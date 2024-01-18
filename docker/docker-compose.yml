@@ -1,0 +1,10 @@
+version: '3'
+services:
+  demo:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8002:8000"
+    stdin_open: true
+    tty: true
