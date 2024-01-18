@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    environment: ci
+    timeout-minutes: 10
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Setup Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.9.18
+    - name: Run Python commands
+      run: |
+        pip install --upgrade pip
+        pip install poetry==1.6.1
+    - name: Install dependencies
+      run: |
+        poetry install --with dev
+    - name: Run checks
+      run: |
+        make checks
+    - name: Run tests
+      run: |
+        make tests

@@ -1,0 +1,42 @@
+[tool.black]
+line-length = 79
+
+[tool.isort]
+profile = "black"
+line_length = 79
+
+[tool.poetry]
+name = "lczerolens"
+version = "0.1.0"
+description = "Interpretability for LeelaChessZero networks."
+license = "MIT"
+authors = [
+    "Yoann Poupart <yoann.poupart@ens-lyon.org>",
+]
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "default"
+
+[build-system]
+requires = ["poetry-core>=1.6.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+python-chess = "^1.999"
+torch = "^2.1.2"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "*"
+pytest = "*"
+pytest-cov = "*"
+
+[tool.poetry.group.demo]
+optional = true
+
+[tool.poetry.group.demo.dependencies]
+gradio = "^4.14.0"

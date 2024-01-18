@@ -1,0 +1,37 @@
+repos:
+-   repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+    -   id: black
+        args: ["--config", "pyproject.toml"]
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: check-added-large-files
+        args: ['--maxkb=600']
+    -   id: check-yaml
+    -   id: check-json
+    -   id: check-toml
+    -   id: end-of-file-fixer
+    -   id: trailing-whitespace
+    -   id: check-docstring-first
+-   repo: https://github.com/python-poetry/poetry
+    rev: 1.7.0
+    hooks:
+    -   id: poetry-check
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+    -   id: mypy
+        additional_dependencies: ['types-requests', 'types-toml']
+-   repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+    -   id: flake8
+        args: ['--ignore=E203,W503', '--per-file-ignores=__init__.py:F401']
+-   repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+    -   id: isort
+        args: ["--settings-path", "pyproject.toml"]
+        name: isort (python)
