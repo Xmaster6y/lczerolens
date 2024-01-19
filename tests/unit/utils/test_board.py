@@ -2,26 +2,10 @@
 Tests for the board utils.
 """
 
-import torch
-from lczero.backends import Backend, GameState
+from lczero.backends import GameState
 
 from lczerolens import board_utils
-
-
-def board_from_backend(
-    lczero_backend: Backend, lczero_game: GameState, planes: int = 112
-):
-    """
-    Create a board from the lczero backend.
-    """
-    lczero_input = lczero_game.as_input(lczero_backend)
-    lczero_input_tensor = torch.zeros((112, 64), dtype=torch.float)
-    for plane in range(planes):
-        mask_str = f"{lczero_input.mask(plane):b}".zfill(64)
-        lczero_input_tensor[plane] = torch.tensor(
-            tuple(map(int, reversed(mask_str))), dtype=torch.float
-        ) * lczero_input.val(plane)
-    return lczero_input_tensor.view((112, 8, 8))
+from lczerolens.utils import lczero as lczero_utils
 
 
 class TestWithBackend:
@@ -36,7 +20,7 @@ class TestWithBackend:
             board_tensor = board_utils.board_to_tensor13x8x8(board)
             uci_moves = [move.uci() for move in move_list[:i]]
             lczero_game = GameState(moves=uci_moves)
-            lczero_input_tensor = board_from_backend(
+            lczero_input_tensor = lczero_utils.board_from_backend(
                 lczero_backend, lczero_game, planes=13
             )
             assert (board_tensor == lczero_input_tensor[:13]).all()
@@ -52,7 +36,7 @@ class TestWithBackend:
             board_tensor = board_utils.board_to_tensor112x8x8(board)
             uci_moves = [move.uci() for move in move_list[:i]]
             lczero_game = GameState(moves=uci_moves)
-            lczero_input_tensor = board_from_backend(
+            lczero_input_tensor = lczero_utils.board_from_backend(
                 lczero_backend, lczero_game
             )
             # assert (board_tensor == lczero_input_tensor).all()
@@ -72,10 +56,9 @@ class TestRepetition:
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
             uci_moves = [move.uci() for move in move_list[:i]]
-            fens = [board.fen().split(" ")[0] for board in board_list[:i]]
-            board_tensor = board_utils.board_to_tensor13x8x8(board, fens=fens)
+            board_tensor = board_utils.board_to_tensor13x8x8(board)
             lczero_game = GameState(moves=uci_moves)
-            lczero_input_tensor = board_from_backend(
+            lczero_input_tensor = lczero_utils.board_from_backend(
                 lczero_backend, lczero_game, planes=13
             )
             assert (board_tensor == lczero_input_tensor[:13]).all()
@@ -89,10 +72,9 @@ class TestRepetition:
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
             uci_moves = [move.uci() for move in move_list[:i]]
-            fens = [board.fen().split(" ")[0] for board in board_list[:i]]
-            board_tensor = board_utils.board_to_tensor112x8x8(board, fens=fens)
+            board_tensor = board_utils.board_to_tensor112x8x8(board)
             lczero_game = GameState(moves=uci_moves)
-            lczero_input_tensor = board_from_backend(
+            lczero_input_tensor = lczero_utils.board_from_backend(
                 lczero_backend, lczero_game
             )
             assert (board_tensor == lczero_input_tensor).all()
@@ -106,10 +88,9 @@ class TestLong:
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
             uci_moves = [move.uci() for move in move_list[:i]]
-            fens = [board.fen().split(" ")[0] for board in board_list[:i]]
-            board_tensor = board_utils.board_to_tensor13x8x8(board, fens=fens)
+            board_tensor = board_utils.board_to_tensor13x8x8(board)
             lczero_game = GameState(moves=uci_moves)
-            lczero_input_tensor = board_from_backend(
+            lczero_input_tensor = lczero_utils.board_from_backend(
                 lczero_backend, lczero_game, planes=13
             )
             assert (board_tensor == lczero_input_tensor[:13]).all()
@@ -123,10 +104,9 @@ class TestLong:
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
             uci_moves = [move.uci() for move in move_list[:i]]
-            fens = [board.fen().split(" ")[0] for board in board_list[:i]]
-            board_tensor = board_utils.board_to_tensor112x8x8(board, fens=fens)
+            board_tensor = board_utils.board_to_tensor112x8x8(board)
             lczero_game = GameState(moves=uci_moves)
-            lczero_input_tensor = board_from_backend(
+            lczero_input_tensor = lczero_utils.board_from_backend(
                 lczero_backend, lczero_game
             )
             assert (board_tensor == lczero_input_tensor).all()

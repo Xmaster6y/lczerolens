@@ -1871,7 +1871,7 @@ INVERTED_TO_INDEX: Dict[str, List[int]] = {}
 for i, move in enumerate(POLICY_INDEX):
     INVERTED_POLICY_INDEX[move] = i
     from_square = move[:2]
-    to_square = move[2:]
+    to_square = move[2:4]
     try:
         INVERTED_FROM_INDEX[from_square].append(i)
     except KeyError:
