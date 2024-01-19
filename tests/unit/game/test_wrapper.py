@@ -11,7 +11,7 @@ from lczerolens.utils import lczero as lczero_utils
 
 
 class TestWrapper:
-    def test_load_wrapper(self):
+    def test_load_wrapper(self, ensure_network):
         """
         Test that the wrapper loads.
         """
@@ -19,7 +19,7 @@ class TestWrapper:
         wrapper.ensure_loaded()
         assert wrapper.model is not None
 
-    def test_wrapper_prediction(self, lczero_backend):
+    def test_wrapper_prediction(self, lczero_backend, ensure_network):
         """
         Test that the wrapper prediction works.
         """
