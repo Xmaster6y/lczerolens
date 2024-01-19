@@ -8,5 +8,5 @@ from lczero.backends import Backend, Weights
 
 @pytest.fixture(scope="session")
 def lczero_backend():
-    lczero_weights = Weights("ignored/BT2-768x15-swa-3250000.pb.gz")
+    lczero_weights = Weights("assets/tinygyal-8.pb.gz")
     yield Backend(weights=lczero_weights)

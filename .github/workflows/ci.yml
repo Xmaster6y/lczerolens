@@ -27,6 +27,9 @@ jobs:
     - name: Run checks
       run: |
         make checks
+    - name: Download lczero weights
+      run: |
+        curl -L -o "assets/tinygyal-8.pb.gz" "https://drive.google.com/uc?export=download&id=1Ssl4JanqzQn3p-RoHRDk_aApykl-SukE"
     - name: Run tests
       run: |
         make tests
