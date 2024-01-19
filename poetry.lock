@@ -927,6 +927,21 @@ files = [
 ]
 
 [[package]]
+name = "lczero_bindings"
+version = "0.1.0"
+description = "Leela Chess Zero Python bindings"
+optional = false
+python-versions = ">=3.7"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/LeelaChessZero/lc0.git"
+reference = "HEAD"
+resolved_reference = "d89a4565fb440d0694e7fea0b11b368a4ba117a9"
+
+[[package]]
 name = "markdown-it-py"
 version = "3.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
@@ -2500,4 +2515,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "7918773c29fd9aade67a16110c41c1fc760487cb0b487caea3ea6f3086e0ddcc"
+content-hash = "6059e15e7f666b0351494f53f3026bb2d79636614a67bca2abef716e36a3973a"

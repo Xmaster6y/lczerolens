@@ -34,6 +34,7 @@ optional = true
 pre-commit = "*"
 pytest = "*"
 pytest-cov = "*"
+lczero-bindings = {git = "https://github.com/LeelaChessZero/lc0.git"}
 
 [tool.poetry.group.demo]
 optional = true
