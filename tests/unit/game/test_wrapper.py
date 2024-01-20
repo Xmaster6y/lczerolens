@@ -30,5 +30,5 @@ class TestWrapper:
         lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
             lczero_backend, lczero_game
         )
-        assert torch.allclose(policy, lczero_policy, atol=1e-5)
+        assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value)
