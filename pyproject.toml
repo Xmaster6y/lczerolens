@@ -27,6 +27,7 @@ python = "^3.9"
 python-chess = "^1.999"
 torch = "^2.1.2"
 onnx2pytorch = "^0.4.1"
+matplotlib = "^3.8.2"
 
 [tool.poetry.group.dev]
 optional = true
