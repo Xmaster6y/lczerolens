@@ -30,7 +30,7 @@ def describenet(path):
     )
     popen.wait()
     if popen.returncode != 0:
-        raise ValueError(f"Could not describe net at {path}.")
+        raise RuntimeError(f"Could not describe net at {path}.")
     return popen.stdout.read().decode("utf-8")
 
 
@@ -45,7 +45,28 @@ def convertnet(in_path, out_path):
     )
     popen.wait()
     if popen.returncode != 0:
-        raise ValueError(f"Could not convert net at {in_path}.")
+        raise RuntimeError(f"Could not convert net at {in_path}.")
+    return popen.stdout.read().decode("utf-8")
+
+
+def generic_command(args, verbose=False):
+    """
+    Run a generic command.
+    """
+    popen = subprocess.Popen(
+        ["lc0", *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    popen.wait()
+    if popen.returncode != 0:
+        if verbose:
+            stderr = (
+                f'\n[DEBUG] stderr:\n{popen.stderr.read().decode("utf-8")}'
+            )
+        else:
+            stderr = ""
+        raise RuntimeError(f"Could not run `lc0 {' '.join(args)}`." + stderr)
     return popen.stdout.read().decode("utf-8")
 
 

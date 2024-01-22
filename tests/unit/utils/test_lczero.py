@@ -13,17 +13,27 @@ class TestExecution:
         """
         Test that the describenet function works.
         """
-        describenet = lczero_utils.describenet("assets/tinygyal-8.pb.gz")
-        assert isinstance(describenet, str)
+        description = lczero_utils.describenet("assets/tinygyal-8.pb.gz")
+        assert isinstance(description, str)
+        assert "Minimal Lc0 version:" in description
 
     def test_convertnet(self):
         """
         Test that the convertnet function works.
         """
-        convertnet = lczero_utils.convertnet(
+        conversion = lczero_utils.convertnet(
             "assets/tinygyal-8.pb.gz", "assets/tinygyal-8.onnx"
         )
-        assert isinstance(convertnet, str)
+        assert isinstance(conversion, str)
+        assert "INPUT_CLASSICAL_112_PLANE" in conversion
+
+    def test_generic_command(self):
+        """
+        Test that the generic command function works.
+        """
+        generic_command = lczero_utils.generic_command(["--help"])
+        assert isinstance(generic_command, str)
+        assert "Usage: lc0" in generic_command
 
     def test_board_from_backend(self, lczero_backend):
         """

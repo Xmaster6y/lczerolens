@@ -4,15 +4,16 @@
             "name": "Tests",
             "type": "python",
             "request": "launch",
-            "module": "pytest",
-            "args": ["tests"],
+            "module": "poetry",
+            "args": ["run", "pytest", "tests", "--cov=src"],
             "console": "integratedTerminal"
         },
         {
             "name": "Demo",
             "type": "python",
             "request": "launch",
-            "module": "demo.main",
+            "module": "poetry",
+            "args": ["run", "python", "-m", "demo.main"],
             "console": "integratedTerminal"
         }
     ]

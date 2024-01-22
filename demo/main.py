@@ -4,10 +4,12 @@ Gradio demo for lczero-easy.
 
 import gradio as gr
 
+from . import convert_interface
+
 demo = gr.TabbedInterface(
-    [],
-    [],
-    title="Lc0 Easy",
+    [convert_interface.interface],
+    ["Convert"],
+    title="LczeroLens Demo",
     analytics_enabled=False,
 )
 
