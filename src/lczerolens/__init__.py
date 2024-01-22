@@ -7,3 +7,4 @@ __version__ = "0.1.0"
 from .utils import board as board_utils
 from .utils import model as model_utils
 from .utils import move as move_utils
+from .utils import visualisation as visualisation_utils

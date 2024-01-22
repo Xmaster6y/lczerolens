@@ -15,19 +15,17 @@ def list_models():
     """
     List the models in the model directory.
     """
-    return utils.get_model_names()
+    models_info = utils.get_models_info()
+    return sorted([[model_info[0]] for model_info in models_info])
 
 
 def on_select_model_df(
     evt: gr.SelectData,
-    model_df: gr.Dataframe,
 ):
     """
     When a model is selected, update the statement.
     """
-    model_index = evt.index[0]
-    model_name = model_df[model_index][0]
-    return model_name
+    return evt.value
 
 
 def convert_model(
@@ -141,8 +139,8 @@ with gr.Blocks() as interface:
     with gr.Row():
         with gr.Column(scale=2):
             model_df = gr.Dataframe(
-                headers=["Available models", "type", "n_blocks", "n_filters"],
-                datatype=["str", "str", "number", "number"],
+                headers=["Available models"],
+                datatype=["str"],
                 interactive=False,
                 type="array",
                 value=list_models,
@@ -180,7 +178,7 @@ with gr.Blocks() as interface:
 
     model_df.select(
         on_select_model_df,
-        model_df,
+        None,
         model_name,
     )
     upload_button.click(

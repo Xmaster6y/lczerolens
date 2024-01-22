@@ -48,8 +48,15 @@ def compute_move_prediction(model, board_list: List[chess.Board]):
     with torch.no_grad():
         out = model(batched_tensor)
         if len(out) == 2:
-            policy, value = out
-            outcome_probs = torch.zeros(value.shape[0], 3)
+            policy, other = out
+            if other.shape[1] == 3:
+                outcome_probs = other
+                value = torch.zeros((outcome_probs.shape[0], 1))
+            elif other.shape[1] == 1:
+                value = other
+                outcome_probs = torch.zeros((value.shape[0], 3))
+            else:
+                raise ValueError(f"Unexpected output shape {other.shape}.")
         else:
             policy, outcome_probs, value = out
 

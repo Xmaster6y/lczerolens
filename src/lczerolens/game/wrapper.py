@@ -25,8 +25,6 @@ class LczerroModelWrapper:
         """
         self.model_path = model_path
         self.model = None
-        self.attention_cache = None
-        self.num_attention_layers = None
 
     @classmethod
     def from_model(cls, model, model_path: str = ""):

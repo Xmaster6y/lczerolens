@@ -6,11 +6,13 @@ import os
 import re
 import subprocess
 
-from demo import constants
+from demo import constants, state
+from lczerolens.game import LczerroModelWrapper
 from lczerolens.utils import lczero as lczero_utils
+from lczerolens.xai import AttentionWrapper
 
 
-def get_model_names(leela=True):
+def get_models_info(leela=True):
     """
     Get the names of the models in the model directory.
     """
@@ -28,6 +30,7 @@ def get_model_names(leela=True):
             model_df.append(
                 [
                     filename,
+                    "ONNX",
                     n_blocks,
                     n_filters,
                 ]
@@ -45,6 +48,7 @@ def get_model_names(leela=True):
                 model_df.append(
                     [
                         filename,
+                        "LEELA",
                         n_blocks,
                         n_filters,
                     ]
@@ -86,3 +90,31 @@ def save_model(tmp_file_path):
     except RuntimeError:
         os.remove(f"{constants.LEELA_MODEL_DIRECTORY}/{model_name}.gz")
         raise RuntimeError
+
+
+def get_wrapper_from_state(model_name):
+    """
+    Get the model wrapper from the state.
+    """
+    if model_name in state.models:
+        wrapper = LczerroModelWrapper.from_model(state.models[model_name])
+        return wrapper
+    else:
+        wrapper = LczerroModelWrapper(
+            f"{constants.MODEL_DIRECTORY}/{model_name}"
+        )
+        state.models[model_name] = wrapper.model
+        return wrapper
+
+
+def get_attention_wrapper_from_state(model_name):
+    """
+    Get the model wrapper from the state.
+    """
+    if model_name in state.models:
+        wrapper = AttentionWrapper.from_model(state.models[model_name])
+        return wrapper
+    else:
+        wrapper = AttentionWrapper(f"{constants.MODEL_DIRECTORY}/{model_name}")
+        state.models[model_name] = wrapper.model
+        return wrapper
