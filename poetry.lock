@@ -620,6 +620,22 @@ typing-extensions = ">=4.0,<5.0"
 websockets = ">=10.0,<12.0"
 
 [[package]]
+name = "graphviz"
+version = "0.20.1"
+description = "Simple Python interface for Graphviz"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "graphviz-0.20.1-py3-none-any.whl", hash = "sha256:587c58a223b51611c0cf461132da386edd896a029524ca61a1462b880bf97977"},
+    {file = "graphviz-0.20.1.zip", hash = "sha256:8c58f14adaa3b947daf26c19bc1e98c4e0702cdc31cf99153e6f06904d492bf8"},
+]
+
+[package.extras]
+dev = ["flake8", "pep8-naming", "tox (>=3)", "twine", "wheel"]
+docs = ["sphinx (>=5)", "sphinx-autodoc-typehints", "sphinx-rtd-theme"]
+test = ["coverage", "mock (>=4)", "pytest (>=7)", "pytest-cov", "pytest-mock (>=3)"]
+
+[[package]]
 name = "h11"
 version = "0.14.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
@@ -2388,6 +2404,20 @@ torch = "2.1.2"
 scipy = ["scipy"]
 
 [[package]]
+name = "torchviz"
+version = "0.0.2"
+description = "A small package to create visualizations of PyTorch execution graphs"
+optional = false
+python-versions = "*"
+files = [
+    {file = "torchviz-0.0.2.tar.gz", hash = "sha256:c790b4c993f783433604bf610cfa58bb0a031260be4ee5196a00c0884e768051"},
+]
+
+[package.dependencies]
+graphviz = "*"
+torch = "*"
+
+[[package]]
 name = "tqdm"
 version = "4.66.1"
 description = "Fast, Extensible Progress Meter"
@@ -2613,6 +2643,28 @@ files = [
 ]
 
 [[package]]
+name = "zennit"
+version = "0.5.1"
+description = "Attribution of Neural Networks using PyTorch"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "zennit-0.5.1-py3-none-any.whl", hash = "sha256:a49be81f34ccb851633fea08a07bba2d04e73b00c25ffe54ac0ec822d0a3b096"},
+    {file = "zennit-0.5.1.tar.gz", hash = "sha256:ce4889ad8c09fee87d5eca426ea5607ef27f43340a7d2963559d559f5f4d3fd3"},
+]
+
+[package.dependencies]
+click = "*"
+numpy = "*"
+Pillow = "*"
+torch = ">=1.7.0"
+torchvision = "*"
+
+[package.extras]
+docs = ["ipykernel (>=6.13.0)", "nbsphinx (>=0.8.8)", "sphinx-copybutton (>=0.4.0)", "sphinx-rtd-theme (>=1.0.0)", "sphinxcontrib.bibtex (>=2.4.1)", "sphinxcontrib.datatemplates (>=0.9.0)"]
+tests = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "zipp"
 version = "3.17.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -2630,4 +2682,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "21c69ac7b7c07f0061aa463a3131eaf6e5dfaaef6d39d2d4ece87d66701ced87"
+content-hash = "3a3d09641a5bfcae1ece05f7f74291de03c683d49f4ba71ca5d7e57c4b912b24"
