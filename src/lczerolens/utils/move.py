@@ -21,8 +21,12 @@ def encode_move(
     to_square = move.to_square
 
     if us == chess.BLACK:
-        from_square = 63 - from_square
-        to_square = 63 - to_square
+        from_square_row = from_square // 8
+        from_square_col = from_square % 8
+        from_square = 8 * (7 - from_square_row) + from_square_col
+        to_square_row = to_square // 8
+        to_square_col = to_square % 8
+        to_square = 8 * (7 - to_square_row) + to_square_col
     us_uci_move = (
         chess.SQUARE_NAMES[from_square] + chess.SQUARE_NAMES[to_square]
     )
@@ -50,8 +54,13 @@ def decode_move(
     from_square = chess.SQUARE_NAMES.index(us_uci_move[:2])
     to_square = chess.SQUARE_NAMES.index(us_uci_move[2:4])
     if us == chess.BLACK:
-        from_square = 63 - from_square
-        to_square = 63 - to_square
+        from_square_row = from_square // 8
+        from_square_col = from_square % 8
+        from_square = 8 * (7 - from_square_row) + from_square_col
+        to_square_row = to_square // 8
+        to_square_col = to_square % 8
+        to_square = 8 * (7 - to_square_row) + to_square_col
+
     uci_move = chess.SQUARE_NAMES[from_square] + chess.SQUARE_NAMES[to_square]
     from_piece = board.piece_at(from_square)
     if (

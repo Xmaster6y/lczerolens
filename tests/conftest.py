@@ -16,7 +16,7 @@ def lczero_backend():
 
 @pytest.fixture(scope="session")
 def ensure_network():
-    lczero_utils.convertnet(
+    lczero_utils.convert_to_onnx(
         "assets/tinygyal-8.pb.gz", "assets/tinygyal-8.onnx"
     )
     yield

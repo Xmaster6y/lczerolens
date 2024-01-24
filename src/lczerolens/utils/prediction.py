@@ -6,12 +6,13 @@ from typing import List
 
 import chess
 import torch
+from tensordict import TensorDict
 
 from . import board as board_utils
 from .constants import INVERTED_FROM_INDEX, INVERTED_TO_INDEX
 
 
-def aggregate_policy(policy, aggregate_topk=-1):
+def aggregate_policy(policy: torch.Tensor, aggregate_topk: int = -1):
     """
     Aggregate the policy for a given board.
     """
@@ -34,7 +35,11 @@ def aggregate_policy(policy, aggregate_topk=-1):
     return pickup_agg, dropoff_agg
 
 
-def compute_move_prediction(model, board_list: List[chess.Board]):
+def compute_move_prediction(
+    model: torch.nn.Module,
+    board_list: List[chess.Board],
+    with_grad: bool = False,
+) -> TensorDict:
     """
     Compute the move prediction for a list of boards.
     """
@@ -43,9 +48,8 @@ def compute_move_prediction(model, board_list: List[chess.Board]):
         for board in board_list
     ]
     batched_tensor = torch.cat(tensor_list, dim=0)
-    # batched_tensor.to(model.device)
-    model.eval()
-    with torch.no_grad():
+
+    with torch.set_grad_enabled(with_grad):
         out = model(batched_tensor)
         if len(out) == 2:
             policy, other = out
@@ -59,5 +63,11 @@ def compute_move_prediction(model, board_list: List[chess.Board]):
                 raise ValueError(f"Unexpected output shape {other.shape}.")
         else:
             policy, outcome_probs, value = out
-
-    return policy, outcome_probs, value
+    return TensorDict(
+        {
+            "policy": policy,
+            "outcome_probs": outcome_probs,
+            "value": value,
+        },
+        batch_size=batched_tensor.shape[0],
+    )

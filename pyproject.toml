@@ -30,6 +30,8 @@ onnx2pytorch = "^0.4.1"
 matplotlib = "^3.8.2"
 torchviz = "^0.0.2"
 zennit = "^0.5.1"
+onnx2torch = "^1.5.13"
+tensordict = "^0.2.1"
 
 [tool.poetry.group.dev]
 optional = true

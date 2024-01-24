@@ -5,11 +5,11 @@ from typing import Any, Dict, Optional
 
 import chess
 
-from lczerolens import model_utils
-from lczerolens.game import LczerroModelWrapper
+from lczerolens import prediction_utils
+from lczerolens.adapt import ModelWrapper
 
 
-class AttentionWrapper(LczerroModelWrapper):
+class AttentionWrapper(ModelWrapper):
     """
     Class for wrapping the LCZero models with attention.
     """
@@ -48,7 +48,6 @@ class AttentionWrapper(LczerroModelWrapper):
             self.attention_cache = {}
         else:
             raise ValueError("Cache already exists.")
-        self.ensure_loaded()
         self.ensure_has_attention()
 
         removable_handles = []
@@ -61,7 +60,7 @@ class AttentionWrapper(LczerroModelWrapper):
                 self.attention_cache[module_name] = output
 
             removable_handles.append(module.register_forward_hook(cache_hook))
-        model_utils.compute_move_prediction(self.model, [board])
+        prediction_utils.compute_move_prediction(self.model, [board])
         for handle in removable_handles:
             handle.remove()
 

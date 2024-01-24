@@ -19,9 +19,9 @@ class TestExecution:
 
     def test_convertnet(self):
         """
-        Test that the convertnet function works.
+        Test that the convert_to_onnx function works.
         """
-        conversion = lczero_utils.convertnet(
+        conversion = lczero_utils.convert_to_onnx(
             "assets/tinygyal-8.pb.gz", "assets/tinygyal-8.onnx"
         )
         assert isinstance(conversion, str)

@@ -7,7 +7,7 @@ import torch
 import zennit
 
 from lczerolens import board_utils
-from lczerolens.game import LczerroModelWrapper
+from lczerolens.adapt import ModelWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -37,7 +37,7 @@ def compute_lrp_heatmap(model, board: chess.Board):
     return relevance
 
 
-class LrpWrapper(LczerroModelWrapper):
+class LrpWrapper(ModelWrapper):
     """
     Class for wrapping the LCZero models.
     """
@@ -46,12 +46,5 @@ class LrpWrapper(LczerroModelWrapper):
         """
         Runs basic LRP on the model.
         """
-        self.ensure_loaded()
-        # try:
-        #     self.ensure_has_attention()
-        # except ValueError:
-        #     pass
-        # else:
-        #     raise ValueError("Model has attention.")
         relevance = compute_lrp_heatmap(self.model, board)
         return relevance

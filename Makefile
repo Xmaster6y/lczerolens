@@ -5,7 +5,7 @@ checks:
 
 .PHONY: tests
 tests:
-	poetry run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s
+	poetry run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v
 
 # API
 .PHONY: app-start

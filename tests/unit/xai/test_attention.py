@@ -15,17 +15,18 @@ class TestWrapper:
         """
         Test that the wrapper loads.
         """
-        wrapper = AttentionWrapper("assets/tinygyal-8.onnx")
-        wrapper.ensure_loaded()
+        wrapper = AttentionWrapper.from_path("assets/tinygyal-8.onnx")
         assert wrapper.model is not None
 
     def test_wrapper_prediction(self, lczero_backend, ensure_network):
         """
         Test that the wrapper prediction works.
         """
-        wrapper = AttentionWrapper("assets/tinygyal-8.onnx")
+        wrapper = AttentionWrapper.from_path("assets/tinygyal-8.onnx")
         board = chess.Board()
-        policy, _, value = wrapper.prediction(board)
+        out = wrapper.predict(board)
+        policy = out["policy"]
+        value = out["value"]
         lczero_game = GameState()
         lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
             lczero_backend, lczero_game

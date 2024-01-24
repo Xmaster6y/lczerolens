@@ -64,7 +64,11 @@ def compute_cache(
                     boards.append(board.copy())
         except ValueError:
             gr.Warning(f"Invalid action {action} stopping before it.")
-    wrapper = utils.get_attention_wrapper_from_state(model_name)
+    try:
+        wrapper = utils.get_attention_wrapper_from_state(model_name)
+    except ValueError:
+        gr.Warning("Could not load attention wrapper.")
+        return None, None, None
     cache = []
     for board in boards:
         wrapper.cache_attention(board, overwrite=True)

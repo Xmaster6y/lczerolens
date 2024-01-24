@@ -7,34 +7,35 @@ import re
 import subprocess
 
 from demo import constants, state
-from lczerolens.game import LczerroModelWrapper
+from lczerolens.adapt import ModelWrapper
 from lczerolens.utils import lczero as lczero_utils
 from lczerolens.xai import AttentionWrapper
 
 
-def get_models_info(leela=True):
+def get_models_info(onnx=True, leela=True):
     """
     Get the names of the models in the model directory.
     """
     model_df = []
     exp = r"(?P<n_filters>\d+)x(?P<n_blocks>\d+)"
-    for filename in os.listdir(constants.MODEL_DIRECTORY):
-        if filename.endswith(".onnx"):
-            match = re.search(exp, filename)
-            if match is None:
-                n_filters = -1
-                n_blocks = -1
-            else:
-                n_filters = int(match.group("n_filters"))
-                n_blocks = int(match.group("n_blocks"))
-            model_df.append(
-                [
-                    filename,
-                    "ONNX",
-                    n_blocks,
-                    n_filters,
-                ]
-            )
+    if onnx:
+        for filename in os.listdir(constants.MODEL_DIRECTORY):
+            if filename.endswith(".onnx"):
+                match = re.search(exp, filename)
+                if match is None:
+                    n_filters = -1
+                    n_blocks = -1
+                else:
+                    n_filters = int(match.group("n_filters"))
+                    n_blocks = int(match.group("n_blocks"))
+                model_df.append(
+                    [
+                        filename,
+                        "ONNX",
+                        n_blocks,
+                        n_filters,
+                    ]
+                )
     if leela:
         for filename in os.listdir(constants.LEELA_MODEL_DIRECTORY):
             if filename.endswith(".pb.gz"):
@@ -97,12 +98,11 @@ def get_wrapper_from_state(model_name):
     Get the model wrapper from the state.
     """
     if model_name in state.models:
-        wrapper = LczerroModelWrapper.from_model(state.models[model_name])
+        wrapper = ModelWrapper.from_model(state.models[model_name])
         return wrapper
     else:
-        wrapper = LczerroModelWrapper(
-            f"{constants.MODEL_DIRECTORY}/{model_name}"
-        )
+        wrapper = ModelWrapper(f"{constants.MODEL_DIRECTORY}/{model_name}")
+        wrapper.ensure_loaded()
         state.models[model_name] = wrapper.model
         return wrapper
 
@@ -116,5 +116,7 @@ def get_attention_wrapper_from_state(model_name):
         return wrapper
     else:
         wrapper = AttentionWrapper(f"{constants.MODEL_DIRECTORY}/{model_name}")
+        wrapper.ensure_loaded()
+        wrapper.ensure_has_attention()
         state.models[model_name] = wrapper.model
         return wrapper

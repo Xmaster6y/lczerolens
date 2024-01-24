@@ -45,7 +45,7 @@ def convert_model(
         )
         return list_models(), ""
     try:
-        lczero_utils.convertnet(
+        lczero_utils.convert_to_onnx(
             f"{constants.LEELA_MODEL_DIRECTORY}/{model_name}",
             f"{constants.MODEL_DIRECTORY}/{model_name[:-6]}.onnx",
         )

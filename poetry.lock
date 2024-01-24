@@ -234,6 +234,17 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cloudpickle"
+version = "3.0.0"
+description = "Pickler class to extend the standard pickle.Pickler functionality"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "cloudpickle-3.0.0-py3-none-any.whl", hash = "sha256:246ee7d0c295602a036e86369c77fecda4ab17b506496730f2f576d9016fd9c7"},
+    {file = "cloudpickle-3.0.0.tar.gz", hash = "sha256:996d9a482c6fb4f33c1a35335cf8afd065d2a56e973270364840712d9131a882"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -1403,6 +1414,26 @@ torch = ">=1.4.0"
 torchvision = ">=0.9.0"
 
 [[package]]
+name = "onnx2torch"
+version = "1.5.13"
+description = "ONNX to PyTorch converter"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "onnx2torch-1.5.13-py3-none-any.whl", hash = "sha256:c127206eb4650cc337dcda972c73e76ee4ac54ddf5eb82f87338e46c5bf16255"},
+    {file = "onnx2torch-1.5.13.tar.gz", hash = "sha256:81b596f5c553796007e60f15969594a3a43ac39299e787ade0edbab1d2d30c89"},
+]
+
+[package.dependencies]
+numpy = ">=1.16.4"
+onnx = ">=1.9.0"
+torch = ">=1.8.0"
+torchvision = ">=0.9.0"
+
+[package.extras]
+dev = ["Pillow", "black", "googledrivedownloader", "isort", "onnxruntime", "pre-commit", "pylint", "pytest", "requests"]
+
+[[package]]
 name = "orjson"
 version = "3.9.10"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
@@ -2280,6 +2311,41 @@ files = [
 mpmath = ">=0.19"
 
 [[package]]
+name = "tensordict"
+version = "0.2.1"
+description = ""
+optional = false
+python-versions = "*"
+files = [
+    {file = "tensordict-0.2.1-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:97209f06416b83aa337cd3f4932d4642b7f7deec81ac6e19d8a6911eb914b4f0"},
+    {file = "tensordict-0.2.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:fdd4b556bc59d78057c22546050c1f77717f9c5398ef99414d6344fa7e89bbcc"},
+    {file = "tensordict-0.2.1-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:299306146667777311dfe60090fd985b2d5c816379d92b49ab86a07ff68f80ad"},
+    {file = "tensordict-0.2.1-cp310-cp310-win_amd64.whl", hash = "sha256:08ea903f390d505511cf89937bf47ad35708672f1b6ed906ccbe389fd7f786cc"},
+    {file = "tensordict-0.2.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:cc0026ae276ee4dc00551eebf97ae047ce2083cfb24077f8fb8f5152d6670686"},
+    {file = "tensordict-0.2.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:a9c8e480566ab044e5c68f41367b0c06155613a3806f881eff53a3f3ef244135"},
+    {file = "tensordict-0.2.1-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:516c0cf63418235f829490c93fc5f8ce579ca2c1f67653c8e0e77e6aa6f6117d"},
+    {file = "tensordict-0.2.1-cp311-cp311-win_amd64.whl", hash = "sha256:edba163de38eec5c6174e0db3314b9af1319cd1405ade68c22a083849a0944fb"},
+    {file = "tensordict-0.2.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:aa68aec689881ac875defe1db819171d84616c4c373026157d5c9b6af04614da"},
+    {file = "tensordict-0.2.1-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:588f0a35fe9cea644cf522207259575c7c7494a6a14a0ad57399d1370dde384b"},
+    {file = "tensordict-0.2.1-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:19bd22b6e08a01b32c6d4d0949a307561a22e4f88c8960bc52c4f90ef7dd2baf"},
+    {file = "tensordict-0.2.1-cp38-cp38-win_amd64.whl", hash = "sha256:2230addaafa4ec821e2278aab8549093462df9eb454d77c2b8b92a22a08de83c"},
+    {file = "tensordict-0.2.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:b386a983fa7cc7ce4a0eb6f145aae39f24ae605f2dbc66eccbc228b1fcd9a461"},
+    {file = "tensordict-0.2.1-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:79592eecad15d1a8d584adf446c6198658609ef44ea798be2bef19a29e8201bd"},
+    {file = "tensordict-0.2.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:1dfbcc92f5ebd9ce0518452bf1978a0c0ecff55e7a4c10fab210eb9845d52312"},
+    {file = "tensordict-0.2.1-cp39-cp39-win_amd64.whl", hash = "sha256:4bd05552dad6db1af18080bcd0145998ab5f516e9829ad52f51666f7035cd71f"},
+]
+
+[package.dependencies]
+cloudpickle = "*"
+numpy = "*"
+torch = "*"
+
+[package.extras]
+checkpointing = ["torchsnapshot-nightly"]
+h5 = ["h5py (>=3.8)"]
+tests = ["pytest", "pytest-benchmark", "pytest-instafail", "pytest-rerunfailures", "pyyaml"]
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -2682,4 +2748,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "3a3d09641a5bfcae1ece05f7f74291de03c683d49f4ba71ca5d7e57c4b912b24"
+content-hash = "31a012f09d8c65f77dcfb886958f9425ba65d361cea4551f1a6013e3a4bb573c"

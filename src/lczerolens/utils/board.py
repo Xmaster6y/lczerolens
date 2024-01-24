@@ -49,7 +49,10 @@ def board_to_tensor13x8x8(
     return tensor13x8x8 if us == chess.WHITE else tensor13x8x8.flip(1)
 
 
-def board_to_tensor112x8x8(last_board=chess.Board):
+def board_to_tensor112x8x8(
+    last_board=chess.Board,
+    with_history: bool = True,
+):
     """
     Create the lc0 112x8x8 tensor from the history of a game.
     """
@@ -57,13 +60,14 @@ def board_to_tensor112x8x8(last_board=chess.Board):
     tensor112x8x8 = torch.zeros((112, 8, 8), dtype=torch.float)
     us = last_board.turn
     them = not us
-    for i in range(8):
-        tensor13x8x8 = board_to_tensor13x8x8(board, (us, them))
-        tensor112x8x8[i * 13 : (i + 1) * 13] = tensor13x8x8
-        try:
-            board.pop()
-        except IndexError:
-            break
+    if with_history:
+        for i in range(8):
+            tensor13x8x8 = board_to_tensor13x8x8(board, (us, them))
+            tensor112x8x8[i * 13 : (i + 1) * 13] = tensor13x8x8
+            try:
+                board.pop()
+            except IndexError:
+                break
     if last_board.has_queenside_castling_rights(us):
         tensor112x8x8[104] = torch.ones((8, 8), dtype=torch.float)
     if last_board.has_kingside_castling_rights(us):
