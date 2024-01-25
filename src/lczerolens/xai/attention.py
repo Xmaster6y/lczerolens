@@ -5,42 +5,55 @@ from typing import Any, Dict, Optional
 
 import chess
 
-from lczerolens import prediction_utils
 from lczerolens.adapt import ModelWrapper
 
+from .lens import Lens
 
-class AttentionWrapper(ModelWrapper):
+
+class AttentionLens(Lens):
     """
     Class for wrapping the LCZero models with attention.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """
         Initializes the wrapper.
         """
-        super().__init__(*args, **kwargs)
         self.attention_cache: Optional[Dict[str, Any]] = None
-        self.num_attention_layers = None
 
-    def ensure_has_attention(self):
+    def is_compatible(self, wrapper: ModelWrapper):
+        """
+        Returns whether the lens is compatible with the model.
+        """
+        return self._has_attention(wrapper)
+
+    def compute_heatmap(
+        self, board: chess.Board, wrapper: ModelWrapper, **kwargs
+    ):
+        """
+        Compute attention heatmap for a given model and input.
+        """
+        self._cache_attention(board, wrapper, overwrite=True)
+        attention_layer = kwargs.get("attention_layer", -1)
+        attention = self._get_attention(attention_layer)
+        return attention
+
+    def _has_attention(self, wrapper: ModelWrapper) -> bool:
         """
         Ensures that the model has attention.
         """
         module_name = "Softmax_/encoder0/mha/QK/softmax"
-        module_names = [name for name, _ in self.model.named_modules()]
+        module_names = [name for name, _ in wrapper.model.named_modules()]
         if module_name not in module_names:
-            raise ValueError(
-                f"Model at {self.model_path} does not have attention."
-            )
-        num_layers = 1
-        while True:
-            module_name = f"Softmax_/encoder{num_layers}/mha/QK/softmax"
-            if module_name not in module_names:
-                break
-            num_layers += 1
-        self.num_attention_layers = num_layers
+            return False
+        return True
 
-    def cache_attention(self, board: chess.Board, overwrite: bool = False):
+    def _cache_attention(
+        self,
+        board: chess.Board,
+        wrapper: ModelWrapper,
+        overwrite: bool = False,
+    ):
         """
         Caches the attention for a given board.
         """
@@ -48,23 +61,24 @@ class AttentionWrapper(ModelWrapper):
             self.attention_cache = {}
         else:
             raise ValueError("Cache already exists.")
-        self.ensure_has_attention()
 
         removable_handles = []
-        named_modules = dict(self.model.named_modules())  # type: ignore
-        for layer in range(self.num_attention_layers):
-            module_name = f"Softmax_/encoder{layer}/mha/QK/softmax"
+        named_modules = dict(wrapper.model.named_modules())  # type: ignore
+        layer = 0
+        module_name = f"Softmax_/encoder{layer}/mha/QK/softmax"
+        while module_name in named_modules:
             module = named_modules[module_name]
 
             def cache_hook(module, input, output, module_name=module_name):
                 self.attention_cache[module_name] = output
 
             removable_handles.append(module.register_forward_hook(cache_hook))
-        prediction_utils.compute_move_prediction(self.model, [board])
+            layer += 1
+        wrapper.predict(board)
         for handle in removable_handles:
             handle.remove()
 
-    def get_attention(self, attention_layer: int):
+    def _get_attention(self, attention_layer: int):
         """
         Gets the attention for a given layer and head.
         """
@@ -80,16 +94,3 @@ class AttentionWrapper(ModelWrapper):
                 f"Attention for layer {attention_layer} does not exist."
             )
         return attention
-
-
-def compute_attention_heatmap(
-    board: chess.Board,
-    wrapper: AttentionWrapper,
-    attention_layer: int,
-):
-    """
-    Compute attention heatmap for a given model and input.
-    """
-    wrapper.cache_attention(board, overwrite=True)
-    attention = wrapper.get_attention(attention_layer)
-    return attention

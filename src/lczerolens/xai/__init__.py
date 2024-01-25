@@ -2,5 +2,5 @@
 XAI module.
 """
 
-from .attention import AttentionWrapper
-from .lrp import LrpWrapper
+from .attention import AttentionLens
+from .lrp import LrpLens

@@ -9,7 +9,7 @@ import subprocess
 from demo import constants, state
 from lczerolens.adapt import ModelWrapper
 from lczerolens.utils import lczero as lczero_utils
-from lczerolens.xai import AttentionWrapper
+from lczerolens.xai import AttentionLens
 
 
 def get_models_info(onnx=True, leela=True):
@@ -97,26 +97,30 @@ def get_wrapper_from_state(model_name):
     """
     Get the model wrapper from the state.
     """
-    if model_name in state.models:
-        wrapper = ModelWrapper.from_model(state.models[model_name])
-        return wrapper
+    if model_name in state.wrappers:
+        return state.wrappers[model_name]
     else:
-        wrapper = ModelWrapper(f"{constants.MODEL_DIRECTORY}/{model_name}")
-        wrapper.ensure_loaded()
-        state.models[model_name] = wrapper.model
+        wrapper = ModelWrapper.from_path(
+            f"{constants.MODEL_DIRECTORY}/{model_name}"
+        )
+        state.wrappers[model_name] = wrapper
         return wrapper
 
 
-def get_attention_wrapper_from_state(model_name):
+def get_attention_lens_from_state(model_name):
     """
-    Get the model wrapper from the state.
+    Get the model wrapper and attention lens from the state.
     """
-    if model_name in state.models:
-        wrapper = AttentionWrapper.from_model(state.models[model_name])
-        return wrapper
+    if model_name in state.wrappers:
+        wrapper = state.wrappers[model_name]
     else:
-        wrapper = AttentionWrapper(f"{constants.MODEL_DIRECTORY}/{model_name}")
-        wrapper.ensure_loaded()
-        wrapper.ensure_has_attention()
-        state.models[model_name] = wrapper.model
-        return wrapper
+        wrapper = ModelWrapper.from_path(
+            f"{constants.MODEL_DIRECTORY}/{model_name}"
+        )
+        state.wrappers[model_name] = wrapper
+    if model_name in state.attention_lenses:
+        attention_lens = state.attention_lenses[model_name]
+    else:
+        attention_lens = AttentionLens(wrapper)
+        state.attention_lenses[model_name] = attention_lens
+    return wrapper, attention_lens

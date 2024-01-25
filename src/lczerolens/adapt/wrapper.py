@@ -25,6 +25,10 @@ class ModelWrapper:
         """
         Initializes the wrapper.
         """
+        if not isinstance(model, LczeroModel):
+            raise ValueError(
+                f"Model must be an instance of LczeroModel, not {type(model)}"
+            )
         self.model = model
 
     @classmethod

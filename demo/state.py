@@ -4,6 +4,9 @@ Global state for the demo application.
 
 from typing import Dict
 
-import torch
+from lczerolens.adapt import ModelWrapper
+from lczerolens.xai import AttentionLens, LrpLens
 
-models: Dict[str, torch.nn.Module] = {}
+wrappers: Dict[str, ModelWrapper] = {}
+attention_lenses: Dict[str, AttentionLens] = {}
+lrp_lenses: Dict[str, LrpLens] = {}
