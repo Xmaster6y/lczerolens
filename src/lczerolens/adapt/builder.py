@@ -3,11 +3,13 @@ LCZero model builder.
 """
 
 import os
+import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any, List
 
 import onnx
 from onnx2pytorch import ConvertModel
+from onnx2torch import convert
 from torch import nn
 
 
@@ -31,7 +33,17 @@ class LczeroOnnx(LczeroModel):
         """
         super().__init__()
         self.onnx_model = onnx_model
-        self.convert_model = ConvertModel(onnx_model)
+        try:
+            self.convert_model = convert(onnx_model)
+        except Exception:
+            warnings.warn(
+                "Could not convert model using onnx2torch, "
+                "trying onnx2pytorch."
+            )
+            try:
+                self.convert_model = ConvertModel(onnx_model)
+            except Exception:
+                raise ValueError("Could not convert model.")
         self.convert_model.eval()
 
     def forward(self, *args: List[Any]):

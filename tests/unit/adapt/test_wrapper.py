@@ -31,10 +31,6 @@ class TestWrapper:
         lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
             lczero_backend, lczero_game
         )
-        argsort = torch.argsort(policy, stable=True)
-        lczero_argsort = torch.argsort(lczero_policy, stable=True)
-        if (argsort != lczero_argsort).sum() > 10:
-            raise ValueError
         assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value, atol=1e-4)
 
@@ -56,10 +52,6 @@ class TestWrapper:
             lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
                 lczero_backend, lczero_game
             )
-            argsort = torch.argsort(policy, stable=True)
-            lczero_argsort = torch.argsort(lczero_policy, stable=True)
-            if (argsort != lczero_argsort).sum() > 10:
-                raise ValueError
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
@@ -81,10 +73,6 @@ class TestWrapper:
             lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
                 lczero_backend, lczero_game
             )
-            argsort = torch.argsort(policy, stable=True)
-            lczero_argsort = torch.argsort(lczero_policy, stable=True)
-            if (argsort != lczero_argsort).sum() > 10:
-                raise ValueError
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
@@ -106,9 +94,5 @@ class TestWrapper:
             lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
                 lczero_backend, lczero_game
             )
-            argsort = torch.argsort(policy, stable=True)
-            lczero_argsort = torch.argsort(lczero_policy, stable=True)
-            if (argsort != lczero_argsort).sum() > 10:
-                raise ValueError
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)

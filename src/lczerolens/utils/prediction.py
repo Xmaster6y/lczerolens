@@ -39,6 +39,8 @@ def compute_move_prediction(
     model: torch.nn.Module,
     board_list: List[chess.Board],
     with_grad: bool = False,
+    input_requires_grad: bool = False,
+    return_input: bool = False,
 ) -> TensorDict:
     """
     Compute the move prediction for a list of boards.
@@ -48,6 +50,8 @@ def compute_move_prediction(
         for board in board_list
     ]
     batched_tensor = torch.cat(tensor_list, dim=0)
+    if input_requires_grad:
+        batched_tensor.requires_grad = True
 
     with torch.set_grad_enabled(with_grad):
         out = model(batched_tensor)
@@ -63,11 +67,14 @@ def compute_move_prediction(
                 raise ValueError(f"Unexpected output shape {other.shape}.")
         else:
             policy, outcome_probs, value = out
+    out_d = {
+        "policy": policy,
+        "outcome_probs": outcome_probs,
+        "value": value,
+    }
+    if return_input:
+        out_d["input"] = batched_tensor
     return TensorDict(
-        {
-            "policy": policy,
-            "outcome_probs": outcome_probs,
-            "value": value,
-        },
+        out_d,
         batch_size=batched_tensor.shape[0],
     )

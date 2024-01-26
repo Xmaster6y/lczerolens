@@ -20,10 +20,17 @@ def render_heatmap(
     vmin=None,
     vmax=None,
     arrows=None,
+    normalise="none",
 ):
     """
     Render a heatmap on the board.
     """
+    if normalise == "abs":
+        a_max = heatmap.abs().max()
+        if a_max != 0:
+            heatmap = heatmap / a_max
+        vmin = -1
+        vmax = 1
     if vmin is None:
         vmin = heatmap.min()
     if vmax is None:

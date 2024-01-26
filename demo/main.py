@@ -10,11 +10,13 @@ from . import (
     board_interface,
     convert_interface,
     encoding_interface,
+    lrp_interface,
     policy_interface,
 )
 
 demo = gr.TabbedInterface(
     [
+        lrp_interface.interface,
         attention_interface.interface,
         policy_interface.interface,
         backend_interface.interface,
@@ -22,7 +24,7 @@ demo = gr.TabbedInterface(
         board_interface.interface,
         convert_interface.interface,
     ],
-    ["Attention", "Policy", "Backend", "Encoding", "Board", "Convert"],
+    ["LRP", "Attention", "Policy", "Backend", "Encoding", "Board", "Convert"],
     title="LczeroLens Demo",
     analytics_enabled=False,
 )

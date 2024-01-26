@@ -72,8 +72,8 @@ def compute_policy(
                 "",
             )
     wrapper = utils.get_wrapper_from_state(model_name)
-    policy, outcome, value = wrapper.prediction(board)
-    policy = torch.softmax(policy, dim=-1)
+    output = wrapper.predict(board)
+    policy = torch.softmax(output["policy"], dim=-1)
 
     filtered_policy = torch.full((1858,), 0.0)
     legal_moves = [
@@ -85,8 +85,8 @@ def compute_policy(
 
     current_board = board
     current_policy = policy
-    current_value = value
-    current_outcome = outcome
+    current_value = output["value"]
+    current_outcome = output["outcome_probs"]
 
 
 def make_plot(

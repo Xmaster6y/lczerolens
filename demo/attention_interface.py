@@ -39,11 +39,17 @@ def compute_cache(
     attention_layer,
     attention_head,
     square,
-    from_to,
-    color_flip,
+    quantity,
+    func,
+    trick,
+    aggregate,
 ):
     global cache
     global boards
+    if model_name == "":
+        gr.Warning("No model selected.")
+        return None, None, None
+
     try:
         board = chess.Board(board_fen)
     except ValueError:
@@ -65,24 +71,28 @@ def compute_cache(
         except ValueError:
             gr.Warning(f"Invalid action {action} stopping before it.")
     try:
-        wrapper = utils.get_attention_wrapper_from_state(model_name)
+        wrapper, lens = utils.get_attention_lens_from_state(model_name)
     except ValueError:
-        gr.Warning("Could not load attention wrapper.")
+        gr.Warning("Could not load model.")
         return None, None, None
     cache = []
     for board in boards:
-        wrapper.cache_attention(board, overwrite=True)
-        board_cache = {}
-        for layer in range(wrapper.num_attention_layers):
-            attention = wrapper.get_attention(layer)
-            board_cache[layer] = copy.deepcopy(attention)
-        cache.append(board_cache)
+        attention_cache = copy.deepcopy(lens.compute_heatmap(board, wrapper))
+        cache.append(attention_cache)
     return make_plot(
-        attention_layer, attention_head, square, from_to, color_flip
+        attention_layer,
+        attention_head,
+        square,
+        quantity,
+        func,
+        trick,
+        aggregate,
     )
 
 
-def make_plot(attention_layer, attention_head, square, from_to, color_flip):
+def make_plot(
+    attention_layer, attention_head, square, quantity, func, trick, aggregate
+):
     global cache
     global boards
     global board_index
@@ -99,8 +109,13 @@ def make_plot(attention_layer, attention_head, square, from_to, color_flip):
             f"using layer {num_attention_layers} instead."
         )
         attention_layer = num_attention_layers
-    attention_tensor = cache[board_index][attention_layer - 1]
 
+    key = f"{attention_layer-1}-{quantity}-{func}"
+    try:
+        attention_tensor = cache[board_index][key]
+    except KeyError:
+        gr.Warning(f"Combination {key} does not exist.")
+        return None, None, None
     if attention_head > attention_tensor.shape[1]:
         gr.Warning(
             f"Attention head {attention_head} does not exist, "
@@ -113,13 +128,19 @@ def make_plot(attention_layer, attention_head, square, from_to, color_flip):
         gr.Warning(f"Invalid square {square}, using a1 instead.")
         square_index = 0
         square = "a1"
-    if color_flip and board.turn == chess.BLACK:
+    if board.turn == chess.BLACK:
         square_index = chess.square_mirror(square_index)
-    if from_to == "from":
+
+    if trick == "revert":
+        square_index = 63 - square_index
+
+    if aggregate == "Row":
         heatmap = attention_tensor[0, attention_head - 1, square_index, :]
-    else:
+    elif aggregate == "Column":
         heatmap = attention_tensor[0, attention_head - 1, :, square_index]
-    if color_flip and board.turn == chess.BLACK:
+    else:
+        heatmap = attention_tensor[0, attention_head - 1]
+    if board.turn == chess.BLACK:
         heatmap = heatmap.view(8, 8).flip(0).view(64)
     svg_board, fig = visualisation_utils.render_heatmap(
         board, heatmap, square=square
@@ -130,7 +151,13 @@ def make_plot(attention_layer, attention_head, square, from_to, color_flip):
 
 
 def previous_board(
-    attention_layer, attention_head, square, from_to, color_flip
+    attention_layer,
+    attention_head,
+    square,
+    from_to,
+    color_flip,
+    trick,
+    aggregate,
 ):
     global board_index
     board_index -= 1
@@ -142,7 +169,15 @@ def previous_board(
     )
 
 
-def next_board(attention_layer, attention_head, square, from_to, color_flip):
+def next_board(
+    attention_layer,
+    attention_head,
+    square,
+    from_to,
+    color_flip,
+    trick,
+    aggregate,
+):
     global board_index
     board_index += 1
     if board_index >= len(boards):
@@ -212,15 +247,43 @@ with gr.Blocks() as interface:
                     )
                 with gr.Row():
                     square = gr.Textbox(
-                        label="Square", lines=1, max_lines=1, placeholder="a1"
+                        label="Square",
+                        lines=1,
+                        max_lines=1,
+                        value="a1",
+                        scale=1,
                     )
-                    from_to = gr.Radio(
-                        label="From (Query) / To (Key)",
-                        choices=["from", "to"],
-                        value="from",
+                    quantity = gr.Dropdown(
+                        label="Quantity",
+                        choices=["QK", "Q", "K", "out", "QKV"],
+                        value="QK",
+                        scale=2,
                     )
-                    color_flip = gr.Checkbox(
-                        label="Color flip", value=True, scale=1
+                    aggregate = gr.Dropdown(
+                        label="Aggregate",
+                        choices=["Row", "Column", "None"],
+                        value="Row",
+                        scale=2,
+                    )
+                    func = gr.Dropdown(
+                        label="Function",
+                        choices=[
+                            "softmax",
+                            "transpose",
+                            "matmul",
+                            "scale",
+                        ],
+                        value="softmax",
+                        scale=2,
+                    )
+                    trick = gr.Dropdown(
+                        label="Trick",
+                        choices=[
+                            "none",
+                            "revert",
+                        ],
+                        value="none",
+                        scale=2,
                     )
                 with gr.Row():
                     previous_board_button = gr.Button("Previous board")
@@ -238,8 +301,10 @@ with gr.Blocks() as interface:
         attention_layer,
         attention_head,
         square,
-        from_to,
-        color_flip,
+        quantity,
+        func,
+        trick,
+        aggregate,
     ]
     outputs = [image, current_board_fen, colorbar]
 
@@ -257,5 +322,7 @@ with gr.Blocks() as interface:
     attention_layer.change(make_plot, inputs=base_inputs, outputs=outputs)
     attention_head.change(make_plot, inputs=base_inputs, outputs=outputs)
     square.submit(make_plot, inputs=base_inputs, outputs=outputs)
-    from_to.change(make_plot, inputs=base_inputs, outputs=outputs)
-    color_flip.change(make_plot, inputs=base_inputs, outputs=outputs)
+    quantity.change(make_plot, inputs=base_inputs, outputs=outputs)
+    func.change(make_plot, inputs=base_inputs, outputs=outputs)
+    trick.change(make_plot, inputs=base_inputs, outputs=outputs)
+    aggregate.change(make_plot, inputs=base_inputs, outputs=outputs)

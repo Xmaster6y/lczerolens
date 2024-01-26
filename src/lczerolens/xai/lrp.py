@@ -6,9 +6,13 @@ from typing import Any, Dict
 
 import chess
 import torch
-import zennit
+from zennit.canonizers import SequentialMergeBatchNorm
+from zennit.composites import SpecialFirstLayerMapComposite
+from zennit.rules import Epsilon, Flat, Pass, ZPlus
+from zennit.types import Activation, Convolution
+from zennit.types import Linear as AnyLinear
 
-from lczerolens import board_utils
+from lczerolens import prediction_utils
 from lczerolens.adapt import ModelWrapper
 
 from .lens import Lens
@@ -39,26 +43,35 @@ class LrpLens(Lens):
         """
         return True
 
-    def _compute_lrp_heatmap(self, model, board: chess.Board):
+    def _compute_lrp_heatmap(
+        self, model, board: chess.Board, first_map_flat: bool = False
+    ):
         """
         Compute LRP heatmap for a given model and input.
         """
 
-        board_tensor = board_utils.board_to_tensor112x8x8(board)
-        board_tensor.to(DEVICE)
-        model.to(DEVICE)
-        model.eval()
-        board_tensor.requires_grad_(True)
+        canonizers = [SequentialMergeBatchNorm()]
 
-        composite = zennit.composites.EpsilonPlusFlat()
+        if first_map_flat:
+            first_map = [(AnyLinear, Flat)]
+        else:
+            first_map = []
+        layer_map = [
+            (Activation, Pass()),
+            (Convolution, ZPlus()),
+            (AnyLinear, Epsilon(epsilon=1e-6)),
+        ]
+        composite = SpecialFirstLayerMapComposite(
+            layer_map=layer_map, first_map=first_map, canonizers=canonizers
+        )
         with composite.context(model) as modified_model:
-            out = modified_model(input)
-            if len(out) == 2:
-                policy, outcome_probs = out
-                value = torch.zeros(outcome_probs.shape[0], 1)
-            else:
-                policy, outcome_probs, value = out
-            # gradient/ relevance wrt. class/output 0
-            outcome_probs.backward(gradient=torch.eye(3)[[0]])
-        relevance = board_tensor.grad[0]
+            output = prediction_utils.compute_move_prediction(
+                modified_model,
+                [board],
+                with_grad=True,
+                input_requires_grad=True,
+                return_input=True,
+            )
+            output["policy"].backward(gradient=output["policy"])
+        relevance = output["input"].grad[0]
         return relevance

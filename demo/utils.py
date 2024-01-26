@@ -9,7 +9,7 @@ import subprocess
 from demo import constants, state
 from lczerolens.adapt import ModelWrapper
 from lczerolens.utils import lczero as lczero_utils
-from lczerolens.xai import AttentionLens
+from lczerolens.xai import AttentionLens, LrpLens
 
 
 def get_models_info(onnx=True, leela=True):
@@ -119,8 +119,31 @@ def get_attention_lens_from_state(model_name):
         )
         state.wrappers[model_name] = wrapper
     if model_name in state.attention_lenses:
-        attention_lens = state.attention_lenses[model_name]
+        lens = state.attention_lenses[model_name]
     else:
-        attention_lens = AttentionLens(wrapper)
-        state.attention_lenses[model_name] = attention_lens
-    return wrapper, attention_lens
+        lens = AttentionLens()
+        if not lens.is_compatible(wrapper):
+            raise ValueError("Attention lens not compatible with model.")
+        state.attention_lenses[model_name] = lens
+    return wrapper, lens
+
+
+def get_lrp_lens_from_state(model_name):
+    """
+    Get the model wrapper and LRP lens from the state.
+    """
+    if model_name in state.wrappers:
+        wrapper = state.wrappers[model_name]
+    else:
+        wrapper = ModelWrapper.from_path(
+            f"{constants.MODEL_DIRECTORY}/{model_name}"
+        )
+        state.wrappers[model_name] = wrapper
+    if model_name in state.lrp_lenses:
+        lens = state.lrp_lenses[model_name]
+    else:
+        lens = LrpLens()
+        if not lens.is_compatible(wrapper):
+            raise ValueError("LRP lens not compatible with model.")
+        state.lrp_lenses[model_name] = lens
+    return wrapper, lens

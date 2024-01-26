@@ -78,7 +78,7 @@ class HookFactory(ABC):
     def register(
         self,
         module_registry: Dict[str, torch.nn.Module],
-        args_registry: Dict[str, HookArgs],
+        args_registry,
     ):
         """
         Registers the hooks.
@@ -88,7 +88,7 @@ class HookFactory(ABC):
     @abstractmethod
     def generate(
         self,
-        hook_args: HookArgs,
+        hook_args,
     ) -> Callable[
         [torch.nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]
     ]:
@@ -127,7 +127,7 @@ class CacheHookFactory(HookFactory):
         Initializes the hook factory.
         """
         super().__init__()
-        self._mode = mode
+        self._mode = CacheMode(mode)
 
     @property
     def mode(self):
@@ -139,7 +139,7 @@ class CacheHookFactory(HookFactory):
     def register(
         self,
         module_registry: Dict[str, torch.nn.Module],
-        args_registry: Dict[str, HookArgs],
+        args_registry: Dict[str, CacheHookArgs],
     ):
         """
         Registers the hooks.
@@ -152,7 +152,7 @@ class CacheHookFactory(HookFactory):
             self.removable_handles.append(removable_handle)
 
     def generate(
-        self, hook_args: HookArgs
+        self, hook_args: CacheHookArgs
     ) -> Callable[
         [torch.nn.Module, torch.Tensor, torch.Tensor], Optional[torch.Tensor]
     ]:
