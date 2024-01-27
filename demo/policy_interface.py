@@ -11,6 +11,7 @@ from demo import constants, utils
 from lczerolens import move_utils, prediction_utils, visualisation_utils
 
 current_board = None
+current_raw_policy = None
 current_policy = None
 current_value = None
 current_outcome = None
@@ -40,6 +41,7 @@ def compute_policy(
 ):
     global current_board
     global current_policy
+    global current_raw_policy
     global current_value
     global current_outcome
     if model_name == "":
@@ -55,24 +57,17 @@ def compute_policy(
         board = chess.Board(board_fen)
     except ValueError:
         gr.Warning("Invalid FEN.")
-        return (
-            None,
-            None,
-            "",
-        )
+        return (None, None, "", None)
     if action_seq:
         try:
             for action in action_seq.split():
                 board.push_uci(action)
         except ValueError:
             gr.Warning("Invalid action sequence.")
-            return (
-                None,
-                None,
-                "",
-            )
+            return (None, None, "", None)
     wrapper = utils.get_wrapper_from_state(model_name)
     output = wrapper.predict(board)
+    current_raw_policy = output["policy"]
     policy = torch.softmax(output["policy"], dim=-1)
 
     filtered_policy = torch.full((1858,), 0.0)
@@ -96,6 +91,7 @@ def make_plot(
 ):
     global current_board
     global current_policy
+    global current_raw_policy
     global current_value
     global current_outcome
 
@@ -106,11 +102,7 @@ def make_plot(
         or current_outcome is None
     ):
         gr.Warning("Please compute a policy first.")
-        return (
-            None,
-            None,
-            "",
-        )
+        return (None, None, "", None)
 
     value = current_value.item()
     us_win = current_outcome[0].item()
@@ -142,6 +134,13 @@ def make_plot(
     )
     with open(f"{constants.FIGURE_DIRECTORY}/policy.svg", "w") as f:
         f.write(svg_board)
+    fig_dist = visualisation_utils.render_policy_distribution(
+        current_raw_policy,
+        [
+            move_utils.encode_move(move, us_them)
+            for move in current_board.legal_moves
+        ],
+    )
     return (
         f"{constants.FIGURE_DIRECTORY}/policy.svg",
         fig,
@@ -149,6 +148,7 @@ def make_plot(
             f"Value: {value:.2f} - Win: {us_win:.2f} - "
             f"Draw: {draw:.2f} - Loss: {them_win:.2f}"
         ),
+        fig_dist,
     )
 
 
@@ -276,6 +276,7 @@ with gr.Blocks() as interface:
             )
         with gr.Column():
             image = gr.Image(label="Board")
+            density_plot = gr.Plot(label="Density")
 
     policy_inputs = [
         board_fen,
@@ -285,7 +286,7 @@ with gr.Blocks() as interface:
         aggregate_topk,
         move_to_play,
     ]
-    policy_outputs = [image, colorbar, game_info]
+    policy_outputs = [image, colorbar, game_info, density_plot]
     policy_button.click(
         make_policy_plot, inputs=policy_inputs, outputs=policy_outputs
     )

@@ -108,10 +108,22 @@ def make_policy_plot(
     )
     with open(f"{constants.FIGURE_DIRECTORY}/policy.svg", "w") as f:
         f.write(svg_board)
+    raw_policy, _ = lczero_utils.prediction_from_backend(
+        lczero_backend,
+        lczero_game,
+        softmax=False,
+        only_legal=False,
+        illegal_value=0,
+    )
+    fig_dist = visualisation_utils.render_policy_distribution(
+        raw_policy,
+        [move_utils.encode_move(move, us_them) for move in board.legal_moves],
+    )
     return (
         f"{constants.FIGURE_DIRECTORY}/policy.svg",
         fig,
         (f"Value: {value:.2f}"),
+        fig_dist,
     )
 
 
@@ -192,6 +204,7 @@ with gr.Blocks() as interface:
             )
         with gr.Column():
             image = gr.Image(label="Board")
+            density_plot = gr.Plot(label="Density")
 
     policy_inputs = [
         board_fen,
@@ -204,7 +217,7 @@ with gr.Blocks() as interface:
         render_bestk,
         only_legal,
     ]
-    policy_outputs = [image, colorbar, game_info]
+    policy_outputs = [image, colorbar, game_info, density_plot]
     policy_button.click(
         make_policy_plot, inputs=policy_inputs, outputs=policy_outputs
     )

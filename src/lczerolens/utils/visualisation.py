@@ -94,3 +94,37 @@ def render_architecture(model, name: str = "model", directory: str = ""):
     torchviz.make_dot(
         value, params=dict(list(model.named_parameters()))
     ).render(f"{directory}/{name}_value", format="svg")
+
+
+def render_policy_distribution(
+    policy,
+    legal_moves,
+    n_bins=10,
+):
+    """
+    Render the policy distribution histogram.
+    """
+    legal_mask = torch.Tensor(
+        [move in legal_moves for move in range(1858)]
+    ).bool()
+    fig = plt.figure(figsize=(6, 6))
+    ax = plt.gca()
+    _, bins, _ = ax.hist(
+        policy[~legal_mask],
+        bins=n_bins,
+        density=True,
+        alpha=0.5,
+        label="Illegal moves",
+    )
+    ax.hist(
+        policy[legal_mask],
+        bins=bins,
+        alpha=0.5,
+        density=True,
+        label="Legal moves",
+    )
+    plt.xlabel("Policy")
+    plt.ylabel("Density")
+    plt.legend()
+    plt.yscale("log")
+    return fig
