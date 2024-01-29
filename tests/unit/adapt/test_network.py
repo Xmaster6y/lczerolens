@@ -6,22 +6,20 @@ import chess
 import torch
 from lczero.backends import GameState
 
+from lczerolens import board_utils
 from lczerolens.utils import lczero as lczero_utils
 
 
-class TestWrapper:
-    def test_load_wrapper(self, tiny_wrapper):
-        """
-        Test that the wrapper loads.
-        """
-        assert tiny_wrapper.model is not None
-
-    def test_wrapper_prediction(self, lczero_backend, tiny_wrapper):
+class TestSeNet:
+    def test_senet_prediction(self, lczero_backend, tiny_senet):
         """
         Test that the wrapper prediction works.
         """
+
         board = chess.Board()
-        out = tiny_wrapper.predict(board)
+        out = tiny_senet(
+            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+        )
         policy = out["policy"]
         value = out["value"]
         lczero_game = GameState()
@@ -31,15 +29,18 @@ class TestWrapper:
         assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    def test_wrapper_prediction_random(
-        self, lczero_backend, tiny_wrapper, random_move_board_list
+    def test_senet_prediction_random(
+        self, lczero_backend, tiny_senet, random_move_board_list
     ):
         """
         Test that the wrapper prediction works.
         """
+
         move_list, board_list = random_move_board_list
         for i, board in enumerate(board_list):
-            out = tiny_wrapper.predict(board)
+            out = tiny_senet(
+                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            )
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(
@@ -51,15 +52,18 @@ class TestWrapper:
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    def test_wrapper_prediction_repetition(
-        self, lczero_backend, tiny_wrapper, repetition_move_board_list
+    def test_senet_prediction_repetition(
+        self, lczero_backend, tiny_senet, repetition_move_board_list
     ):
         """
         Test that the wrapper prediction works.
         """
+
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
-            out = tiny_wrapper.predict(board)
+            out = tiny_senet(
+                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            )
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(
@@ -71,15 +75,18 @@ class TestWrapper:
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    def test_wrapper_prediction_long(
-        self, lczero_backend, tiny_wrapper, long_move_board_list
+    def test_senet_prediction_long(
+        self, lczero_backend, tiny_senet, long_move_board_list
     ):
         """
         Test that the wrapper prediction works.
         """
+
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
-            out = tiny_wrapper.predict(board)
+            out = tiny_senet(
+                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            )
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(
