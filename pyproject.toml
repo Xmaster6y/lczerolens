@@ -26,7 +26,6 @@ build-backend = "poetry.core.masonry.api"
 python = "^3.9"
 python-chess = "^1.999"
 torch = "^2.1.2"
-onnx2pytorch = "^0.4.1"
 matplotlib = "^3.8.2"
 torchviz = "^0.0.2"
 zennit = "^0.5.1"
@@ -41,6 +40,7 @@ pre-commit = "*"
 pytest = "*"
 pytest-cov = "*"
 lczero-bindings = {git = "https://github.com/LeelaChessZero/lc0.git"}
+onnxruntime = "^1.16.3"
 
 [tool.poetry.group.demo]
 optional = true

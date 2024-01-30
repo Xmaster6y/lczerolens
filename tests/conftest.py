@@ -2,10 +2,11 @@
 File to test the encodings for the Leela Chess Zero engine.
 """
 
+import onnxruntime as ort
 import pytest
 from lczero.backends import Backend, Weights
 
-from lczerolens.adapt import ModelWrapper, SeNet
+from lczerolens.adapt import AutoBuilder, ModelWrapper
 from lczerolens.utils import lczero as lczero_utils
 
 
@@ -31,8 +32,11 @@ def tiny_wrapper(ensure_network):
 
 @pytest.fixture(scope="session")
 def tiny_senet(tiny_wrapper):
-    senet = SeNet(2, 16, n_hidden_red=16, heads=["policy", "value"])
-    state_dict = tiny_wrapper.model.state_dict()
-    new_state_dict = senet.state_dict_mapper(state_dict)
-    senet.load_state_dict(new_state_dict)
+    senet = AutoBuilder.build_from_path("assets/tinygyal-8.onnx")
     yield senet
+
+
+@pytest.fixture(scope="session")
+def tiny_senet_ort():
+    senet_ort = ort.InferenceSession("assets/tinygyal-8.onnx")
+    yield senet_ort

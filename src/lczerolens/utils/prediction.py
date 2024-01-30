@@ -55,26 +55,7 @@ def compute_move_prediction(
 
     with torch.set_grad_enabled(with_grad):
         out = model(batched_tensor)
-        if len(out) == 2:
-            policy, other = out
-            if other.shape[1] == 3:
-                outcome_probs = other
-                value = torch.zeros((outcome_probs.shape[0], 1))
-            elif other.shape[1] == 1:
-                value = other
-                outcome_probs = torch.zeros((value.shape[0], 3))
-            else:
-                raise ValueError(f"Unexpected output shape {other.shape}.")
-        else:
-            policy, outcome_probs, value = out
-    out_d = {
-        "policy": policy,
-        "outcome_probs": outcome_probs,
-        "value": value,
-    }
+
     if return_input:
-        out_d["input"] = batched_tensor
-    return TensorDict(
-        out_d,
-        batch_size=batched_tensor.shape[0],
-    )
+        out["input"] = batched_tensor
+    return out

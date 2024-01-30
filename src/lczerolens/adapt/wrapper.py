@@ -5,10 +5,11 @@ Class for wrapping the LCZero models.
 from typing import List
 
 import chess
+from torch import nn
 
 from lczerolens import prediction_utils
 
-from .builder import AutoBuilder, LczeroModel
+from .builder import AutoBuilder
 
 
 class ModelWrapper:
@@ -20,12 +21,12 @@ class ModelWrapper:
 
     def __init__(
         self,
-        model: LczeroModel,
+        model: nn.Module,
     ):
         """
         Initializes the wrapper.
         """
-        if not isinstance(model, LczeroModel):
+        if not isinstance(model, nn.Module):
             raise ValueError(
                 f"Model must be an instance of LczeroModel, not {type(model)}"
             )
@@ -36,8 +37,8 @@ class ModelWrapper:
         """
         Creates a wrapper from a model path.
         """
-        lczero_model = cls.model_builder.build_from_path(model_path)
-        return cls(lczero_model)
+        model = cls.model_builder.build_from_path(model_path)
+        return cls(model)
 
     def __call__(self, boards: List[chess.Board]):
         """
