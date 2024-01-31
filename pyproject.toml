@@ -48,3 +48,6 @@ optional = true
 
 [tool.poetry.group.demo.dependencies]
 gradio = "^4.14.0"
+
+[build]
+target-dir = "build/dist"
