@@ -31,6 +31,7 @@ torchviz = "^0.0.2"
 zennit = "^0.5.1"
 onnx2torch = "^1.5.13"
 tensordict = "^0.2.1"
+gdown = "^5.0.1"
 
 [tool.poetry.group.dev]
 optional = true
