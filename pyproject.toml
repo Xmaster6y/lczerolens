@@ -9,6 +9,7 @@ line_length = 79
 name = "lczerolens"
 version = "0.1.0"
 description = "Interpretability for LeelaChessZero networks."
+readme = "README.md"
 license = "MIT"
 authors = [
     "Yoann Poupart <yoann.poupart@ens-lyon.org>",
