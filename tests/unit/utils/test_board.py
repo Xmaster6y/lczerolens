@@ -10,7 +10,7 @@ from lczerolens.utils import lczero as lczero_utils
 
 class TestWithBackend:
     def test_board_to_tensor13x8x8(
-        self, random_move_board_list, lczero_backend
+        self, random_move_board_list, tiny_lczero_backend
     ):
         """
         Test that the board to tensor function works.
@@ -21,12 +21,12 @@ class TestWithBackend:
             uci_moves = [move.uci() for move in move_list[:i]]
             lczero_game = GameState(moves=uci_moves)
             lczero_input_tensor = lczero_utils.board_from_backend(
-                lczero_backend, lczero_game, planes=13
+                tiny_lczero_backend, lczero_game, planes=13
             )
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
     def test_board_to_tensor112x8x8(
-        self, random_move_board_list, lczero_backend
+        self, random_move_board_list, tiny_lczero_backend
     ):
         """
         Test that the board to tensor function works.
@@ -37,7 +37,7 @@ class TestWithBackend:
             uci_moves = [move.uci() for move in move_list[:i]]
             lczero_game = GameState(moves=uci_moves)
             lczero_input_tensor = lczero_utils.board_from_backend(
-                lczero_backend, lczero_game
+                tiny_lczero_backend, lczero_game
             )
             # assert (board_tensor == lczero_input_tensor).all()
             for plane in range(112):
@@ -48,7 +48,7 @@ class TestWithBackend:
 
 class TestRepetition:
     def test_board_to_tensor13x8x8(
-        self, repetition_move_board_list, lczero_backend
+        self, repetition_move_board_list, tiny_lczero_backend
     ):
         """
         Test that the board to tensor function works.
@@ -59,12 +59,12 @@ class TestRepetition:
             board_tensor = board_utils.board_to_tensor13x8x8(board)
             lczero_game = GameState(moves=uci_moves)
             lczero_input_tensor = lczero_utils.board_from_backend(
-                lczero_backend, lczero_game, planes=13
+                tiny_lczero_backend, lczero_game, planes=13
             )
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
     def test_board_to_tensor112x8x8(
-        self, repetition_move_board_list, lczero_backend
+        self, repetition_move_board_list, tiny_lczero_backend
     ):
         """
         Test that the board to tensor function works.
@@ -75,13 +75,15 @@ class TestRepetition:
             board_tensor = board_utils.board_to_tensor112x8x8(board)
             lczero_game = GameState(moves=uci_moves)
             lczero_input_tensor = lczero_utils.board_from_backend(
-                lczero_backend, lczero_game
+                tiny_lczero_backend, lczero_game
             )
             assert (board_tensor == lczero_input_tensor).all()
 
 
 class TestLong:
-    def test_board_to_tensor13x8x8(self, long_move_board_list, lczero_backend):
+    def test_board_to_tensor13x8x8(
+        self, long_move_board_list, tiny_lczero_backend
+    ):
         """
         Test that the board to tensor function works.
         """
@@ -91,12 +93,12 @@ class TestLong:
             board_tensor = board_utils.board_to_tensor13x8x8(board)
             lczero_game = GameState(moves=uci_moves)
             lczero_input_tensor = lczero_utils.board_from_backend(
-                lczero_backend, lczero_game, planes=13
+                tiny_lczero_backend, lczero_game, planes=13
             )
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
     def test_board_to_tensor112x8x8(
-        self, long_move_board_list, lczero_backend
+        self, long_move_board_list, tiny_lczero_backend
     ):
         """
         Test that the board to tensor function works.
@@ -107,6 +109,6 @@ class TestLong:
             board_tensor = board_utils.board_to_tensor112x8x8(board)
             lczero_game = GameState(moves=uci_moves)
             lczero_input_tensor = lczero_utils.board_from_backend(
-                lczero_backend, lczero_game
+                tiny_lczero_backend, lczero_game
             )
             assert (board_tensor == lczero_input_tensor).all()

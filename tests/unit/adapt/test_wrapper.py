@@ -16,7 +16,7 @@ class TestWrapper:
         """
         assert tiny_wrapper.model is not None
 
-    def test_wrapper_prediction(self, lczero_backend, tiny_wrapper):
+    def test_wrapper_prediction(self, tiny_lczero_backend, tiny_wrapper):
         """
         Test that the wrapper prediction works.
         """
@@ -26,13 +26,13 @@ class TestWrapper:
         value = out["value"]
         lczero_game = GameState()
         lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
-            lczero_backend, lczero_game
+            tiny_lczero_backend, lczero_game
         )
         assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value, atol=1e-4)
 
     def test_wrapper_prediction_random(
-        self, lczero_backend, tiny_wrapper, random_move_board_list
+        self, tiny_lczero_backend, tiny_wrapper, random_move_board_list
     ):
         """
         Test that the wrapper prediction works.
@@ -46,13 +46,13 @@ class TestWrapper:
                 moves=[move.uci() for move in move_list[:i]]
             )
             lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
-                lczero_backend, lczero_game
+                tiny_lczero_backend, lczero_game
             )
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
     def test_wrapper_prediction_repetition(
-        self, lczero_backend, tiny_wrapper, repetition_move_board_list
+        self, tiny_lczero_backend, tiny_wrapper, repetition_move_board_list
     ):
         """
         Test that the wrapper prediction works.
@@ -66,13 +66,13 @@ class TestWrapper:
                 moves=[move.uci() for move in move_list[:i]]
             )
             lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
-                lczero_backend, lczero_game
+                tiny_lczero_backend, lczero_game
             )
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
     def test_wrapper_prediction_long(
-        self, lczero_backend, tiny_wrapper, long_move_board_list
+        self, tiny_lczero_backend, tiny_wrapper, long_move_board_list
     ):
         """
         Test that the wrapper prediction works.
@@ -86,7 +86,7 @@ class TestWrapper:
                 moves=[move.uci() for move in move_list[:i]]
             )
             lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
-                lczero_backend, lczero_game
+                tiny_lczero_backend, lczero_game
             )
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)

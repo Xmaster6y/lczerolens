@@ -30,6 +30,9 @@ jobs:
     - name: Download lczero weights
       run: |
         curl -L -o "assets/tinygyal-8.pb.gz" "https://drive.google.com/uc?export=download&id=1Ssl4JanqzQn3p-RoHRDk_aApykl-SukE"
+        curl -L -o "assets/384x30-2022_0108_1903_17_608.pb.gz" "https://drive.google.com/uc?export=download&id=1WzBQV_zn5NnfsG0K8kOion0pvWxXhgKM"
+        curl -L -o "assets/maia-1100.pb.gz" "https://drive.google.com/uc?export=download&id=1erxB3tULDURjpPhiPWVGr6X986Q8uE6U"
+        curl -L -o "assets/t1-smolgen-512x15x8h-distilled-swa-3395000.pb.gz" "https://drive.google.com/uc?export=download&id=1YqqANK-wuZIOmMweuK_oCU7vfPN7G_Z6"
     - name: Run tests
       run: |
         make tests

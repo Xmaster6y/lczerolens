@@ -7,7 +7,7 @@ from lczerolens.xai import AttentionLens
 
 
 class TestWrapper:
-    def test_load_wrapper(self, ensure_network):
+    def test_load_wrapper(self, tiny_ensure_network):
         """
         Test that the wrapper loads.
         """

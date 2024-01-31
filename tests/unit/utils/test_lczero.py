@@ -35,28 +35,28 @@ class TestExecution:
         assert isinstance(generic_command, str)
         assert "Usage: lc0" in generic_command
 
-    def test_board_from_backend(self, lczero_backend):
+    def test_board_from_backend(self, tiny_lczero_backend):
         """
         Test that the board from backend function works.
         """
         lczero_game = GameState()
         lczero_board_tensor = lczero_utils.board_from_backend(
-            lczero_backend, lczero_game
+            tiny_lczero_backend, lczero_game
         )
         assert lczero_board_tensor.shape == (112, 8, 8)
 
-    def test_prediction_from_backend(self, lczero_backend):
+    def test_prediction_from_backend(self, tiny_lczero_backend):
         """
         Test that the prediction from backend function works.
         """
         lczero_game = GameState()
         lczero_policy, lczero_value = lczero_utils.prediction_from_backend(
-            lczero_backend, lczero_game
+            tiny_lczero_backend, lczero_game
         )
         assert lczero_policy.shape == (1858,)
         assert (lczero_value >= -1) and (lczero_value <= 1)
         lczero_policy_softmax, _ = lczero_utils.prediction_from_backend(
-            lczero_backend, lczero_game, softmax=True
+            tiny_lczero_backend, lczero_game, softmax=True
         )
         assert lczero_policy_softmax.shape == (1858,)
         assert (lczero_policy_softmax >= 0).all() and (
