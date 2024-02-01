@@ -7,7 +7,7 @@ from typing import List
 import chess
 from torch import nn
 
-from lczerolens import prediction_utils
+from lczerolens.utils import prediction as prediction_utils
 
 from .builder import AutoBuilder
 

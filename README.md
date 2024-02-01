@@ -18,13 +18,8 @@ pip install lczerolens
 Build a model from leela file (convert then load):
 
 ```python
-from lczerolens import lczero as lczero_utils
 from lczerolens import AutoBuilder
 
-lczero_utils.convert_to_onnx(
-    "leela-network.pb.gz",
-    "leela-network.onnx"
-)
 model = AutoBuilder.from_path(
     "leela-network.onnx"
 )
@@ -67,7 +62,7 @@ from lczerolens import visualisation_utils, LrpLens
 lens = LrpLens()
 
 # Compute the relevance
-assert lens.is_compatible(board, wrapper)
+assert lens.is_compatible(wrapper)
 relevance = lens.compute_heatmap(board, wrapper)
 
 # Choose a plane index and render the heatmap on the board
@@ -78,6 +73,37 @@ if board.turn == chess.BLACK:
 svg_board, fig = visualisation_utils.render_heatmap(
     board, heatmap, normalise="abs"
 )
+```
+
+### Convert a Network
+
+To convert a network you'll need to have installed the `lc0` extra:
+
+```bash
+pip install lczerolens[lc0]
+```
+
+```python
+from lczerolens import lczero as lczero_utils
+
+lczero_utils.convert_to_onnx(
+    "leela-network.pb.gz",
+    "leela-network.onnx"
+)
+```
+
+## Demo
+
+Additionally, you can run the gradio demo locally (also deployed on HF). First you'll need gradio, which is packaged in the `demo` extra:
+
+```bash
+pip install lczerolens[demo]
+```
+
+And then launch the demo (running on port `8000`):
+
+```bash
+make demo
 ```
 
 ## Full Documentation

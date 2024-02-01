@@ -32,6 +32,12 @@ torchviz = "^0.0.2"
 zennit = "^0.5.1"
 onnx2torch = "^1.5.13"
 tensordict = "^0.2.1"
+lczero-bindings = {git = "https://github.com/LeelaChessZero/lc0.git", optional = true}
+gradio = {version = "^4.14.0", optional = true}
+
+[tool.poetry.extras]
+lc0 = ["lczero-bindings"]
+demo = ["gradio"]
 
 [tool.poetry.group.dev]
 optional = true

@@ -8,8 +8,8 @@ tests:
 	poetry run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v
 
 # API
-.PHONY: app-start
-app-start:
+.PHONY: demo
+demo:
 	poetry run python -m demo.main
 
 # Docker
