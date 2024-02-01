@@ -92,11 +92,16 @@ def make_plot(
 
     board = boards[board_index]
     relevance_tensor = cache[board_index]
+    a_max = relevance_tensor.abs().max()
+    if a_max != 0:
+        relevance_tensor = relevance_tensor / a_max
+    vmin = -1
+    vmax = 1
     heatmap = relevance_tensor[plane_index - 1].view(64)
     if board.turn == chess.BLACK:
         heatmap = heatmap.view(8, 8).flip(0).view(64)
     svg_board, fig = visualisation_utils.render_heatmap(
-        board, heatmap, normalise="abs"
+        board, heatmap, vmin=vmin, vmax=vmax
     )
     with open(f"{constants.FIGURE_DIRECTORY}/lrp.svg", "w") as f:
         f.write(svg_board)
@@ -116,6 +121,11 @@ def make_history_plot(
 
     board = boards[board_index]
     relevance_tensor = cache[board_index]
+    a_max = relevance_tensor.abs().max()
+    if a_max != 0:
+        relevance_tensor = relevance_tensor / a_max
+    vmin = -1
+    vmax = 1
     heatmap = (
         relevance_tensor[13 * (history_index - 1) : 13 * history_index - 1]
         .sum(dim=0)
@@ -128,7 +138,7 @@ def make_history_plot(
     else:
         history_board = boards[board_index - history_index + 1]
     svg_board, fig = visualisation_utils.render_heatmap(
-        history_board, heatmap, normalise="abs"
+        history_board, heatmap, vmin=vmin, vmax=vmax
     )
     with open(f"{constants.FIGURE_DIRECTORY}/lrp_history.svg", "w") as f:
         f.write(svg_board)
