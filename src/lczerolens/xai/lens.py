@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, Optional
 import chess
 import torch
 
-from lczerolens.adapt import ModelWrapper
+from lczerolens.adapt.wrapper import ModelWrapper
 
 
 class Lens(ABC):

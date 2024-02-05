@@ -6,6 +6,7 @@ import chess
 import torch
 from lczero.backends import GameState
 
+from lczerolens.adapt import MlhFlow, PolicyFlow, ValueFlow, WdlFlow
 from lczerolens.utils import lczero as lczero_utils
 
 
@@ -90,3 +91,45 @@ class TestWrapper:
             )
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
+
+
+class TestFlows:
+    def test_policy_flow(self, tiny_wrapper):
+        """
+        Test that the policy flow works.
+        """
+        policy_flow = PolicyFlow(tiny_wrapper.model)
+        board = chess.Board()
+        policy = policy_flow.predict(board)
+        wrapper_policy = tiny_wrapper.predict(board)["policy"]
+        assert torch.allclose(policy, wrapper_policy)
+
+    def test_value_flow(self, tiny_wrapper):
+        """
+        Test that the value flow works.
+        """
+        value_flow = ValueFlow(tiny_wrapper.model)
+        board = chess.Board()
+        value = value_flow.predict(board)
+        wrapper_value = tiny_wrapper.predict(board)["value"]
+        assert torch.allclose(value, wrapper_value)
+
+    def test_wdl_flow(self, winner_wrapper):
+        """
+        Test that the wdl flow works.
+        """
+        wdl_flow = WdlFlow(winner_wrapper.model)
+        board = chess.Board()
+        wdl = wdl_flow.predict(board)
+        wrapper_wdl = winner_wrapper.predict(board)["wdl"]
+        assert torch.allclose(wdl, wrapper_wdl)
+
+    def test_mlh_flow(self, winner_wrapper):
+        """
+        Test that the mlh flow works.
+        """
+        mlh_flow = MlhFlow(winner_wrapper.model)
+        board = chess.Board()
+        mlh = mlh_flow.predict(board)
+        wrapper_mlh = winner_wrapper.predict(board)["mlh"]
+        assert torch.allclose(mlh, wrapper_mlh)

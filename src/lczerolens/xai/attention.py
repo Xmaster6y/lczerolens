@@ -7,7 +7,8 @@ from typing import Dict, Optional, Union
 import chess
 import torch
 
-from lczerolens.adapt import ModelWrapper
+from lczerolens.adapt.vitnet import VitNet
+from lczerolens.adapt.wrapper import ModelWrapper
 
 from .lens import CacheHookArgs, CacheHookFactory, CacheMode, Lens
 
@@ -33,7 +34,10 @@ class AttentionLens(Lens):
         """
         Returns whether the lens is compatible with the model.
         """
-        return self._has_attention(wrapper)
+        if isinstance(wrapper.model, VitNet):
+            return True
+        else:
+            return False
 
     def compute_heatmap(
         self, board: chess.Board, wrapper: ModelWrapper, **kwargs
@@ -45,16 +49,6 @@ class AttentionLens(Lens):
         attention_layer = kwargs.get("attention_layer", -1)
         attention = self.get_attention(attention_layer)
         return attention
-
-    def _has_attention(self, wrapper: ModelWrapper) -> bool:
-        """
-        Ensures that the model has attention.
-        """
-        for name, _ in wrapper.model.named_modules():
-            match = re.search(self.module_name_exp, name)
-            if match:
-                return True
-        return False
 
     def _cache_attention(
         self,

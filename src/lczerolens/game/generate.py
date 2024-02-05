@@ -1,4 +1,18 @@
+"""
+Classes for generating games.
+"""
+
+from dataclasses import dataclass
+from typing import List
+
 from .search import SearchAlgorithm
+
+
+@dataclass
+class Game:
+    offset: int
+    gameid: str
+    moves: List[str]
 
 
 class GameGenerator:

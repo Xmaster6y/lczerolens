@@ -1,3 +1,8 @@
+"""
+Classes for search algorithms.
+"""
+
+
 class Node:
     pass
 

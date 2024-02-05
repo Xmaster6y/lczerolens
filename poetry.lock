@@ -890,6 +890,20 @@ MarkupSafe = ">=2.0"
 i18n = ["Babel (>=2.7)"]
 
 [[package]]
+name = "jsonlines"
+version = "4.0.0"
+description = "Library with helpers for the jsonlines file format"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "jsonlines-4.0.0-py3-none-any.whl", hash = "sha256:185b334ff2ca5a91362993f42e83588a360cf95ce4b71a73548502bda52a7c55"},
+    {file = "jsonlines-4.0.0.tar.gz", hash = "sha256:0c6d2c09117550c089995247f605ae4cf77dd1533041d366351f6f298822ea74"},
+]
+
+[package.dependencies]
+attrs = ">=19.2.0"
+
+[[package]]
 name = "jsonschema"
 version = "4.21.1"
 description = "An implementation of JSON Schema validation for Python"
@@ -2868,13 +2882,13 @@ files = [
 
 [[package]]
 name = "zennit"
-version = "0.5.1"
+version = "0.4.6"
 description = "Attribution of Neural Networks using PyTorch"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "zennit-0.5.1-py3-none-any.whl", hash = "sha256:a49be81f34ccb851633fea08a07bba2d04e73b00c25ffe54ac0ec822d0a3b096"},
-    {file = "zennit-0.5.1.tar.gz", hash = "sha256:ce4889ad8c09fee87d5eca426ea5607ef27f43340a7d2963559d559f5f4d3fd3"},
+    {file = "zennit-0.4.6-py3-none-any.whl", hash = "sha256:bc69c0ca04c4e9addb774636900da046f746b3504676155df4d4c81a32106a43"},
+    {file = "zennit-0.4.6.tar.gz", hash = "sha256:ef8c8c8b81b4d13987f4d5fbafee2faa733b87503f920b6fc67a6177892a94f8"},
 ]
 
 [package.dependencies]
@@ -2884,9 +2898,25 @@ Pillow = "*"
 torch = ">=1.7.0"
 torchvision = "*"
 
+[[package]]
+name = "zennit-crp"
+version = "0.6.0"
+description = "Concept Relevance Propagation and Relevance Maximization"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "zennit-crp-0.6.0.tar.gz", hash = "sha256:a0ca58990f54280df84623e78c396474a7ad4041baa0c2caa4ef0b46326446ba"},
+    {file = "zennit_crp-0.6.0-py3-none-any.whl", hash = "sha256:dd8341ca31b2e0bb12d1cbdaa7913a80f99c73299f81cfeeb4bda117603dca74"},
+]
+
+[package.dependencies]
+matplotlib = "*"
+torch = ">=1.7.0"
+tqdm = "*"
+zennit = "<=0.4.6"
+
 [package.extras]
-docs = ["ipykernel (>=6.13.0)", "nbsphinx (>=0.8.8)", "sphinx-copybutton (>=0.4.0)", "sphinx-rtd-theme (>=1.0.0)", "sphinxcontrib.bibtex (>=2.4.1)", "sphinxcontrib.datatemplates (>=0.9.0)"]
-tests = ["pytest", "pytest-cov"]
+fast-img = ["Pillow-SIMD"]
 
 [[package]]
 name = "zipp"
@@ -2910,4 +2940,4 @@ lc0 = ["lczero-bindings"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "8abcf1f407c4b079e5bc0ad0ebed20a12439f93fbc701a247fcbb0726733add9"
+content-hash = "188631a83882f1ad5bf89dedd63b4841af265a1cb45b4484accaeb005ddc7519"

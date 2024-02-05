@@ -6,22 +6,24 @@ from typing import Any, Dict
 
 import chess
 import torch
+from crp.attribution import CondAttribution
+from crp.helper import get_layer_names
 from zennit.canonizers import SequentialMergeBatchNorm
 from zennit.composites import SpecialFirstLayerMapComposite
 from zennit.rules import Epsilon, Flat, Pass, ZPlus
 from zennit.types import Activation, Convolution
 from zennit.types import Linear as AnyLinear
 
-from lczerolens import prediction_utils
+from lczerolens import board_utils
 from lczerolens.adapt.senet import SeNet
-from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
 
 from .lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class LrpLens(Lens):
+class CrpLens(Lens):
     """
     Class for wrapping the LCZero models.
     """
@@ -35,7 +37,7 @@ class LrpLens(Lens):
         """
         Runs basic LRP on the model.
         """
-        relevance = self._compute_lrp_heatmap(wrapper.model, board)
+        relevance = self._compute_crp_heatmap(wrapper.model, board, **kwargs)
         return relevance
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
@@ -47,8 +49,11 @@ class LrpLens(Lens):
         else:
             return False
 
-    def _compute_lrp_heatmap(
-        self, model, board: chess.Board, first_map_flat: bool = False
+    def _compute_crp_heatmap(
+        self,
+        model,
+        board: chess.Board,
+        **kwargs: Dict[str, Any],
     ):
         """
         Compute LRP heatmap for a given model and input.
@@ -56,7 +61,7 @@ class LrpLens(Lens):
 
         canonizers = [SequentialMergeBatchNorm()]
 
-        if first_map_flat:
+        if kwargs["first_map_flat"]:
             first_map = [(AnyLinear, Flat)]
         else:
             first_map = []
@@ -68,14 +73,32 @@ class LrpLens(Lens):
         composite = SpecialFirstLayerMapComposite(
             layer_map=layer_map, first_map=first_map, canonizers=canonizers
         )
-        with composite.context(model) as modified_model:
-            output = prediction_utils.compute_move_prediction(
-                modified_model,
-                [board],
-                with_grad=True,
-                input_requires_grad=True,
-                return_input=True,
-            )
-            output["policy"].backward(gradient=output["policy"])
-        relevance = output["input"].grad[0]
-        return relevance
+        policy_model = PolicyFlow(model)
+        layer_names = get_layer_names(
+            policy_model, [torch.nn.Conv2d, torch.nn.Linear]
+        )
+        attribution = CondAttribution(policy_model)
+        board_tensor = (
+            board_utils.board_to_tensor112x8x8(board)
+            .to(DEVICE)
+            .unsqueeze(0)
+            .requires_grad_(True)
+        )
+        conditions = [
+            {
+                "model.block4.conv1": [0],
+                "model.block3.conv1": [0],
+                "model.block2.conv1": [0],
+                "model.block1.conv1": [0],
+                "y": list(range(1858)),
+            }
+        ]
+        attr = attribution(
+            board_tensor,
+            conditions,
+            composite,
+            record_layer=layer_names,
+        )
+
+        heatmap = attr.heatmap
+        return heatmap

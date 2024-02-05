@@ -6,7 +6,8 @@ import onnxruntime as ort
 import pytest
 from lczero.backends import Backend, Weights
 
-from lczerolens.adapt import AutoBuilder, ModelWrapper, SeNet, VitNet
+from lczerolens import AutoBuilder, GameDataset, ModelWrapper
+from lczerolens.adapt import SeNet, VitNet
 from lczerolens.utils import lczero as lczero_utils
 
 
@@ -74,6 +75,14 @@ def winner_ensure_network():
 
 
 @pytest.fixture(scope="class")
+def winner_wrapper(winner_ensure_network):
+    wrapper = ModelWrapper.from_path(
+        "assets/384x30-2022_0108_1903_17_608.onnx"
+    )
+    yield wrapper
+
+
+@pytest.fixture(scope="class")
 def winner_senet(winner_ensure_network):
     senet = AutoBuilder.build_from_path(
         "assets/384x30-2022_0108_1903_17_608.onnx"
@@ -114,3 +123,8 @@ def t1_vitnet_ort(t1_ensure_network):
         "assets/t1-smolgen-512x15x8h-distilled-swa-3395000.onnx"
     )
     yield vitnet_ort
+
+
+@pytest.fixture(scope="session")
+def game_dataset_10():
+    yield GameDataset("assets/test_stockfish_10.jsonl")
