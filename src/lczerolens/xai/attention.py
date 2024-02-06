@@ -9,6 +9,7 @@ import torch
 
 from lczerolens.adapt.vitnet import VitNet
 from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.game.dataset import GameDataset
 
 from .lens import CacheHookArgs, CacheHookFactory, CacheMode, Lens
 
@@ -49,6 +50,18 @@ class AttentionLens(Lens):
         attention_layer = kwargs.get("attention_layer", -1)
         attention = self.get_attention(attention_layer)
         return attention
+
+    def compute_statistics(
+        self,
+        dataset: GameDataset,
+        wrapper: ModelWrapper,
+        batch_size: int,
+        **kwargs,
+    ) -> dict:
+        """
+        Computes the statistics for a given board.
+        """
+        raise NotImplementedError
 
     def _cache_attention(
         self,

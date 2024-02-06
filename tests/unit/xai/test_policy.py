@@ -1,10 +1,10 @@
 """
-Test for the model utils.
+Test the policy lens.
 """
 
 import torch
 
-from lczerolens import prediction_utils
+from lczerolens import AutoLens
 
 
 class TestAggregatePolicy:
@@ -13,7 +13,8 @@ class TestAggregatePolicy:
         Test that the aggregate policy function works.
         """
         policy = torch.zeros(1858)
-        pickup_agg, dropoff_agg = prediction_utils.aggregate_policy(policy)
+        lens = AutoLens.from_type("policy")
+        pickup_agg, dropoff_agg = lens.aggregate_policy(policy)
         assert (pickup_agg == torch.zeros(64)).all()
         assert (dropoff_agg == torch.zeros(64)).all()
 
@@ -22,7 +23,8 @@ class TestAggregatePolicy:
         Test that the aggregate policy function works.
         """
         policy = torch.ones(1858)
-        pickup_agg, dropoff_agg = prediction_utils.aggregate_policy(policy)
+        lens = AutoLens.from_type("policy")
+        pickup_agg, dropoff_agg = lens.aggregate_policy(policy)
         assert pickup_agg.sum() == 1858
         assert dropoff_agg.sum() == 1858
         promotion_diff = torch.tensor([6, 9, 9, 9, 9, 9, 9, 6])

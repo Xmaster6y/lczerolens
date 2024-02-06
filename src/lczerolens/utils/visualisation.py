@@ -6,6 +6,7 @@ import chess
 import chess.svg
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torchviz
 
@@ -127,4 +128,79 @@ def render_policy_distribution(
     plt.ylabel("Density")
     plt.legend()
     plt.yscale("log")
+    return fig
+
+
+def render_policy_statistics(
+    statistics,
+):
+    """
+    Render the policy statistics.
+    """
+    fig = plt.figure(figsize=(6, 6))
+    ax = plt.gca()
+    move_indices = list(statistics["mean_legal_logits"].keys())
+    legal_means_avg = [
+        np.mean(statistics["mean_legal_logits"][move_idx])
+        for move_idx in move_indices
+    ]
+    illegal_means_avg = [
+        np.mean(statistics["mean_illegal_logits"][move_idx])
+        for move_idx in move_indices
+    ]
+    legal_means_std = [
+        np.std(statistics["mean_legal_logits"][move_idx])
+        for move_idx in move_indices
+    ]
+    illegal_means_std = [
+        np.std(statistics["mean_illegal_logits"][move_idx])
+        for move_idx in move_indices
+    ]
+    ax.errorbar(
+        move_indices,
+        legal_means_avg,
+        yerr=legal_means_std,
+        label="Legal moves",
+    )
+    ax.errorbar(
+        move_indices,
+        illegal_means_avg,
+        yerr=illegal_means_std,
+        label="Illegal moves",
+    )
+    plt.xlabel("Move index")
+    plt.ylabel("Mean policy logits")
+    plt.legend()
+    return fig
+
+
+def render_relevance_proportion(
+    statistics,
+):
+    """
+    Render the relevance proportion statistics.
+    """
+    fig = plt.figure(figsize=(6, 6))
+    ax = plt.gca()
+    move_indices = list(statistics["relevance_proportion_h0"].keys())
+    for h in range(8):
+        relevance_proportion_avg = [
+            np.mean(statistics[f"relevance_proportion_h{h}"][move_idx])
+            for move_idx in move_indices
+        ]
+        relevance_proportion_std = [
+            np.std(statistics[f"relevance_proportion_h{h}"][move_idx])
+            for move_idx in move_indices
+        ]
+        ax.errorbar(
+            move_indices[h + 1 :],
+            relevance_proportion_avg[h + 1 :],
+            yerr=relevance_proportion_std[h + 1 :],
+            label=f"History {h}",
+        )
+
+    plt.xlabel("Move index")
+    plt.ylabel("Absolute relevance proportion")
+    plt.yscale("log")
+    plt.legend()
     return fig

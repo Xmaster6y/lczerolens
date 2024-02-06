@@ -8,7 +8,8 @@ import gradio as gr
 import torch
 
 from demo import constants, utils
-from lczerolens import move_utils, prediction_utils, visualisation_utils
+from lczerolens import move_utils, visualisation_utils
+from lczerolens.xai import PolicyLens
 
 current_board = None
 current_raw_policy = None
@@ -67,8 +68,8 @@ def compute_policy(
             return (None, None, "", None)
     wrapper = utils.get_wrapper_from_state(model_name)
     output = wrapper.predict(board)
-    current_raw_policy = output["policy"]
-    policy = torch.softmax(output["policy"], dim=-1)
+    current_raw_policy = output["policy"][0]
+    policy = torch.softmax(output["policy"][0], dim=-1)
 
     filtered_policy = torch.full((1858,), 0.0)
     legal_moves = [
@@ -80,8 +81,8 @@ def compute_policy(
 
     current_board = board
     current_policy = policy
-    current_value = output["value"]
-    current_outcome = output["outcome_probs"]
+    current_value = output.get("value", None)
+    current_outcome = output.get("wdl", None)
 
 
 def make_plot(
@@ -95,21 +96,11 @@ def make_plot(
     global current_value
     global current_outcome
 
-    if (
-        current_board is None
-        or current_policy is None
-        or current_value is None
-        or current_outcome is None
-    ):
+    if current_board is None or current_policy is None:
         gr.Warning("Please compute a policy first.")
         return (None, None, "", None)
 
-    value = current_value.item()
-    us_win = current_outcome[0].item()
-    draw = current_outcome[1].item()
-    them_win = current_outcome[2].item()
-
-    pickup_agg, dropoff_agg = prediction_utils.aggregate_policy(
+    pickup_agg, dropoff_agg = PolicyLens.aggregate_policy(
         current_policy, int(aggregate_topk)
     )
 
@@ -144,10 +135,7 @@ def make_plot(
     return (
         f"{constants.FIGURE_DIRECTORY}/policy.svg",
         fig,
-        (
-            f"Value: {value:.2f} - Win: {us_win:.2f} - "
-            f"Draw: {draw:.2f} - Loss: {them_win:.2f}"
-        ),
+        (f"Value: {current_value} - WDL: {current_outcome}"),
         fig_dist,
     )
 

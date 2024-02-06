@@ -1,0 +1,132 @@
+"""
+Gradio interface for visualizing the policy of a model.
+"""
+
+import gradio as gr
+
+from demo import utils
+from lczerolens import GameDataset, visualisation_utils
+
+current_policy_statistics = None
+current_lrp_statistics = None
+dataset = GameDataset("assets/test_stockfish_10.jsonl")
+
+
+def list_models():
+    """
+    List the models in the model directory.
+    """
+    models_info = utils.get_models_info(leela=False)
+    return sorted([[model_info[0]] for model_info in models_info])
+
+
+def on_select_model_df(
+    evt: gr.SelectData,
+):
+    """
+    When a model is selected, update the statement.
+    """
+    return evt.value
+
+
+def compute_policy_statistics(
+    model_name,
+):
+    global current_policy_statistics
+    if model_name == "":
+        gr.Warning(
+            "Please select a model.",
+        )
+        return None
+    wrapper, lens = utils.get_lens_from_state(model_name, "policy")
+    current_policy_statistics = lens.compute_statistics(dataset, wrapper, 10)
+    return make_policy_plot()
+
+
+def make_policy_plot():
+    global current_policy_statistics
+
+    if current_policy_statistics is None:
+        gr.Warning(
+            "Please compute policy statistics first.",
+        )
+        return None
+    else:
+        return visualisation_utils.render_policy_statistics(
+            current_policy_statistics
+        )
+
+
+def compute_lrp_statistics(
+    model_name,
+):
+    global current_lrp_statistics
+    if model_name == "":
+        gr.Warning(
+            "Please select a model.",
+        )
+        return None
+    wrapper, lens = utils.get_lens_from_state(model_name, "lrp")
+    current_lrp_statistics = lens.compute_statistics(dataset, wrapper, 10)
+    return make_lrp_plot()
+
+
+def make_lrp_plot():
+    global current_lrp_statistics
+
+    if current_lrp_statistics is None:
+        gr.Warning(
+            "Please compute LRP statistics first.",
+        )
+        return None
+    else:
+        return visualisation_utils.render_relevance_proportion(
+            current_lrp_statistics
+        )
+
+
+with gr.Blocks() as interface:
+    with gr.Row():
+        with gr.Column(scale=2):
+            model_df = gr.Dataframe(
+                headers=["Available models"],
+                datatype=["str"],
+                interactive=False,
+                type="array",
+                value=list_models,
+            )
+        with gr.Column(scale=1):
+            with gr.Row():
+                model_name = gr.Textbox(
+                    label="Selected model", lines=1, interactive=False, scale=7
+                )
+    model_df.select(
+        on_select_model_df,
+        None,
+        model_name,
+    )
+
+    with gr.Row():
+        with gr.Column():
+            policy_plot = gr.Plot(label="Policy statistics")
+            policy_compute_button = gr.Button(
+                value="Compute policy statistics"
+            )
+            policy_plot_button = gr.Button(value="Plot policy statistics")
+
+            policy_compute_button.click(
+                compute_policy_statistics,
+                inputs=[model_name],
+                outputs=[policy_plot],
+            )
+            policy_plot_button.click(make_policy_plot, outputs=[policy_plot])
+
+        with gr.Column():
+            lrp_plot = gr.Plot(label="LRP statistics")
+            lrp_compute_button = gr.Button(value="Compute LRP statistics")
+            lrp_plot_button = gr.Button(value="Plot LRP statistics")
+
+            lrp_compute_button.click(
+                compute_lrp_statistics, inputs=[model_name], outputs=[lrp_plot]
+            )
+            lrp_plot_button.click(make_lrp_plot, outputs=[lrp_plot])

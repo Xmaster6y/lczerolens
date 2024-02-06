@@ -6,6 +6,7 @@ from .attention import AttentionLens
 from .crp import CrpLens
 from .lens import Lens
 from .lrp import LrpLens
+from .policy import PolicyLens
 
 
 class AutoLens:
@@ -13,7 +14,7 @@ class AutoLens:
     Auto lens constructor.
     """
 
-    lens_types = ["attention", "lrp", "crp"]
+    lens_types = ["attention", "lrp", "crp", "policy"]
 
     @staticmethod
     def from_type(lens_type: str) -> Lens:
@@ -22,11 +23,14 @@ class AutoLens:
         """
         if lens_type == "attention":
             return AttentionLens()
-        if lens_type == "lrp":
+        elif lens_type == "lrp":
             return LrpLens()
-        if lens_type == "crp":
+        elif lens_type == "crp":
             return CrpLens()
-        raise ValueError(f"Unknown lens type: {lens_type}")
+        elif lens_type == "policy":
+            return PolicyLens()
+        else:
+            raise ValueError(f"Unknown lens type: {lens_type}")
 
     @classmethod
     def from_wrapper(cls, wrapper) -> Lens:

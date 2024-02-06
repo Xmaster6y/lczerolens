@@ -8,4 +8,9 @@ from lczerolens import Lens, ModelWrapper
 
 wrappers: Dict[str, ModelWrapper] = {}
 
-lenses: Dict[str, Dict[str, Lens]] = {"attention": {}, "lrp": {}, "crp": {}}
+lenses: Dict[str, Dict[str, Lens]] = {
+    "attention": {},
+    "lrp": {},
+    "crp": {},
+    "policy": {},
+}

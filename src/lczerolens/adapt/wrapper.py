@@ -5,9 +5,10 @@ Class for wrapping the LCZero models.
 from typing import List, Union
 
 import chess
+import torch
 from torch import nn
 
-from lczerolens.utils import prediction as prediction_utils
+from lczerolens.utils import board as board_utils
 
 from .builder import AutoBuilder
 
@@ -26,6 +27,7 @@ class ModelWrapper(nn.Module):
         """
         super().__init__()
         self.model = model
+        self.model.eval()
 
     def forward(self, x):
         """
@@ -41,18 +43,36 @@ class ModelWrapper(nn.Module):
         model = AutoBuilder.build_from_path(model_path)
         return cls(model)
 
-    def predict(self, to_pred: Union[chess.Board, List[chess.Board]]):
+    def predict(
+        self,
+        to_pred: Union[chess.Board, List[chess.Board]],
+        with_grad: bool = False,
+        input_requires_grad: bool = False,
+        return_input: bool = False,
+    ):
         """
         Predicts the move.
         """
         if isinstance(to_pred, chess.Board):
-            output = prediction_utils.compute_move_prediction(self, [to_pred])
-            return output[0]
+            board_list = [to_pred]
         elif isinstance(to_pred, list):
-            output = prediction_utils.compute_move_prediction(self, to_pred)
-            return output
+            board_list = to_pred
         else:
-            raise ValueError("Invalid input type")
+            raise ValueError("Invalid input type.")
+
+        tensor_list = [
+            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            for board in board_list
+        ]
+        batched_tensor = torch.cat(tensor_list, dim=0)
+        if input_requires_grad:
+            batched_tensor.requires_grad = True
+        with torch.set_grad_enabled(with_grad):
+            out = self.forward(batched_tensor)
+
+        if return_input:
+            out["input"] = batched_tensor
+        return out
 
 
 class PolicyFlow(ModelWrapper):

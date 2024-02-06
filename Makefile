@@ -3,9 +3,13 @@
 checks:
 	poetry run pre-commit run --all-files
 
-.PHONY: assets
-assets:
-	bash assets/resolve-assets.sh
+.PHONY: test-assets
+test-assets:
+	bash assets/test-assets.sh
+
+.PHONY: demo-assets
+demo-assets:
+	bash assets/demo-assets.sh
 
 .PHONY: tests
 tests:

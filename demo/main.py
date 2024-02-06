@@ -13,11 +13,13 @@ from . import (
     encoding_interface,
     lrp_interface,
     policy_interface,
+    statistics_interface,
 )
 
 demo = gr.TabbedInterface(
     [
         crp_interface.interface,
+        statistics_interface.interface,
         lrp_interface.interface,
         attention_interface.interface,
         policy_interface.interface,
@@ -28,6 +30,7 @@ demo = gr.TabbedInterface(
     ],
     [
         "CRP",
+        "Statistics",
         "LRP",
         "Attention",
         "Policy",

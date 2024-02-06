@@ -27,7 +27,7 @@ jobs:
         make checks
     - name: Download assets
       run: |
-        make assets
+        make test-assets
     - name: Run tests
       run: |
         make tests

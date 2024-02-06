@@ -9,8 +9,9 @@ import torch
 from lczero.backends import Backend, GameState, Weights
 
 from demo import constants, utils
-from lczerolens import move_utils, prediction_utils, visualisation_utils
+from lczerolens import move_utils, visualisation_utils
 from lczerolens.utils import lczero as lczero_utils
+from lczerolens.xai import PolicyLens
 
 
 def list_models():
@@ -73,7 +74,7 @@ def make_policy_plot(
         only_legal=only_legal,
         illegal_value=0,
     )
-    pickup_agg, dropoff_agg = prediction_utils.aggregate_policy(
+    pickup_agg, dropoff_agg = PolicyLens.aggregate_policy(
         policy, int(aggregate_topk)
     )
 

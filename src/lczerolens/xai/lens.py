@@ -5,12 +5,13 @@ Generic lens class.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Dict, Optional
 
 import chess
 import torch
 
 from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.game.dataset import GameDataset
 
 
 class Lens(ABC):
@@ -30,10 +31,23 @@ class Lens(ABC):
         self,
         board: chess.Board,
         wrapper: ModelWrapper,
-        **kwargs: Dict[str, Any],
+        **kwargs,
     ) -> torch.Tensor:
         """
         Computes the heatmap for a given board.
+        """
+        pass
+
+    @abstractmethod
+    def compute_statistics(
+        self,
+        dataset: GameDataset,
+        wrapper: ModelWrapper,
+        batch_size: int,
+        **kwargs,
+    ) -> dict:
+        """
+        Computes the statistics for a given board.
         """
         pass
 
