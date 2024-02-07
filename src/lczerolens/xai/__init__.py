@@ -2,9 +2,6 @@
 XAI module.
 """
 
-from .attention import AttentionLens
 from .auto import AutoLens
-from .crp import CrpLens
 from .lens import Lens
-from .lrp import LrpLens
-from .policy import PolicyLens
+from .lenses import AttentionLens, CrpLens, LrpLens, PolicyLens

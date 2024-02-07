@@ -16,8 +16,7 @@ from lczerolens import board_utils
 from lczerolens.adapt.senet import SeNet
 from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.game.dataset import GameDataset
-
-from .lens import Lens
+from lczerolens.xai.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

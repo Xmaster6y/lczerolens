@@ -12,8 +12,7 @@ from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.game.dataset import GameDataset
 from lczerolens.utils import move as move_utils
 from lczerolens.utils.constants import INVERTED_FROM_INDEX, INVERTED_TO_INDEX
-
-from .lens import Lens
+from lczerolens.xai.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
