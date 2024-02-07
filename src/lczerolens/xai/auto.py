@@ -2,11 +2,11 @@
 Auto lens module
 """
 
-from .attention import AttentionLens
-from .crp import CrpLens
 from .lens import Lens
-from .lrp import LrpLens
-from .policy import PolicyLens
+from .lenses.attention import AttentionLens
+from .lenses.crp import CrpLens
+from .lenses.lrp import LrpLens
+from .lenses.policy import PolicyLens
 
 
 class AutoLens:

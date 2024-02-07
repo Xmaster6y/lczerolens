@@ -6,6 +6,7 @@ import os
 import re
 
 import torch
+from onnx2torch import convert
 from onnx2torch.onnx_graph import OnnxGraph
 from onnx2torch.utils.safe_shape_inference import safe_shape_inference
 from torch import nn
@@ -67,12 +68,12 @@ class AutoBuilder:
         return module_name, module_index, remaining
 
     @classmethod
-    def build_from_path(cls, model_path: str):
+    def build_from_path(cls, model_path: str, native: bool = True):
         """
         Builds a model from a given path.
         """
         if model_path.endswith(".onnx"):
-            return cls.build_from_onnx(model_path)
+            return cls.build_from_onnx(model_path, native=native)
         elif model_path.endswith(".pt"):
             return cls.build_from_torch_path(model_path)
         else:
@@ -81,7 +82,7 @@ class AutoBuilder:
             )
 
     @classmethod
-    def build_from_onnx(cls, onnx_model_or_path: str):
+    def build_from_onnx(cls, onnx_model_or_path: str, native: bool = True):
         """
         Builds a model from a given path.
         """
@@ -91,6 +92,9 @@ class AutoBuilder:
             )
         try:
             onnx_model = safe_shape_inference(onnx_model_or_path)
+            if not native:
+                onnx_torch_model = convert(onnx_model)
+                return onnx_torch_model
             onnx_graph = OnnxGraph(onnx_model.graph)
         except Exception:
             raise BuilderError(
@@ -135,7 +139,7 @@ class AutoBuilder:
             raise BuilderError(
                 f"State dict must be a dict, not {type(state_dict)}"
             )
-        pass
+        raise NotImplementedError("Building from state dict is not supported.")
 
     @classmethod
     def _build_senet_from_onnx(cls, onnx_graph):

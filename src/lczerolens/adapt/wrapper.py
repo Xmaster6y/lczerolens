@@ -36,11 +36,11 @@ class ModelWrapper(nn.Module):
         return self.model(x)
 
     @classmethod
-    def from_path(cls, model_path):
+    def from_path(cls, model_path: str, native: bool = True):
         """
         Creates a wrapper from a model path.
         """
-        model = AutoBuilder.build_from_path(model_path)
+        model = AutoBuilder.build_from_path(model_path, native=native)
         return cls(model)
 
     def predict(
