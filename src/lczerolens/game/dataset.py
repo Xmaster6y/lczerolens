@@ -17,21 +17,24 @@ from .generate import Game
 class GameDataset(Dataset):
     def __init__(
         self,
-        file_name: str,
+        file_name: Optional[str],
     ):
         self.games: List[Game] = []
-        with jsonlines.open(file_name) as reader:
-            offset = 0
-            for obj in reader:
-                parsed_moves = [
-                    m for m in obj["moves"].split() if not m.endswith(".")
-                ]
-                self.games.append(
-                    Game(
-                        offset=offset, gameid=obj["gameid"], moves=parsed_moves
+        if file_name is not None:
+            with jsonlines.open(file_name) as reader:
+                offset = 0
+                for obj in reader:
+                    parsed_moves = [
+                        m for m in obj["moves"].split() if not m.endswith(".")
+                    ]
+                    self.games.append(
+                        Game(
+                            offset=offset,
+                            gameid=obj["gameid"],
+                            moves=parsed_moves,
+                        )
                     )
-                )
-                offset += len(parsed_moves) + 1
+                    offset += len(parsed_moves) + 1
         self.device = torch.device("cpu")
         self.cache: Optional[Tuple[int, int, chess.Board]] = None
 
@@ -85,11 +88,11 @@ class GameDataset(Dataset):
         return board
 
     @staticmethod
-    def collate_fn_board_list(batch):
+    def collate_fn_list(batch):
         return batch
 
     @staticmethod
-    def collate_fn_board_tensor(batch):
+    def collate_fn_tensor(batch):
         tensor_list = [
             board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
             for board in batch

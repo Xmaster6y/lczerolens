@@ -36,6 +36,7 @@ gradio = {version = "^4.14.0", optional = true}
 zennit-crp = "^0.6.0"
 zennit = "<=0.4.6"
 jsonlines = "^4.0.0"
+scikit-learn = "^1.4.0"
 
 [tool.poetry.extras]
 lc0 = ["lczero-bindings"]
