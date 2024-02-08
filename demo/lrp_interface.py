@@ -64,7 +64,7 @@ def compute_cache(
                     boards.append(board.copy())
         except ValueError:
             gr.Warning(f"Invalid action {action} stopping before it.")
-    wrapper, lens = utils.get_lens_from_state(model_name, "lrp")
+    wrapper, lens = utils.get_wrapper_lens_from_state(model_name, "lrp")
     cache = []
     for board in boards:
         relevance = lens.compute_heatmap(board, wrapper)

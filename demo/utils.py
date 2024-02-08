@@ -106,7 +106,9 @@ def get_wrapper_from_state(model_name):
         return wrapper
 
 
-def get_lens_from_state(model_name, lens_type):
+def get_wrapper_lens_from_state(
+    model_name, lens_type, lens_name="lens", **kwargs
+):
     """
     Get the model wrapper and lens from the state.
     """
@@ -117,11 +119,13 @@ def get_lens_from_state(model_name, lens_type):
             f"{constants.MODEL_DIRECTORY}/{model_name}"
         )
         state.wrappers[model_name] = wrapper
-    if model_name in state.lenses[lens_type]:
-        lens = state.lenses[lens_type][model_name]
+    if lens_name in state.lenses[lens_type]:
+        lens = state.lenses[lens_type][lens_name]
     else:
-        lens = AutoLens.from_type(lens_type)
+        lens = AutoLens.from_type(lens_type, **kwargs)
         if not lens.is_compatible(wrapper):
-            raise ValueError("Attention lens not compatible with model.")
-        state.lenses[lens_type][model_name] = lens
+            raise ValueError(
+                f"Lens of type {lens_type} not compatible with model."
+            )
+        state.lenses[lens_type][lens_name] = lens
     return wrapper, lens

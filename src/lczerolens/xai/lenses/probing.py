@@ -31,7 +31,7 @@ class ProbingLens(Lens):
         if isinstance(concept, BinaryConcept) or isinstance(
             concept, MulticlassConcept
         ):
-            self.probe = LogisticRegression(penalty="l1")
+            self.probe = LogisticRegression(penalty="l1", solver="saga")
         elif isinstance(concept, ContinuousConcept):
             self.probe = Lasso()
         else:
@@ -68,32 +68,36 @@ class ProbingLens(Lens):
         """
         Computes the statistics for a given board.
         """
+        if not isinstance(dataset, UniqueConceptDataset):
+            raise ValueError(f"{dataset} is not a UniqueConceptDataset")
+
         test_size = kwargs.get("test_size", 0.2)
         shuffle = kwargs.get("shuffle", True)
         random_state = kwargs.get("random_state", 42)
 
-        cache_hook = CacheHook(HookConfig(module_exp=r"block\d+"))
+        cache_hook = CacheHook(HookConfig(module_exp=r"block\d+$"))
         cache_hook.register(wrapper.model)
         loader = DataLoader(
             dataset,
             batch_size=batch_size,
             shuffle=shuffle,
             num_workers=0,
-            collate_fn=UniqueConceptDataset.collate_fn_tensor,
+            collate_fn=UniqueConceptDataset.collate_fn_list,
         )
         labels = []
         activations = {}
         for batch in loader:
-            board_tensor, label_list = batch
+            board_list, label_list = batch
             labels.extend(label_list)
-            wrapper.predict(board_tensor)
+            wrapper.predict(board_list)
             for key, value in cache_hook.storage.items():
                 if key not in activations:
-                    activations[key] = value
+                    activations[key] = value.flatten(start_dim=1)
                 else:
                     activations[key] = torch.cat(
-                        [activations[key], value], dim=0
+                        [activations[key], value.flatten(start_dim=1)], dim=0
                     )
+        labels = torch.Tensor(labels)
         cache_hook.remove()
 
         statistics: Dict[str, Dict[str, Any]] = {

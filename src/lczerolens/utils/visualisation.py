@@ -204,3 +204,33 @@ def render_relevance_proportion(
     plt.yscale("log")
     plt.legend()
     return fig
+
+
+def render_probing_statistics(
+    statistics,
+):
+    """
+    Render the probing statistics.
+    """
+    fig = plt.figure(figsize=(6, 6))
+    ax = plt.gca()
+    n_blocks = len(statistics["metrics"])
+    for metric in statistics["metrics"]["block0"]:
+        avg = []
+        std = []
+        for block_idx in range(n_blocks):
+            metrics = statistics["metrics"]
+            block_data = metrics[f"block{block_idx}"]
+            avg.append(np.mean(block_data[metric]))
+            std.append(np.std(block_data[metric]))
+        ax.errorbar(
+            range(n_blocks),
+            avg,
+            yerr=std,
+            label=metric,
+        )
+    plt.xlabel("Block index")
+    plt.ylabel("Metric")
+    plt.yscale("log")
+    plt.legend()
+    return fig

@@ -71,7 +71,9 @@ def compute_cache(
         except ValueError:
             gr.Warning(f"Invalid action {action} stopping before it.")
     try:
-        wrapper, lens = utils.get_lens_from_state(model_name, "attention")
+        wrapper, lens = utils.get_wrapper_lens_from_state(
+            model_name, "attention"
+        )
     except ValueError:
         gr.Warning("Could not load model.")
         return None, None, None

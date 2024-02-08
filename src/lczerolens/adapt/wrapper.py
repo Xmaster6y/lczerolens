@@ -2,7 +2,7 @@
 Class for wrapping the LCZero models.
 """
 
-from typing import List, Union
+from typing import Iterable, Union
 
 import chess
 import torch
@@ -45,7 +45,7 @@ class ModelWrapper(nn.Module):
 
     def predict(
         self,
-        to_pred: Union[chess.Board, List[chess.Board]],
+        to_pred: Union[chess.Board, Iterable[chess.Board]],
         with_grad: bool = False,
         input_requires_grad: bool = False,
         return_input: bool = False,
@@ -55,8 +55,8 @@ class ModelWrapper(nn.Module):
         """
         if isinstance(to_pred, chess.Board):
             board_list = [to_pred]
-        elif isinstance(to_pred, list):
-            board_list = to_pred
+        elif isinstance(to_pred, Iterable):
+            board_list = to_pred  # type: ignore
         else:
             raise ValueError("Invalid input type.")
 

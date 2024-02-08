@@ -197,7 +197,9 @@ class UniqueConceptDataset(ConceptDataset):
         self._unique_resample(strict=strict)
 
     def __getitem__(self, idx) -> chess.Board:
-        self.unique_boards[idx]
+        board = self.unique_boards[idx]
+        label = self.concept.compute_label(board)
+        return board, label
 
     def __len__(self):
         return len(self.unique_boards)

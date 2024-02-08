@@ -13,4 +13,5 @@ lenses: Dict[str, Dict[str, Lens]] = {
     "lrp": {},
     "crp": {},
     "policy": {},
+    "probing": {},
 }
