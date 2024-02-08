@@ -3,5 +3,7 @@ XAI module.
 """
 
 from .auto import AutoLens
+from .concept import AndBinaryConcept, BinaryConcept, OrBinaryConcept
+from .concepts import HasPieceConcept, HasThreatConcept
 from .lens import Lens
-from .lenses import AttentionLens, CrpLens, LrpLens, PolicyLens
+from .lenses import AttentionLens, CrpLens, LrpLens, PolicyLens, ProbingLens

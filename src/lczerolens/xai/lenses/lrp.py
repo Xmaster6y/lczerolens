@@ -69,7 +69,7 @@ class LrpLens(Lens):
             batch_size=batch_size,
             shuffle=False,
             num_workers=0,
-            collate_fn=GameDataset.collate_fn_board_list,
+            collate_fn=GameDataset.collate_fn_list,
         )
         for batch in dataloader:
             relevance = self._compute_lrp_relevance(

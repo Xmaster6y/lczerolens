@@ -3,7 +3,7 @@ Class for concept-based XAI methods.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, List, Optional
 
 import chess
 import torch
@@ -28,8 +28,8 @@ class Concept(ABC):
         """
         pass
 
-    @abstractmethod
     @staticmethod
+    @abstractmethod
     def compute_metrics(
         predictions,
         labels,
@@ -153,8 +153,8 @@ class ConceptDataset(GameDataset):
     Class for concept
     """
 
-    def __init__(self, concept: Concept, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, concept: Concept, file_name: Optional[str]):
+        super().__init__(file_name=file_name)
         self.concept = concept
 
     def __getitem__(self, idx) -> chess.Board:
@@ -183,3 +183,49 @@ class ConceptDataset(GameDataset):
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)
         return batched_tensor, label_list
+
+
+class UniqueConceptDataset(ConceptDataset):
+    """
+    Class for unique board concept
+    """
+
+    def __init__(
+        self, concept: Concept, file_name: Optional[str], strict: bool = False
+    ):
+        super().__init__(concept, file_name)
+        self._unique_resample(strict=strict)
+
+    def __getitem__(self, idx) -> chess.Board:
+        self.unique_boards[idx]
+
+    def __len__(self):
+        return len(self.unique_boards)
+
+    @classmethod
+    def from_game_dataset(
+        cls, game_dataset: GameDataset, concept: Concept, strict: bool = False
+    ):
+        instance = super().from_game_dataset(game_dataset, concept)
+        instance._unique_resample(strict=strict)
+        return instance
+
+    def _unique_resample(self, strict: bool = False):
+        unique_boards: List[chess.Board] = []
+        for game in self.games:
+            board = chess.Board()
+            for move in game.moves:
+                board.push_san(move)
+                if board not in unique_boards:
+                    if strict:
+                        for unique_board in unique_boards:
+                            if (
+                                board.move_stack[:8]
+                                == unique_board.move_stack[:8]
+                            ):  # Encodings can still be different
+                                break
+                        else:
+                            unique_boards.append(board.copy())
+                    else:
+                        unique_boards.append(board.copy())
+        self.unique_boards = unique_boards

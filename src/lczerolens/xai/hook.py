@@ -50,7 +50,7 @@ class HookConfig(ABC):
     hook_mode: HookMode = HookMode.OUTPUT
     module_exp: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
-    data_fn: Optional[Callable[[torch.Tensor, Any], torch.Tensor]] = None
+    data_fn: Optional[Callable[[torch.Tensor, Any], Any]] = None
 
 
 class Hook(ABC):
@@ -120,15 +120,15 @@ class CacheHook(Hook):
         if self.config.hook_mode is HookMode.INPUT:
 
             def hook(module, input, output):
-                self.storage[name] = input
+                self.storage[name] = input.detach()
 
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
-                self.storage[name] = output
+                self.storage[name] = output.detach()
 
         else:
-            raise ValueError(f"Unknown cache mode: {self.config.hook_mode}")
+            raise ValueError(f"Unknown hook mode: {self.config.hook_mode}")
         return hook
 
     def backward_factory(self, name: str):
@@ -143,10 +143,26 @@ class MeasureHook(Hook):
     """
 
     def forward_factory(self, name: str):
-        def hook(module, input, output):
-            self.storage[name] = self.config.data_fn(
-                input, self.config.data[name]
-            )
+        if self.config.data is not None:
+            measure_data = self.config.data[name]
+        else:
+            measure_data = None
+        if self.config.hook_mode is HookMode.INPUT:
+
+            def hook(module, input, output):
+                self.storage[name] = self.config.data_fn(
+                    input.detach(), measure_data
+                )
+
+        elif self.config.hook_mode is HookMode.OUTPUT:
+
+            def hook(module, input, output):
+                self.storage[name] = self.config.data_fn(
+                    output.detach(), measure_data
+                )
+
+        else:
+            raise ValueError(f"Unknown hook mode: {self.config.hook_mode}")
 
         return hook
 
@@ -156,17 +172,34 @@ class MeasureHook(Hook):
         )
 
 
-class AddHook(Hook):
+class ModifyHook(Hook):
     """
-    Hook for adding vectors.
+    Hook for modifying vectors.
     """
 
     def forward_factory(self, name: str):
-        def hook(module, input, output):
-            output = self.config.data_fn(output, self.config.data[name])
-            return output
+        if self.config.data is not None:
+            modify_data = self.config.data[name]
+        else:
+            modify_data = None
+        if self.config.hook_mode is HookMode.INPUT:
+
+            def hook(module, input, output):
+                input = self.config.data_fn(input, modify_data)
+                return input
+
+        elif self.config.hook_mode is HookMode.OUTPUT:
+
+            def hook(module, input, output):
+                output = self.config.data_fn(output, modify_data)
+                return output
+
+        else:
+            raise ValueError(f"Unknown hook mode: {self.config.hook_mode}")
 
         return hook
 
     def backward_factory(self, name: str):
-        raise NotImplementedError("Backward hook not implemented for AddHook")
+        raise NotImplementedError(
+            "Backward hook not implemented for ModifyHook"
+        )
