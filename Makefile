@@ -5,11 +5,11 @@ checks:
 
 .PHONY: test-assets
 test-assets:
-	bash assets/test-assets.sh
+	bash assets/resolve-test-assets.sh
 
 .PHONY: demo-assets
 demo-assets:
-	bash assets/demo-assets.sh
+	bash assets/resolve-demo-assets.sh
 
 .PHONY: tests
 tests:
