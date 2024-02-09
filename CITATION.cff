@@ -1,0 +1,11 @@
+cff-version: 0.1.0
+title: LCZeroLens
+type: software
+authors:
+  - name: Yoann Poupart
+repository-code: 'https://github.com/Xmaster6y/lczerolens'
+repository-artifact: 'https://github.com/Xmaster6y/lczerolens/releases/'
+keywords:
+  - chess
+  - explainable AI (XAI)
+license: MIT

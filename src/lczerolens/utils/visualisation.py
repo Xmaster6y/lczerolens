@@ -1,5 +1,7 @@
 """
 Visualisation utils.
+
+TODO: Remove this file.
 """
 
 import chess
