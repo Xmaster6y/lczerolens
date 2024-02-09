@@ -1,5 +1,4 @@
-"""
-Generic hook classes.
+"""Generic hook classes.
 """
 
 import re

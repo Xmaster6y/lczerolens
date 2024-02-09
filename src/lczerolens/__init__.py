@@ -1,5 +1,4 @@
-"""
-Main module for the lczerolens package.
+"""Main module for the lczerolens package.
 """
 
 __version__ = "0.1.0"

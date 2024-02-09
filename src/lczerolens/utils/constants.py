@@ -1,5 +1,12 @@
 """
 Constants for the move module.
+
+Constants
+---------
+POLICY_INDEX : List[str]
+    The policy index for the move module.
+INVERTED_POLICY_INDEX : Dict[str, int]
+    The inverted policy index for the move module.
 """
 
 from typing import Dict, List

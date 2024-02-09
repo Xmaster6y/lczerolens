@@ -1,5 +1,11 @@
-"""
-LCZero model builder.
+"""LCZero model builder.
+
+Classes
+-------
+AutoBuilder
+    Class for automatically building a model.
+BuilderError
+    Error raised when the builder fails.
 """
 
 import os
@@ -16,15 +22,11 @@ from .vitnet import VitConfig, VitNet
 
 
 class BuilderError(Exception):
-    """
-    Error raised when the builder fails.
-    """
+    """Error raised when the builder fails."""
 
 
 class AutoBuilder:
-    """
-    Class for automatically building a model.
-    """
+    """Class for automatically building a model."""
 
     _module_exp = re.compile(
         r"\/?(?P<module_name>[a-z_\-]+)(?P<module_index>[0-9]*)"

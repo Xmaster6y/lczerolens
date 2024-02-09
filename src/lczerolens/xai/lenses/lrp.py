@@ -1,5 +1,4 @@
-"""
-Compute LRP heatmap for a given model and input.
+"""Compute LRP heatmap for a given model and input.
 """
 
 from typing import Any, Dict, List
@@ -23,13 +22,39 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class LrpLens(Lens):
-    """
-    Class for wrapping the LCZero models.
+    """Class for wrapping the LCZero models.
+
+    Methods
+    -------
+    is_compatible(wrapper: ModelWrapper) -> bool
+        Returns whether the lens is compatible with the model.
+    compute_heatmap(
+        board: chess.Board,
+        wrapper: ModelWrapper,
+        **kwargs
+    ) -> torch.Tensor
+        Runs basic LRP on the model.
+    compute_statistics(
+        dataset: GameDataset,
+        wrapper: ModelWrapper,
+        batch_size: int,
+        **kwargs
+    ) -> dict
+        Computes the statistics for a given board.
     """
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
-        """
-        Returns whether the lens is compatible with the model.
+        """Returns whether the lens is compatible with the model.
+
+        Parameters
+        ----------
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        bool
+            Whether the lens is compatible with the model.
         """
         if isinstance(wrapper.model, SeNet):
             return True
@@ -42,8 +67,19 @@ class LrpLens(Lens):
         wrapper: ModelWrapper,
         **kwargs,
     ) -> torch.Tensor:
-        """
-        Runs basic LRP on the model.
+        """Runs basic LRP on the model.
+
+        Parameters
+        ----------
+        board : chess.Board
+            The board to compute the heatmap for.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        torch.Tensor
+            The heatmap for the given board.
         """
         first_map_flat = kwargs.get("first_map_flat", False)
         relevance = self._compute_lrp_relevance(
@@ -58,8 +94,16 @@ class LrpLens(Lens):
         batch_size: int,
         **kwargs,
     ) -> dict:
-        """
-        Computes the statistics for a given board.
+        """Computes the statistics for a given board.
+
+        Parameters
+        ----------
+        dataset : GameDataset
+            The dataset to compute the statistics for.
+        wrapper : ModelWrapper
+            The model wrapper.
+        batch_size : int
+            The batch size.
         """
         first_map_flat = kwargs.get("first_map_flat", False)
         statistics: Dict[str, Dict[int, Any]] = {

@@ -1,5 +1,11 @@
-"""
-Classes for generating games.
+"""Classes for generating games.
+
+Classes
+-------
+Game
+    A class for representing a game.
+GameGenerator
+    A class for generating games.
 """
 
 from dataclasses import dataclass

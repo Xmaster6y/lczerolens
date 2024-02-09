@@ -1,5 +1,9 @@
-"""
-Constants needed for the networks.
+"""Constants needed for the networks.
+
+Constants
+---------
+GATHER_INDICES : list
+    The gather indices for the PolicyHead.
 """
 
 GATHER_INDICES = [
