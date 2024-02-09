@@ -1,0 +1,32 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.9.18
+    - name: Run Python commands
+      run: |
+        pip install --upgrade pip
+        pip install poetry==1.6.1
+    - name: Install dependencies
+      run: |
+        poetry build
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@release/v1

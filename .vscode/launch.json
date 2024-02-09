@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["tests", "--cov=src", "--capture=no"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Demo",
+            "type": "python",
+            "request": "launch",
+            "module": "demo.main",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
