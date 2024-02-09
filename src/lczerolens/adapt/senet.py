@@ -7,7 +7,7 @@ from tensordict import TensorDict
 from torch import nn
 
 from . import constants
-from .network import ProdLayer, SumLayer
+from .network import ElementwiseMultiplyUniform, SumLayer
 
 
 class SeLayer(nn.Module):
@@ -24,7 +24,6 @@ class SeLayer(nn.Module):
         self.linear1 = nn.Linear(n_hidden, n_hidden_red)
         self.linear2 = nn.Linear(n_hidden_red, n_hidden * 2)
 
-        self.prod_layer = ProdLayer(dim=-1)
         self.sum_layer = SumLayer(dim=-1)
 
         self.relu = nn.ReLU()
@@ -39,10 +38,8 @@ class SeLayer(nn.Module):
         out = out.view(-1, self.n_hidden * 2, 1, 1)
 
         out1, out2 = out.split(self.n_hidden, dim=1)
-        non_lin = self.sigmoid(out1).detach()
-        out1 = self.prod_layer(
-            torch.stack([x, non_lin.repeat(1, 1, 8, 8)], dim=-1)
-        )
+        non_lin = self.sigmoid(out1)
+        out1 = ElementwiseMultiplyUniform.apply(x, non_lin)
         return self.sum_layer(
             torch.stack([out1, out2.repeat(1, 1, 8, 8)], dim=-1)
         )
@@ -162,9 +159,10 @@ class WdlHead(nn.Module):
     WDL head.
     """
 
-    def __init__(self, n_hidden) -> None:
+    def __init__(self, n_hidden, softmax: bool = False) -> None:
         super().__init__()
         self.n_hidden = n_hidden
+        self.softmax = softmax
 
         self.conv = nn.Conv2d(n_hidden, 32, 1)
         self.linear1 = nn.Linear(32 * 64, 128)
@@ -180,7 +178,8 @@ class WdlHead(nn.Module):
         out = self.linear1(out)
         out = self.relu(out)
         out = self.linear2(out)
-        out = self.softmax(out)
+        if self.softmax:
+            out = self.softmax(out)
         return out
 
 

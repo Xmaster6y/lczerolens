@@ -1880,3 +1880,22 @@ for i, move in enumerate(POLICY_INDEX):
         INVERTED_TO_INDEX[to_square].append(i)
     except KeyError:
         INVERTED_TO_INDEX[to_square] = [i]
+
+HISTORY_PLANE_NAMES = (
+    [f"{piece} (us)" for piece in "PNBRQK"]
+    + [f"{piece} (them)" for piece in "pnbrqk"]
+    + ["repetition"]
+)
+
+PLANE_NAMES = [
+    f"H{i}: {h_name}" for i in range(8) for h_name in HISTORY_PLANE_NAMES
+] + [
+    "QCR (us)",
+    "KCR (us)",
+    "QCR (them)",
+    "KCR (them)",
+    "color",
+    "halfmove",
+    "zeros",
+    "ones",
+]

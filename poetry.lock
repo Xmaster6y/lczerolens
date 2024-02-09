@@ -3066,4 +3066,4 @@ lc0 = ["lczero-bindings"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "4cc1ac23e4e84a5959c84ea4a0a3595ae18aba14c5030d4d831449490882a9d0"
+content-hash = "13e5ab2a53ea0a720404ff65168200434ba9a54d26f7b4a18458ad97f2710e54"

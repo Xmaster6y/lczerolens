@@ -75,7 +75,7 @@ def compute_lrp_statistics(
         gr.Warning(
             "Please select a model.",
         )
-        return None
+        return None, None, None
     wrapper, lens = utils.get_wrapper_lens_from_state(model_name, "lrp")
     current_lrp_statistics = lens.compute_statistics(dataset, wrapper, 10)
     return make_lrp_plot()
@@ -88,7 +88,7 @@ def make_lrp_plot():
         gr.Warning(
             "Please compute LRP statistics first.",
         )
-        return None
+        return None, None, None
     else:
         return visualisation_utils.render_relevance_proportion(
             current_lrp_statistics
@@ -167,14 +167,29 @@ with gr.Blocks() as interface:
             policy_plot_button.click(make_policy_plot, outputs=[policy_plot])
 
         with gr.Column():
-            lrp_plot = gr.Plot(label="LRP statistics")
-            lrp_compute_button = gr.Button(value="Compute LRP statistics")
-            lrp_plot_button = gr.Button(value="Plot LRP statistics")
+            lrp_plot_hist = gr.Plot(label="LRP history statistics")
 
-            lrp_compute_button.click(
-                compute_lrp_statistics, inputs=[model_name], outputs=[lrp_plot]
-            )
-            lrp_plot_button.click(make_lrp_plot, outputs=[lrp_plot])
+    with gr.Row():
+        with gr.Column():
+            lrp_plot_planes = gr.Plot(label="LRP planes statistics")
+
+        with gr.Column():
+            lrp_plot_pieces = gr.Plot(label="LRP pieces statistics")
+
+    with gr.Row():
+        lrp_compute_button = gr.Button(value="Compute LRP statistics")
+    with gr.Row():
+        lrp_plot_button = gr.Button(value="Plot LRP statistics")
+
+    lrp_compute_button.click(
+        compute_lrp_statistics,
+        inputs=[model_name],
+        outputs=[lrp_plot_hist, lrp_plot_planes, lrp_plot_pieces],
+    )
+    lrp_plot_button.click(
+        make_lrp_plot,
+        outputs=[lrp_plot_hist, lrp_plot_planes, lrp_plot_pieces],
+    )
 
     with gr.Column():
         probing_plot = gr.Plot(label="Probing statistics")

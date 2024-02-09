@@ -10,6 +10,27 @@ import chess
 import torch
 
 
+def get_plane_order(us_them: Tuple[bool, bool]):
+    """
+    Get the plane order for the given us_them tuple.
+    """
+    us, them = us_them
+    plane_orders = {chess.WHITE: "PNBRQK", chess.BLACK: "pnbrqk"}
+    plane_order = plane_orders[us] + plane_orders[them]
+    return plane_order
+
+
+def get_piece_index(
+    piece: str, us_them: Tuple[bool, bool], plane_order: Optional[str] = None
+):
+    """
+    Converts a piece to its index in the plane order.
+    """
+    if plane_order is None:
+        plane_order = get_plane_order(us_them)
+    return f"{plane_order}0".index(piece)
+
+
 def board_to_tensor13x8x8(
     board: chess.Board,
     us_them: Optional[Tuple[bool, bool]] = None,
@@ -22,8 +43,7 @@ def board_to_tensor13x8x8(
         them = not us
     else:
         us, them = us_them
-    plane_orders = {chess.WHITE: "PNBRQK", chess.BLACK: "pnbrqk"}
-    plane_order = plane_orders[us] + plane_orders[them]
+    plane_order = get_plane_order((us, them))
 
     def piece_to_index(piece: str):
         return f"{plane_order}0".index(piece)

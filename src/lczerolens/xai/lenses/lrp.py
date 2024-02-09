@@ -10,9 +10,10 @@ from torch.utils.data import DataLoader
 from zennit.canonizers import SequentialMergeBatchNorm
 from zennit.composites import SpecialFirstLayerMapComposite
 from zennit.rules import Epsilon, Flat, Pass, ZPlus
-from zennit.types import Activation, Convolution
+from zennit.types import Activation
 from zennit.types import Linear as AnyLinear
 
+from lczerolens.adapt.network import SumLayer
 from lczerolens.adapt.senet import SeNet
 from lczerolens.adapt.wrapper import ModelWrapper
 from lczerolens.game.dataset import GameDataset
@@ -62,8 +63,18 @@ class LrpLens(Lens):
         """
         first_map_flat = kwargs.get("first_map_flat", False)
         statistics: Dict[str, Dict[int, Any]] = {
-            f"relevance_proportion_h{h}": {} for h in range(8)
+            "planes_relevance_proportion": {},
+            "planes_relevance_proportion_scaled": {},
         }
+        for piece_type in range(1, 13):
+            statistics.update(
+                {
+                    (
+                        "configuration_relevance_proportion_"
+                        f"threatened_piece{piece_type}"
+                    ): {},
+                }
+            )
         dataloader = DataLoader(
             dataset,
             batch_size=batch_size,
@@ -78,20 +89,56 @@ class LrpLens(Lens):
             total_relevances = relevance.abs().sum(dim=(1, 2, 3))
             for i, board in enumerate(batch):
                 move_idx = len(board.move_stack)
-                for h in range(8):
-                    stat_key = f"relevance_proportion_h{h}"
-                    relevance_proportion = (
-                        relevance[i, 13 * h : 13 * (h + 1)].abs().sum()
-                        / total_relevances[i]
-                    )
-                    if move_idx in statistics[stat_key]:
-                        statistics[stat_key][move_idx].append(
-                            relevance_proportion.item()
+                stat_key = "planes_relevance_proportion"
+                relevance_proportion = (
+                    relevance[i].abs().sum(dim=(1, 2)) / total_relevances[i]
+                )
+                if move_idx in statistics[stat_key]:
+                    statistics[stat_key][move_idx].append(relevance_proportion)
+                else:
+                    statistics[stat_key][move_idx] = [relevance_proportion]
+                stat_key = "planes_relevance_proportion_scaled"
+                n_pieces = (relevance[i] != 0.0).sum(dim=(1, 2))
+                n_pieces_or_one = n_pieces + (n_pieces == 0).float()
+                relevance_proportion = (
+                    relevance[i].abs().sum(dim=(1, 2))
+                    / n_pieces_or_one
+                    / total_relevances[i]
+                )
+                if move_idx in statistics[stat_key]:
+                    statistics[stat_key][move_idx].append(relevance_proportion)
+                else:
+                    statistics[stat_key][move_idx] = [relevance_proportion]
+
+                us = board.turn
+                them = not us
+                configuration_relevance = relevance[i, :12].sum(dim=0).view(64)
+                total_configuration_relevance = (
+                    configuration_relevance.abs().sum()
+                )
+                for piece_type in range(1, 7):
+                    for player in [us, them]:
+                        stat_key = (
+                            "configuration_relevance_proportion_"
+                            f"threatened_piece{piece_type+6*(1-player)}"
                         )
-                    else:
-                        statistics[stat_key][move_idx] = [
-                            relevance_proportion.item()
-                        ]
+                    pieces = board.pieces(piece_type, player)
+                    for square in pieces:
+                        n_attackers = len(board.attackers(not player, square))
+                        if us == chess.BLACK:
+                            square = chess.square_mirror(square)
+                        square_relevance_proportion = (
+                            configuration_relevance[square].abs().sum()
+                            / total_configuration_relevance
+                        )
+                        if n_attackers in statistics[stat_key]:
+                            statistics[stat_key][n_attackers].append(
+                                square_relevance_proportion.item()
+                            )
+                        else:
+                            statistics[stat_key][n_attackers] = [
+                                square_relevance_proportion.item()
+                            ]
         return statistics
 
     def _compute_lrp_relevance(
@@ -112,8 +159,10 @@ class LrpLens(Lens):
             first_map = []
         layer_map = [
             (Activation, Pass()),
-            (Convolution, ZPlus()),
-            (AnyLinear, Epsilon(epsilon=1e-6)),
+            (torch.nn.Conv2d, ZPlus()),
+            (torch.nn.Linear, Epsilon(epsilon=1e-6)),
+            (SumLayer, Epsilon(epsilon=1e-6)),
+            (torch.nn.AdaptiveAvgPool2d, Epsilon(epsilon=1e-6)),
         ]
         composite = SpecialFirstLayerMapComposite(
             layer_map=layer_map, first_map=first_map, canonizers=canonizers

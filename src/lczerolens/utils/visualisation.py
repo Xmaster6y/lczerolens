@@ -10,6 +10,8 @@ import numpy as np
 import torch
 import torchviz
 
+from . import constants
+
 COLOR_MAP = matplotlib.colormaps["RdYlBu_r"].resampled(1000)
 ALPHA = 1.0
 
@@ -174,22 +176,35 @@ def render_policy_statistics(
     return fig
 
 
-def render_relevance_proportion(
-    statistics,
-):
+def render_relevance_proportion(statistics, scaled=True):
     """
     Render the relevance proportion statistics.
     """
-    fig = plt.figure(figsize=(6, 6))
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=1, clip=False)
+    fig_hist = plt.figure(figsize=(6, 6))
     ax = plt.gca()
-    move_indices = list(statistics["relevance_proportion_h0"].keys())
+    move_indices = list(statistics["planes_relevance_proportion"].keys())
     for h in range(8):
         relevance_proportion_avg = [
-            np.mean(statistics[f"relevance_proportion_h{h}"][move_idx])
+            np.mean(
+                [
+                    rel[13 * h : 13 * (h + 1)].sum()
+                    for rel in statistics["planes_relevance_proportion"][
+                        move_idx
+                    ]
+                ]
+            )
             for move_idx in move_indices
         ]
         relevance_proportion_std = [
-            np.std(statistics[f"relevance_proportion_h{h}"][move_idx])
+            np.std(
+                [
+                    rel[13 * h : 13 * (h + 1)].sum()
+                    for rel in statistics["planes_relevance_proportion"][
+                        move_idx
+                    ]
+                ]
+            )
             for move_idx in move_indices
         ]
         ax.errorbar(
@@ -197,13 +212,123 @@ def render_relevance_proportion(
             relevance_proportion_avg[h + 1 :],
             yerr=relevance_proportion_std[h + 1 :],
             label=f"History {h}",
+            c=COLOR_MAP(norm(h / 9)),
+        )
+
+    relevance_proportion_avg = [
+        np.mean(
+            [
+                rel[104:108].sum()
+                for rel in statistics["planes_relevance_proportion"][move_idx]
+            ]
+        )
+        for move_idx in move_indices
+    ]
+    relevance_proportion_std = [
+        np.std(
+            [
+                rel[104:108].sum()
+                for rel in statistics["planes_relevance_proportion"][move_idx]
+            ]
+        )
+        for move_idx in move_indices
+    ]
+    ax.errorbar(
+        move_indices,
+        relevance_proportion_avg,
+        yerr=relevance_proportion_std,
+        label="Castling rights",
+        c=COLOR_MAP(norm(8 / 9)),
+    )
+    relevance_proportion_avg = [
+        np.mean(
+            [
+                rel[108:].sum()
+                for rel in statistics["planes_relevance_proportion"][move_idx]
+            ]
+        )
+        for move_idx in move_indices
+    ]
+    relevance_proportion_std = [
+        np.std(
+            [
+                rel[108:].sum()
+                for rel in statistics["planes_relevance_proportion"][move_idx]
+            ]
+        )
+        for move_idx in move_indices
+    ]
+    ax.errorbar(
+        move_indices,
+        relevance_proportion_avg,
+        yerr=relevance_proportion_std,
+        label="Remaining planes",
+        c=COLOR_MAP(norm(9 / 9)),
+    )
+    plt.xlabel("Move index")
+    plt.ylabel("Absolute relevance proportion")
+    plt.yscale("log")
+    plt.legend()
+
+    if scaled:
+        stat_key = "planes_relevance_proportion_scaled"
+    else:
+        stat_key = "planes_relevance_proportion"
+    fig_planes = plt.figure(figsize=(6, 6))
+    ax = plt.gca()
+    move_indices = list(statistics[stat_key].keys())
+    for p in range(13):
+        relevance_proportion_avg = [
+            np.mean([rel[p].item() for rel in statistics[stat_key][move_idx]])
+            for move_idx in move_indices
+        ]
+        relevance_proportion_std = [
+            np.std([rel[p].item() for rel in statistics[stat_key][move_idx]])
+            for move_idx in move_indices
+        ]
+        ax.errorbar(
+            move_indices,
+            relevance_proportion_avg,
+            yerr=relevance_proportion_std,
+            label=constants.PLANE_NAMES[p],
+            c=COLOR_MAP(norm(p / 12)),
         )
 
     plt.xlabel("Move index")
     plt.ylabel("Absolute relevance proportion")
     plt.yscale("log")
     plt.legend()
-    return fig
+
+    fig_pieces = plt.figure(figsize=(6, 6))
+    ax = plt.gca()
+    for p in range(1, 13):
+        stat_key = f"configuration_relevance_proportion_threatened_piece{p}"
+        n_attackers = list(statistics[stat_key].keys())
+        relevance_proportion_avg = [
+            np.mean(
+                statistics[
+                    f"configuration_relevance_proportion_threatened_piece{p}"
+                ][n]
+            )
+            for n in n_attackers
+        ]
+        relevance_proportion_std = [
+            np.std(statistics[stat_key][n]) for n in n_attackers
+        ]
+        ax.errorbar(
+            n_attackers,
+            relevance_proportion_avg,
+            yerr=relevance_proportion_std,
+            label="PNBRQKpnbrqk"[p - 1],
+            c=COLOR_MAP(norm(p / 12)),
+        )
+
+    plt.xlabel("Number of attackers")
+    plt.ylabel("Absolute configuration relevance proportion")
+    plt.yscale("log")
+    plt.legend()
+
+    return fig_hist, fig_planes, fig_pieces
 
 
 def render_probing_statistics(
