@@ -1,5 +1,9 @@
-"""
-Compute LRP heatmap for a given model and input.
+"""PolicyLens class for wrapping the LCZero models.
+
+Classes
+-------
+PolicyLens
+    A class for wrapping the LCZero models.
 """
 
 from typing import Any, Dict

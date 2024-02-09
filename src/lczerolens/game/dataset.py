@@ -1,5 +1,9 @@
-"""
-Dataset class for lczero models.
+"""Dataset class for lczero models.
+
+Classes
+-------
+GameDataset
+    A class for representing a dataset of games.
 """
 
 from typing import List, Optional, Tuple
@@ -15,6 +19,16 @@ from .generate import Game
 
 
 class GameDataset(Dataset):
+    """A class for representing a dataset of games.
+
+    Methods
+    -------
+    collate_fn_list(batch: List) -> List
+        Collate function for lists.
+    collate_fn_tensor(batch: List) -> torch.Tensor
+        Collate function for tensors.
+    """
+
     def __init__(
         self,
         file_name: Optional[str],

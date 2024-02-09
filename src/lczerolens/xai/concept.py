@@ -1,5 +1,4 @@
-"""
-Class for concept-based XAI methods.
+"""Class for concept-based XAI methods.
 """
 
 from abc import ABC, abstractmethod

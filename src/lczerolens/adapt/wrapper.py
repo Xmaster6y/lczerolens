@@ -1,5 +1,21 @@
-"""
-Class for wrapping the LCZero models.
+"""Class for wrapping the LCZero models.
+
+Classes
+-------
+ModelWrapper
+    A class for wrapping the LCZero models.
+
+PolicyFlow
+    A class for isolating the policy flow.
+
+ValueFlow
+    A class for isolating the value flow.
+
+WdlFlow
+    A class for isolating the value flow.
+
+MlhFlow
+    A class for isolating the value flow.
 """
 
 from typing import Iterable, Union
@@ -14,32 +30,24 @@ from .builder import AutoBuilder
 
 
 class ModelWrapper(nn.Module):
-    """
-    Class for wrapping the LCZero models.
-    """
+    """Class for wrapping the LCZero models."""
 
     def __init__(
         self,
         model: nn.Module,
     ):
-        """
-        Initializes the wrapper.
-        """
+        """Initializes the wrapper."""
         super().__init__()
         self.model = model
         self.model.eval()
 
     def forward(self, x):
-        """
-        Forward pass.
-        """
+        """Forward pass."""
         return self.model(x)
 
     @classmethod
     def from_path(cls, model_path: str, native: bool = True):
-        """
-        Creates a wrapper from a model path.
-        """
+        """Creates a wrapper from a model path."""
         model = AutoBuilder.build_from_path(model_path, native=native)
         return cls(model)
 
@@ -50,9 +58,7 @@ class ModelWrapper(nn.Module):
         input_requires_grad: bool = False,
         return_input: bool = False,
     ):
-        """
-        Predicts the move.
-        """
+        """Predicts the move."""
         if isinstance(to_pred, chess.Board):
             board_list = [to_pred]
         elif isinstance(to_pred, Iterable):
@@ -76,48 +82,32 @@ class ModelWrapper(nn.Module):
 
 
 class PolicyFlow(ModelWrapper):
-    """
-    Class for isolating the policy flow.
-    """
+    """Class for isolating the policy flow."""
 
     def forward(self, x):
-        """
-        Forward pass.
-        """
+        """Forward pass."""
         return self.model(x)["policy"]
 
 
 class ValueFlow(ModelWrapper):
-    """
-    Class for isolating the value flow.
-    """
+    """Class for isolating the value flow."""
 
     def forward(self, x):
-        """
-        Forward pass.
-        """
+        """Forward pass."""
         return self.model(x)["value"]
 
 
 class WdlFlow(ModelWrapper):
-    """
-    Class for isolating the value flow.
-    """
+    """Class for isolating the value flow."""
 
     def forward(self, x):
-        """
-        Forward pass.
-        """
+        """Forward pass."""
         return self.model(x)["wdl"]
 
 
 class MlhFlow(ModelWrapper):
-    """
-    Class for isolating the value flow.
-    """
+    """Class for isolating the value flow."""
 
     def forward(self, x):
-        """
-        Forward pass.
-        """
+        """Forward pass."""
         return self.model(x)["mlh"]

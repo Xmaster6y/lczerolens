@@ -1,5 +1,4 @@
-"""
-Auto lens module
+"""Auto lens module
 """
 
 from .lens import Lens

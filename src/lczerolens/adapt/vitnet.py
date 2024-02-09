@@ -1,5 +1,24 @@
 """
 Custom ViT network.
+
+Classes
+-------
+SmolgenLayer
+    Smolgen layer.
+MlpLayer
+    MLP layer.
+EncoderBlock
+    Custom encoder block.
+PolicyHead
+    Policy head.
+MlhHead
+    MLH head.
+WdlHead
+    WDL head.
+VitConfig
+    Configuration for the ViT network.
+VitNet
+    Custom transformer model.
 """
 
 import warnings

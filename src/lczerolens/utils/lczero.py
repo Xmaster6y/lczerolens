@@ -1,25 +1,24 @@
-"""
-Utils from the lczero executable and bindings.
+"""Utils from the lczero executable and bindings.
+
+Notes
+----
+The lczero bindings are not installed by default. You can install them by
+running `pip install lczero`.
 """
 import subprocess
 
 import chess
 import torch
-from lczero.backends import Backend, GameState
 
 from lczerolens import move_utils
 
 try:
-    subprocess.run(
-        ["lc0", "--help"],
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-except subprocess.CalledProcessError:
+    from lczero.backends import Backend, GameState
+except ImportError as e:
     raise ImportError(
-        "LCZero is not installed. Please install it from the sources"
-    )
+        "LCZero bindings are not installed."
+        "See https://github.com/LeelaChessZero/lc0.git."
+    ) from e
 
 
 def generic_command(args, verbose=False):

@@ -1,5 +1,4 @@
-"""
-Classes for search algorithms.
+"""Classes for search algorithms.
 """
 
 

@@ -1,5 +1,21 @@
-"""
-Custom SE ResNet.
+"""Custom SE ResNet.
+
+Classes
+-------
+SeLayer
+    Squeeze and excitation layer.
+SeBlock
+    SE ResNet block.
+PolicyHead
+    Policy head.
+ValueHead
+    Value head.
+MlhHead
+    MLH head.
+WdlHead
+    WDL head.
+SeNet
+    ResNet model.
 """
 
 import torch
@@ -11,9 +27,7 @@ from .network import ElementwiseMultiplyUniform, SumLayer
 
 
 class SeLayer(nn.Module):
-    """
-    Squeeze and excitation layer.
-    """
+    """Squeeze and excitation layer."""
 
     def __init__(self, n_hidden, n_hidden_red=32) -> None:
         super().__init__()

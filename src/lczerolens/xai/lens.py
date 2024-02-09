@@ -1,5 +1,4 @@
-"""
-Generic lens class.
+"""Generic lens class.
 """
 
 from abc import ABC, abstractmethod

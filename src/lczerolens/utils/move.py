@@ -1,5 +1,4 @@
-"""
-Utils for the move module.
+"""Utils for the move module.
 """
 
 from typing import Tuple

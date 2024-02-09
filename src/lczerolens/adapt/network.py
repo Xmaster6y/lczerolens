@@ -1,5 +1,21 @@
-"""
-Reusable network components.
+"""Reusable network components.
+
+Classes
+-------
+SumLayer
+    Compute the sum along an axis.
+ProdLayer
+    Compute the product along an axis.
+MultiplyLayer
+    Multiply with parameters.
+SofplusTanhMul
+    Softplus composed with tanh.
+ElementwiseMultiplyUniform
+    Distribute the relevance 100% to the input
+SoftmaxEpsilon
+    Softmax with epsilon.
+MatrixMultiplicationEpsilon
+    Matrix multiplication with epsilon.
 """
 
 import torch

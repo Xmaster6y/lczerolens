@@ -1,5 +1,4 @@
-"""
-Board utilities.
+"""Board utilities.
 """
 
 import re
@@ -11,8 +10,17 @@ import torch
 
 
 def get_plane_order(us_them: Tuple[bool, bool]):
-    """
-    Get the plane order for the given us_them tuple.
+    """Get the plane order for the given us_them tuple.
+
+    Parameters
+    ----------
+    us_them : Tuple[bool, bool]
+        The us_them tuple.
+
+    Returns
+    -------
+    str
+        The plane order.
     """
     us, them = us_them
     plane_orders = {chess.WHITE: "PNBRQK", chess.BLACK: "pnbrqk"}
@@ -23,8 +31,21 @@ def get_plane_order(us_them: Tuple[bool, bool]):
 def get_piece_index(
     piece: str, us_them: Tuple[bool, bool], plane_order: Optional[str] = None
 ):
-    """
-    Converts a piece to its index in the plane order.
+    """Converts a piece to its index in the plane order.
+
+    Parameters
+    ----------
+    piece : str
+        The piece to convert.
+    us_them : Tuple[bool, bool]
+        The us_them tuple.
+    plane_order : Optional[str]
+        The plane order.
+
+    Returns
+    -------
+    int
+        The index of the piece in the plane order.
     """
     if plane_order is None:
         plane_order = get_plane_order(us_them)
@@ -35,8 +56,19 @@ def board_to_tensor13x8x8(
     board: chess.Board,
     us_them: Optional[Tuple[bool, bool]] = None,
 ):
-    """
-    Converts a chess.Board object to a 64 tensor.
+    """Converts a chess.Board object to a 64 tensor.
+
+    Parameters
+    ----------
+    board : chess.Board
+        The board to convert.
+    us_them : Optional[Tuple[bool, bool]]
+        The us_them tuple.
+
+    Returns
+    -------
+    torch.Tensor
+        The 13x8x8 tensor.
     """
     if us_them is None:
         us = board.turn
@@ -73,8 +105,19 @@ def board_to_tensor112x8x8(
     last_board=chess.Board,
     with_history: bool = True,
 ):
-    """
-    Create the lc0 112x8x8 tensor from the history of a game.
+    """Create the lc0 112x8x8 tensor from the history of a game.
+
+    Parameters
+    ----------
+    last_board : chess.Board
+        The last board in the game.
+    with_history : bool
+        Whether to include the history of the game.
+
+    Returns
+    -------
+    torch.Tensor
+        The 112x8x8 tensor.
     """
     board = deepcopy(last_board)
     tensor112x8x8 = torch.zeros((112, 8, 8), dtype=torch.float)
