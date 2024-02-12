@@ -7,10 +7,9 @@ import chess
 import torch
 from torch.utils.data import DataLoader
 from zennit.canonizers import SequentialMergeBatchNorm
-from zennit.composites import SpecialFirstLayerMapComposite
-from zennit.rules import Epsilon, Flat, Pass, ZPlus
+from zennit.composites import LayerMapComposite
+from zennit.rules import Epsilon, Pass, ZPlus
 from zennit.types import Activation
-from zennit.types import Linear as AnyLinear
 
 from lczerolens.adapt.network import SumLayer
 from lczerolens.adapt.senet import SeNet
@@ -81,9 +80,9 @@ class LrpLens(Lens):
         torch.Tensor
             The heatmap for the given board.
         """
-        first_map_flat = kwargs.get("first_map_flat", False)
+        composite = kwargs.get("composite", None)
         relevance = self._compute_lrp_relevance(
-            [board], wrapper, first_map_flat=first_map_flat
+            [board], wrapper, composite=composite
         )
         return relevance[0]
 
@@ -105,7 +104,7 @@ class LrpLens(Lens):
         batch_size : int
             The batch size.
         """
-        first_map_flat = kwargs.get("first_map_flat", False)
+        composite = kwargs.get("composite", None)
         statistics: Dict[str, Dict[int, Any]] = {
             "planes_relevance_proportion": {},
             "planes_relevance_proportion_scaled": {},
@@ -128,7 +127,7 @@ class LrpLens(Lens):
         )
         for batch in dataloader:
             relevance = self._compute_lrp_relevance(
-                batch, wrapper, first_map_flat=first_map_flat
+                batch, wrapper, composite=composite
             )
             total_relevances = relevance.abs().sum(dim=(1, 2, 3))
             for i, board in enumerate(batch):
@@ -189,28 +188,15 @@ class LrpLens(Lens):
         self,
         boards: List[chess.Board],
         wrapper: ModelWrapper,
-        first_map_flat: bool = False,
+        composite: Any = None,
     ):
         """
         Compute LRP heatmap for a given model and input.
         """
 
-        canonizers = [SequentialMergeBatchNorm()]
+        if composite is None:
+            composite = self.make_default_composite()
 
-        if first_map_flat:
-            first_map = [(AnyLinear, Flat)]
-        else:
-            first_map = []
-        layer_map = [
-            (Activation, Pass()),
-            (torch.nn.Conv2d, ZPlus()),
-            (torch.nn.Linear, Epsilon(epsilon=1e-6)),
-            (SumLayer, Epsilon(epsilon=1e-6)),
-            (torch.nn.AdaptiveAvgPool2d, Epsilon(epsilon=1e-6)),
-        ]
-        composite = SpecialFirstLayerMapComposite(
-            layer_map=layer_map, first_map=first_map, canonizers=canonizers
-        )
         with composite.context(wrapper) as modified_model:
             output = modified_model.predict(
                 boards,
@@ -220,3 +206,16 @@ class LrpLens(Lens):
             )
             output["policy"].backward(gradient=output["policy"])
         return output["input"].grad
+
+    @staticmethod
+    def make_default_composite():
+        canonizers = [SequentialMergeBatchNorm()]
+
+        layer_map = [
+            (Activation, Pass()),
+            (torch.nn.Conv2d, ZPlus()),
+            (torch.nn.Linear, Epsilon(epsilon=1e-6)),
+            (SumLayer, Epsilon(epsilon=1e-6)),
+            (torch.nn.AdaptiveAvgPool2d, Epsilon(epsilon=1e-6)),
+        ]
+        return LayerMapComposite(layer_map=layer_map, canonizers=canonizers)

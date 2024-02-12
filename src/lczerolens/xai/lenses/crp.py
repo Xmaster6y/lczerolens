@@ -2,21 +2,19 @@
 Compute LRP heatmap for a given model and input.
 """
 
+from typing import Any
+
 import chess
 import torch
 from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
-from zennit.canonizers import SequentialMergeBatchNorm
-from zennit.composites import SpecialFirstLayerMapComposite
-from zennit.rules import Epsilon, Flat, Pass, ZPlus
-from zennit.types import Activation, Convolution
-from zennit.types import Linear as AnyLinear
 
 from lczerolens import board_utils
 from lczerolens.adapt.senet import SeNet
 from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.game.dataset import GameDataset
 from lczerolens.xai.lens import Lens
+from lczerolens.xai.lenses.lrp import LrpLens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -44,9 +42,9 @@ class CrpLens(Lens):
         """
         Runs basic LRP on the model.
         """
-        first_map_flat = kwargs.get("first_map_flat", False)
+        composite = kwargs.get("composite", None)
         return self._compute_crp_heatmap(
-            wrapper.model, board, first_map_flat=first_map_flat
+            wrapper.model, board, composite=composite
         )
 
     def compute_statistics(
@@ -65,26 +63,15 @@ class CrpLens(Lens):
         self,
         model,
         board: chess.Board,
-        first_map_flat: bool = False,
+        composite: Any = None,
     ):
         """
         Compute LRP heatmap for a given model and input.
         """
 
-        canonizers = [SequentialMergeBatchNorm()]
+        if composite is None:
+            composite = LrpLens.make_default_composite()
 
-        if first_map_flat:
-            first_map = [(AnyLinear, Flat)]
-        else:
-            first_map = []
-        layer_map = [
-            (Activation, Pass()),
-            (Convolution, ZPlus()),
-            (AnyLinear, Epsilon(epsilon=1e-6)),
-        ]
-        composite = SpecialFirstLayerMapComposite(
-            layer_map=layer_map, first_map=first_map, canonizers=canonizers
-        )
         policy_model = PolicyFlow(model)
         layer_names = get_layer_names(
             policy_model, [torch.nn.Conv2d, torch.nn.Linear]
