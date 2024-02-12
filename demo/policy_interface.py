@@ -7,8 +7,8 @@ import chess.svg
 import gradio as gr
 import torch
 
-from demo import constants, utils
-from lczerolens import move_utils, visualisation_utils
+from demo import constants, utils, visualisation
+from lczerolens import move_utils
 from lczerolens.xai import PolicyLens
 
 current_board = None
@@ -120,12 +120,12 @@ def make_plot(
         topk_moves.indices[move_to_play - 1], us_them
     )
     arrows = [(move.from_square, move.to_square)]
-    svg_board, fig = visualisation_utils.render_heatmap(
+    svg_board, fig = visualisation.render_heatmap(
         current_board, heatmap, arrows=arrows
     )
     with open(f"{constants.FIGURE_DIRECTORY}/policy.svg", "w") as f:
         f.write(svg_board)
-    fig_dist = visualisation_utils.render_policy_distribution(
+    fig_dist = visualisation.render_policy_distribution(
         current_raw_policy,
         [
             move_utils.encode_move(move, us_them)

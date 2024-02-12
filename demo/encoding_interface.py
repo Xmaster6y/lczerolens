@@ -5,8 +5,8 @@ Gradio interface for plotting encodings.
 import chess
 import gradio as gr
 
-from demo import constants
-from lczerolens import board_utils, visualisation_utils
+from demo import constants, visualisation
+from lczerolens import board_utils
 
 
 def make_encoding_plot(
@@ -31,7 +31,7 @@ def make_encoding_plot(
     heatmap = board_tensor[plane_index]
     if color_flip and board.turn == chess.BLACK:
         heatmap = heatmap.flip(0)
-    svg_board, fig = visualisation_utils.render_heatmap(
+    svg_board, fig = visualisation.render_heatmap(
         board, heatmap.view(64), vmin=0.0, vmax=1.0
     )
     with open(f"{constants.FIGURE_DIRECTORY}/encoding.svg", "w") as f:

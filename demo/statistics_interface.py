@@ -4,8 +4,8 @@ Gradio interface for visualizing the policy of a model.
 
 import gradio as gr
 
-from demo import utils
-from lczerolens import GameDataset, visualisation_utils
+from demo import utils, visualisation
+from lczerolens import GameDataset
 from lczerolens.xai import HasThreatConcept, UniqueConceptDataset
 
 current_policy_statistics = None
@@ -60,7 +60,7 @@ def make_policy_plot():
         )
         return None
     else:
-        return visualisation_utils.render_policy_statistics(
+        return visualisation.render_policy_statistics(
             current_policy_statistics
         )
 
@@ -90,7 +90,7 @@ def make_lrp_plot():
         )
         return None, None, None
     else:
-        return visualisation_utils.render_relevance_proportion(
+        return visualisation.render_relevance_proportion(
             current_lrp_statistics
         )
 
@@ -125,7 +125,7 @@ def make_probing_plot():
         )
         return None
     else:
-        return visualisation_utils.render_probing_statistics(
+        return visualisation.render_probing_statistics(
             current_probing_statistics
         )
 

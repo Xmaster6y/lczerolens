@@ -8,8 +8,8 @@ import gradio as gr
 import torch
 from lczero.backends import Backend, GameState, Weights
 
-from demo import constants, utils
-from lczerolens import move_utils, visualisation_utils
+from demo import constants, utils, visualisation
+from lczerolens import move_utils
 from lczerolens.utils import lczero as lczero_utils
 from lczerolens.xai import PolicyLens
 
@@ -104,7 +104,7 @@ def make_policy_plot(
     for move_index in topk_moves.indices:
         move = move_utils.decode_move(move_index, us_them)
         arrows.append((move.from_square, move.to_square))
-    svg_board, fig = visualisation_utils.render_heatmap(
+    svg_board, fig = visualisation.render_heatmap(
         board, heatmap, arrows=arrows
     )
     with open(f"{constants.FIGURE_DIRECTORY}/policy.svg", "w") as f:
@@ -116,7 +116,7 @@ def make_policy_plot(
         only_legal=False,
         illegal_value=0,
     )
-    fig_dist = visualisation_utils.render_policy_distribution(
+    fig_dist = visualisation.render_policy_distribution(
         raw_policy,
         [move_utils.encode_move(move, us_them) for move in board.legal_moves],
     )

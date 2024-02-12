@@ -7,8 +7,7 @@ import copy
 import chess
 import gradio as gr
 
-from demo import constants, utils
-from lczerolens import visualisation_utils
+from demo import constants, utils, visualisation
 
 cache = None
 boards = None
@@ -100,7 +99,7 @@ def make_plot(
     heatmap = relevance_tensor[plane_index - 1].view(64)
     if board.turn == chess.BLACK:
         heatmap = heatmap.view(8, 8).flip(0).view(64)
-    svg_board, fig = visualisation_utils.render_heatmap(
+    svg_board, fig = visualisation.render_heatmap(
         board, heatmap, vmin=vmin, vmax=vmax
     )
     with open(f"{constants.FIGURE_DIRECTORY}/lrp.svg", "w") as f:
@@ -137,7 +136,7 @@ def make_history_plot(
         history_board = chess.Board(fen=None)
     else:
         history_board = boards[board_index - history_index + 1]
-    svg_board, fig = visualisation_utils.render_heatmap(
+    svg_board, fig = visualisation.render_heatmap(
         history_board, heatmap, vmin=vmin, vmax=vmax
     )
     with open(f"{constants.FIGURE_DIRECTORY}/lrp_history.svg", "w") as f:
