@@ -2,4 +2,9 @@
 Concepts imports.
 """
 
-from .material import HasPieceConcept, HasThreatConcept
+from .material import (
+    HasMaterialAdvantageConcept,
+    HasMateThreatConcept,
+    HasPieceConcept,
+    HasThreatConcept,
+)

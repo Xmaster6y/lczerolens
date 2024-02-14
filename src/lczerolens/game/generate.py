@@ -16,7 +16,6 @@ from .search import SearchAlgorithm
 
 @dataclass
 class Game:
-    offset: int
     gameid: str
     moves: List[str]
 

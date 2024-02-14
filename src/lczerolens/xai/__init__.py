@@ -8,6 +8,6 @@ from .concept import (
     OrBinaryConcept,
     UniqueConceptDataset,
 )
-from .concepts import HasPieceConcept, HasThreatConcept
+from .concepts import HasMateThreatConcept, HasPieceConcept, HasThreatConcept
 from .lens import Lens
 from .lenses import AttentionLens, CrpLens, LrpLens, PolicyLens, ProbingLens
