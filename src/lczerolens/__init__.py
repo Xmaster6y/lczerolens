@@ -1,7 +1,7 @@
 """Main module for the lczerolens package.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 
 from .adapt import AutoBuilder, ModelWrapper

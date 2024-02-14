@@ -7,7 +7,7 @@ line_length = 79
 
 [tool.poetry]
 name = "lczerolens"
-version = "0.1.0"
+version = "0.1.2"
 description = "Interpretability for LeelaChessZero networks."
 readme = "README.md"
 license = "MIT"
@@ -56,6 +56,19 @@ optional = true
 gradio = "^4.14.0"
 lczero-bindings = {git = "https://github.com/LeelaChessZero/lc0.git"}
 matplotlib = "^3.8.2"
+
+[tool.poetry.group.doc]
+optional = true
+
+[tool.poetry.group.doc.dependencies]
+sphinx = "^7.2.6"
+pydata-sphinx-theme = "^0.15.2"
+sphinx-charts = "^0.2.1"
+sphinx-copybutton = "^0.5.2"
+plotly = "^5.18.0"
+sphinx-design = "^0.5.0"
+nbsphinx = "^0.9.3"
+pandoc = "^2.3"
 
 [build]
 target-dir = "build/dist"

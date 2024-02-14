@@ -1,9 +1,17 @@
-# Leela Chess Zero (lc0) Lens :mag_right:
+<img src="./docs/source/_static/images/lczerolens-logo.svg" alt="logo" style="width:200px;float:left"/>
 
+# lczerolens :mag:
+
+[![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 ![ci](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci.yml/badge.svg)
 
-Set of utilities to make the analysis of Leela Chess Zero networks easy.
+
+<a href="https://pypi.org/project/lczerolens/"><img src="https://img.shields.io/pypi/v/lczerolens?color=purple"></img></a>
+<a href="https://lczerolens.readthedocs.io"><img src="https://img.shields.io/badge/-Read%20the%20Docs%20Here-blue?style=for-the-badge&logo=Read-the-Docs&logoColor=white"></img></a>
+
+
+Leela Chess Zero (lc0) Lens: a set of utilities to make the analysis of Leela Chess Zero networks easy.
 
 ## Getting Started
 
