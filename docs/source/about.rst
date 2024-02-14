@@ -2,7 +2,7 @@
 About lczerolens
 ================
 
-How you use lczerolens
-----------------------
+Goal
+----
 
-Nnsight is built on pytorch.
+Provide analysis tools for lc0 networks with ``torch``.

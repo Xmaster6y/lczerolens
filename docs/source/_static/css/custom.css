@@ -28,9 +28,6 @@ html[data-theme="light"] {
 
 }
 
-.ndif {
-    color: "green";
-}
 
 .bd-sidebar-primary {
     width: fit-content !important;
@@ -73,6 +70,10 @@ img {
 }
 
 .features-container {
+    img {
+        max-width: none;
+    }
+
     display: flex;
     gap: 20px;
 }

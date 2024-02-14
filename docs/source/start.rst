@@ -1,7 +1,7 @@
 Getting Started
 ===============
 
-**lczerolens** (/ɛn.saɪt/) is a package for the interpreting and manipulating the internals of deep learning models.
+**lczerolens** is a package for running interpretability methods on lc0 models. It is designed to be easy to use and to work with the most common interpretability techniques.
 
 .. _installation:
 

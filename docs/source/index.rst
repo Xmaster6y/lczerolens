@@ -29,19 +29,19 @@ lczerolens
 
         .. div:: sd-fs-1 sd-font-weight-bold title-bot sd-text-primary image-container
 
-            lczerolens
+            LczeroLens
 
         .. div:: sd-fs-4 sd-font-weight-bold sd-my-0 sub-bot image-container
 
-            interpretable lc0 networks
+            Interpretability for lc0 networks
 
         **lczerolens** is a package for interpreting and manipulating the neural networks produce by lc0
 
         .. div:: button-group
 
           .. button-ref:: start
-              :color: primary
-              :shadow:
+            :color: primary
+            :shadow:
 
                   Get Started
 
@@ -70,49 +70,23 @@ lczerolens
       .. div:: features-container
 
         .. image:: _static/images/one.png
-          :width: 250
+          :width: 150
 
         .. div::
 
-          **Integration**
+          **Adaptability**
 
-          Pass in a ID from any HuggingFace Transformer repo and access its weights with lczerolens.
+          Load a network from lc0 (``.pb`` or ``.onnx``) and load it with lczerolens using ``torch``.
 
     .. grid-item::
 
       .. div:: features-container
 
         .. image:: _static/images/two.png
-          :width: 250
+          :width: 150
 
         .. div::
 
           **Interpretability**
 
-          Access the internal gradients and activations at any point or module in a model.
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. image:: _static/images/two.png
-          :width: 250
-
-        .. div::
-
-          **Intuitive**
-
-          Set up a context block and manipulate model internals with only a couple lines of code.
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. image:: _static/images/one.png
-          :width: 250
-
-        .. div::
-
-          **Interoperable**
-
-          Enable grad and train interventions like LORA or probes on any point in a model.
+          Easily compute saliency maps or aggregated statistics using the pre-built Interpretability methods.
