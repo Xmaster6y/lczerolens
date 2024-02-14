@@ -1,5 +1,6 @@
 # Leela Chess Zero (lc0) Lens :mag_right:
 
+[![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 ![ci](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci.yml/badge.svg)
 

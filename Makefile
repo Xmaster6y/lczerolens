@@ -15,6 +15,10 @@ demo-assets:
 tests:
 	poetry run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v
 
+.PHONY: docs
+docs:
+	cd docs && poetry run make html
+
 # API
 .PHONY: demo
 demo:
