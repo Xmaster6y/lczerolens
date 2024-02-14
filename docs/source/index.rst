@@ -1,8 +1,8 @@
 :html_theme.sidebar_secondary.remove:
 :sd_hide_title:
 
-nnsight
-=======
+lczerolens
+==========
 
 .. toctree::
    :maxdepth: 1
@@ -21,21 +21,21 @@ nnsight
     .. grid-item::
         .. div::
 
-          .. image:: _static/images/nnsight_logo.svg
-            :width: 400
-            :height: 276
+          .. image:: _static/images/lczerolens-logo.svg
+            :width: 300
+            :height: 300
 
     .. grid-item::
 
         .. div:: sd-fs-1 sd-font-weight-bold title-bot sd-text-primary image-container
 
-            NNsight
+            lczerolens
 
         .. div:: sd-fs-4 sd-font-weight-bold sd-my-0 sub-bot image-container
 
-            interpretable neural networks
+            interpretable lc0 networks
 
-        **NNsight** (/ɛn.saɪt/) is a package for interpreting and manipulating the internals of large models
+        **lczerolens** is a package for interpreting and manipulating the neural networks produce by lc0
 
         .. div:: button-group
 
@@ -76,7 +76,7 @@ nnsight
 
           **Integration**
 
-          Pass in a ID from any HuggingFace Transformer repo and access its weights with nnsight.
+          Pass in a ID from any HuggingFace Transformer repo and access its weights with lczerolens.
 
     .. grid-item::
 

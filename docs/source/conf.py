@@ -24,39 +24,31 @@ fixed_sidebar = True
 
 # See https://sphinx-themes.org/ for more
 html_theme = "pydata_sphinx_theme"
-html_title = "nnsight"
-html_logo = "_static/images/nnsight_logo.svg"
+html_title = "lczerolens"
+html_logo = "_static/images/lczerolens-logo.svg"
 html_static_path = ["_static"]
 
-html_favicon = "_static/images/icon.ico"
+html_favicon = "_static/images/favicon.ico"
 html_show_sourcelink = False
 html_theme_options = {
-    # "logo": {"text": "nnsight"},
     "show_nav_level": 2,
-    "navbar_end": ["navbar-icon-links", "ndif_status"],
-    # "navbar_end": ["navbar-icon-links"],
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
     "navbar_align": "left",
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/JadenFiotto-Kaufman/nnsight",
+            "url": "https://github.com/Xmaster6y/lczerolens",
             "icon": "fa-brands fa-github",
         },
         {
             "name": "Discord",
-            "url": "https://discord.gg/6uFJmCSwW7",
+            "url": "https://discord.gg/e7vhrTsjnt",
             "icon": "fa-brands fa-discord",
-        },
-        {
-            "name": "Status",
-            "url": "/status",
-            "icon": "fa-solid fa-circle-check",
-            "attributes": {"class": "ndif"},
         },
     ],
 }
 
-html_context = {"default_mode": "auto", "ndif_url": "https://ndif.dev/ping"}
+html_context = {"default_mode": "auto"}
 
 html_css_files = [
     "css/custom.css",
