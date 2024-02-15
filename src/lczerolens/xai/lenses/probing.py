@@ -1,5 +1,4 @@
-"""
-Probing lens for XAI.
+"""Probing lens for XAI.
 """
 
 from typing import Any, Dict

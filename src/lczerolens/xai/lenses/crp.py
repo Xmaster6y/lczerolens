@@ -10,7 +10,7 @@ from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
 
 from lczerolens import board_utils
-from lczerolens.adapt.senet import SeNet
+from lczerolens.adapt.models.senet import SeNet
 from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.game.dataset import GameDataset
 from lczerolens.xai.lens import Lens

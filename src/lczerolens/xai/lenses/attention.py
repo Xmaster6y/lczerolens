@@ -7,7 +7,7 @@ from typing import Union
 import chess
 import torch
 
-from lczerolens.adapt.vitnet import VitNet
+from lczerolens.adapt.models.vitnet import VitNet
 from lczerolens.adapt.wrapper import ModelWrapper
 from lczerolens.game.dataset import GameDataset
 from lczerolens.xai.hook import CacheHook, HookConfig

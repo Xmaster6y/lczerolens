@@ -1,9 +1,4 @@
 """PolicyLens class for wrapping the LCZero models.
-
-Classes
--------
-PolicyLens
-    A class for wrapping the LCZero models.
 """
 
 from typing import Any, Dict

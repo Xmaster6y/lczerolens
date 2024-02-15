@@ -1,21 +1,4 @@
 """Class for wrapping the LCZero models.
-
-Classes
--------
-ModelWrapper
-    A class for wrapping the LCZero models.
-
-PolicyFlow
-    A class for isolating the policy flow.
-
-ValueFlow
-    A class for isolating the value flow.
-
-WdlFlow
-    A class for isolating the value flow.
-
-MlhFlow
-    A class for isolating the value flow.
 """
 
 from typing import Iterable, Union

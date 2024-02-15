@@ -11,8 +11,8 @@ from zennit.composites import LayerMapComposite
 from zennit.rules import Epsilon, Pass, ZPlus
 from zennit.types import Activation
 
+from lczerolens.adapt.models.senet import SeNet
 from lczerolens.adapt.network import SumLayer
-from lczerolens.adapt.senet import SeNet
 from lczerolens.adapt.wrapper import ModelWrapper
 from lczerolens.game.dataset import GameDataset
 from lczerolens.xai.lens import Lens
@@ -21,26 +21,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class LrpLens(Lens):
-    """Class for wrapping the LCZero models.
-
-    Methods
-    -------
-    is_compatible(wrapper: ModelWrapper) -> bool
-        Returns whether the lens is compatible with the model.
-    compute_heatmap(
-        board: chess.Board,
-        wrapper: ModelWrapper,
-        **kwargs
-    ) -> torch.Tensor
-        Runs basic LRP on the model.
-    compute_statistics(
-        dataset: GameDataset,
-        wrapper: ModelWrapper,
-        batch_size: int,
-        **kwargs
-    ) -> dict
-        Computes the statistics for a given board.
-    """
+    """Class for wrapping the LCZero models."""
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
         """Returns whether the lens is compatible with the model.

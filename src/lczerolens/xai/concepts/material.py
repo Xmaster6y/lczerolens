@@ -1,5 +1,4 @@
-"""
-All concepts related to material.
+"""All concepts related to material.
 """
 
 from typing import Dict, Optional
@@ -10,18 +9,14 @@ from lczerolens.xai.concept import BinaryConcept
 
 
 class HasPieceConcept(BinaryConcept):
-    """
-    Class for material concept-based XAI methods.
-    """
+    """Class for material concept-based XAI methods."""
 
     def __init__(
         self,
         piece: str,
         relative: bool = True,
     ):
-        """
-        Initialize the class.
-        """
+        """Initialize the class."""
         self.piece = chess.Piece.from_symbol(piece)
         self.relative = relative
 
@@ -29,9 +24,7 @@ class HasPieceConcept(BinaryConcept):
         self,
         board: chess.Board,
     ) -> int:
-        """
-        Compute the label for a given model and input.
-        """
+        """Compute the label for a given model and input."""
         if self.relative:
             color = self.piece.color if board.turn else not self.piece.color
         else:
@@ -41,8 +34,12 @@ class HasPieceConcept(BinaryConcept):
 
 
 class HasMaterialAdvantageConcept(BinaryConcept):
-    """
-    Class for material concept-based XAI methods.
+    """Class for material concept-based XAI methods.
+
+    Attributes
+    ----------
+    piece_values : Dict[int, int]
+        The piece values.
     """
 
     piece_values = {
@@ -83,58 +80,3 @@ class HasMaterialAdvantageConcept(BinaryConcept):
             our_value += len(board.pieces(piece, us)) * piece_values[piece]
             their_value += len(board.pieces(piece, them)) * piece_values[piece]
         return 1 if our_value > their_value else 0
-
-
-class HasThreatConcept(BinaryConcept):
-    """
-    Class for material concept-based XAI methods.
-    """
-
-    def __init__(
-        self,
-        piece: str,
-        relative: bool = True,
-    ):
-        """
-        Initialize the class.
-        """
-        self.piece = chess.Piece.from_symbol(piece)
-        self.relative = relative
-
-    def compute_label(
-        self,
-        board: chess.Board,
-    ) -> int:
-        """
-        Compute the label for a given model and input.
-        """
-        if self.relative:
-            color = self.piece.color if board.turn else not self.piece.color
-        else:
-            color = self.piece.color
-        squares = board.pieces(self.piece.piece_type, color)
-        for square in squares:
-            if board.is_attacked_by(not color, square):
-                return 1
-        return 0
-
-
-class HasMateThreatConcept(BinaryConcept):
-    """
-    Class for material concept-based XAI methods.
-    """
-
-    def compute_label(
-        self,
-        board: chess.Board,
-    ) -> int:
-        """
-        Compute the label for a given model and input.
-        """
-        for move in board.legal_moves:
-            board.push(move)
-            if board.is_checkmate():
-                board.pop()
-                return 1
-            board.pop()
-        return 0

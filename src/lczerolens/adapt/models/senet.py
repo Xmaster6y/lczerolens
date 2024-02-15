@@ -1,29 +1,12 @@
 """Custom SE ResNet.
-
-Classes
--------
-SeLayer
-    Squeeze and excitation layer.
-SeBlock
-    SE ResNet block.
-PolicyHead
-    Policy head.
-ValueHead
-    Value head.
-MlhHead
-    MLH head.
-WdlHead
-    WDL head.
-SeNet
-    ResNet model.
 """
 
 import torch
 from tensordict import TensorDict
 from torch import nn
 
-from . import constants
-from .network import ElementwiseMultiplyUniform, SumLayer
+from lczerolens.adapt import constants
+from lczerolens.adapt.network import ElementwiseMultiplyUniform, SumLayer
 
 
 class SeLayer(nn.Module):
@@ -60,9 +43,7 @@ class SeLayer(nn.Module):
 
 
 class SeBlock(nn.Module):
-    """
-    SE ResNet block.
-    """
+    """SE ResNet block."""
 
     def __init__(self, n_hidden, n_hidden_red=32) -> None:
         super().__init__()
@@ -87,9 +68,7 @@ class SeBlock(nn.Module):
 
 
 class PolicyHead(nn.Module):
-    """
-    Policy head.
-    """
+    """Policy head."""
 
     def __init__(self, n_hidden) -> None:
         super().__init__()
@@ -116,9 +95,7 @@ class PolicyHead(nn.Module):
 
 
 class ValueHead(nn.Module):
-    """
-    Value head.
-    """
+    """Value head."""
 
     def __init__(self, n_hidden) -> None:
         super().__init__()
@@ -143,9 +120,7 @@ class ValueHead(nn.Module):
 
 
 class MlhHead(nn.Module):
-    """
-    MLH head.
-    """
+    """MLH head."""
 
     def __init__(self, n_hidden) -> None:
         super().__init__()
@@ -169,9 +144,7 @@ class MlhHead(nn.Module):
 
 
 class WdlHead(nn.Module):
-    """
-    WDL head.
-    """
+    """WDL head."""
 
     def __init__(self, n_hidden, softmax: bool = False) -> None:
         super().__init__()
@@ -198,9 +171,7 @@ class WdlHead(nn.Module):
 
 
 class SeNet(nn.Module):
-    """
-    ResNet model.
-    """
+    """ResNet model."""
 
     def __init__(
         self, n_blocks, n_hidden, n_hidden_red=32, heads=None
@@ -232,6 +203,7 @@ class SeNet(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
+        """Forward pass."""
         out = self.ini_conv(x)
         out = self.relu(out)
         for i in range(self.n_blocks):

@@ -5,4 +5,5 @@ Documentation
    :titlesonly:
 
    documentation/adapt
+   documentation/game
    documentation/xai

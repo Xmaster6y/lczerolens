@@ -4,6 +4,10 @@ Classes
 -------
 GameDataset
     A class for representing a dataset of games.
+BoardDataset
+    A class for representing a dataset of boards.
+IterableBoardDataset
+    A class for representing an iterable dataset of boards.
 """
 
 from typing import Any, Dict, List, Optional
@@ -19,7 +23,13 @@ from .generate import Game
 
 
 class GameDataset(Dataset):
-    """A class for representing a dataset of games."""
+    """A class for representing a dataset of games.
+
+    Attributes
+    ----------
+    games : List[Game]
+        The list of games.
+    """
 
     def __init__(
         self,
@@ -49,8 +59,23 @@ class GameDataset(Dataset):
 class BoardDataset(Dataset):
     """A class for representing a dataset of boards.
 
+    Attributes
+    ----------
+    boards : List[chess.Board]
+        The list of boards.
+
     Methods
     -------
+    from_game_dataset(
+        game_dataset: GameDataset,
+        n_history: int = 0,
+    )
+        Creates a board dataset from a game dataset.
+    preprocess_game(
+        game: Game,
+        n_history: int = 0,
+    ) -> List[Dict[str, Any]]
+        Preprocesses a game into a list of boards.
     collate_fn_list(batch: List) -> List
         Collate function for lists.
     collate_fn_tensor(batch: List) -> torch.Tensor
@@ -70,6 +95,12 @@ class BoardDataset(Dataset):
                         board.push(chess.Move.from_uci(move))
                     self.boards.append(board)
 
+    def __len__(self):
+        return len(self.boards)
+
+    def __getitem__(self, idx) -> chess.Board:
+        return self.boards[idx]
+
     @classmethod
     def from_game_dataset(
         cls,
@@ -80,9 +111,8 @@ class BoardDataset(Dataset):
         for game in game_dataset.games:
             instance.boards.extend(cls.preprocess_game(game, n_history))
 
-    @classmethod
+    @staticmethod
     def preprocess_game(
-        cls,
         game: Game,
         n_history: int = 0,
     ) -> List[Dict[str, Any]]:
@@ -119,6 +149,13 @@ class BoardDataset(Dataset):
 
 
 class IterableBoardDataset(IterableDataset):
+    """A class for representing an iterable dataset of boards.
+
+    Note
+    ----
+    Usefull for large datasets that do not fit into memory.
+    """
+
     def __init__(
         self,
         file_path,
