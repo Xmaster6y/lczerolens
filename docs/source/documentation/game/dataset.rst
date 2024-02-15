@@ -14,9 +14,3 @@ Board Dataset
 
 .. autoclass:: lczerolens.BoardDataset
    :members:
-
-Iterable Board Dataset
-----------------------
-
-.. autoclass:: lczerolens.IterableBoardDataset
-   :members:

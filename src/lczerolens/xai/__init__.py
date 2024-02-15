@@ -5,6 +5,7 @@ from .auto import AutoLens
 from .concept import (
     AndBinaryConcept,
     BinaryConcept,
+    ConceptDataset,
     OrBinaryConcept,
     UniqueConceptDataset,
 )
