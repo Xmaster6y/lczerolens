@@ -50,7 +50,7 @@ class ModelWrapper(nn.Module):
             raise ValueError("Invalid input type.")
 
         tensor_list = [
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            board_utils.board_to_input_tensor(board).unsqueeze(0)
             for board in board_list
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)

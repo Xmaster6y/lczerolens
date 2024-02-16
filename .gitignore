@@ -130,6 +130,7 @@ dmypy.json
 
 # Various files
 ignored
+debug
 *.zip
 lc0
 !bin/lc0

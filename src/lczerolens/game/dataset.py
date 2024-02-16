@@ -146,13 +146,13 @@ class BoardDataset(Dataset):
         return boards
 
     @staticmethod
-    def collate_fn_list(batch):
+    def collate_fn_tuple(batch):
         return batch
 
     @staticmethod
     def collate_fn_tensor(batch):
         tensor_list = [
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            board_utils.board_to_input_tensor(board).unsqueeze(0)
             for board in batch
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)

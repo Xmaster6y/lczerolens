@@ -78,7 +78,7 @@ class CrpLens(Lens):
         )
         attribution = CondAttribution(policy_model)
         board_tensor = (
-            board_utils.board_to_tensor112x8x8(board)
+            board_utils.board_to_input_tensor(board)
             .to(DEVICE)
             .unsqueeze(0)
             .requires_grad_(True)

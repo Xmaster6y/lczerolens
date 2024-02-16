@@ -15,15 +15,13 @@ class TestTinySeNet:
         """
 
         board = chess.Board()
-        out = tiny_senet(
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
-        )
+        out = tiny_senet(board_utils.board_to_input_tensor(board).unsqueeze(0))
         policy = out["policy"]
         value = out["value"]
         onnx_policy, onnx_value = tiny_senet_ort.run(
             None,
             {
-                "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                "/input/planes": board_utils.board_to_input_tensor(board)
                 .unsqueeze(0)
                 .numpy()
             },
@@ -43,14 +41,14 @@ class TestTinySeNet:
         move_list, board_list = random_move_board_list
         for i, board in enumerate(board_list):
             out = tiny_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             value = out["value"]
             onnx_policy, onnx_value = tiny_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -70,14 +68,14 @@ class TestTinySeNet:
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
             out = tiny_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             value = out["value"]
             onnx_policy, onnx_value = tiny_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -97,14 +95,14 @@ class TestTinySeNet:
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
             out = tiny_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             value = out["value"]
             onnx_policy, onnx_value = tiny_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -122,15 +120,13 @@ class TestMaiaSeNet:
         """
 
         board = chess.Board()
-        out = maia_senet(
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
-        )
+        out = maia_senet(board_utils.board_to_input_tensor(board).unsqueeze(0))
         policy = out["policy"]
         wdl = out["wdl"]
         onnx_policy, onnx_wdl = maia_senet_ort.run(
             None,
             {
-                "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                "/input/planes": board_utils.board_to_input_tensor(board)
                 .unsqueeze(0)
                 .numpy()
             },
@@ -150,14 +146,14 @@ class TestMaiaSeNet:
         move_list, board_list = random_move_board_list
         for i, board in enumerate(board_list):
             out = maia_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
             onnx_policy, onnx_wdl = maia_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -177,14 +173,14 @@ class TestMaiaSeNet:
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
             out = maia_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
             onnx_policy, onnx_wdl = maia_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -204,14 +200,14 @@ class TestMaiaSeNet:
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
             out = maia_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
             onnx_policy, onnx_wdl = maia_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -230,7 +226,7 @@ class TestWinnerSeNet:
 
         board = chess.Board()
         out = winner_senet(
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            board_utils.board_to_input_tensor(board).unsqueeze(0)
         )
         policy = out["policy"]
         wdl = out["wdl"]
@@ -238,7 +234,7 @@ class TestWinnerSeNet:
         onnx_policy, onnx_wdl, onnx_mlh = winner_senet_ort.run(
             None,
             {
-                "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                "/input/planes": board_utils.board_to_input_tensor(board)
                 .unsqueeze(0)
                 .numpy()
             },
@@ -260,7 +256,7 @@ class TestWinnerSeNet:
         move_list, board_list = random_move_board_list
         for i, board in enumerate(board_list):
             out = winner_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
@@ -268,7 +264,7 @@ class TestWinnerSeNet:
             onnx_policy, onnx_wdl, onnx_mlh = winner_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -290,7 +286,7 @@ class TestWinnerSeNet:
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
             out = winner_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
@@ -298,7 +294,7 @@ class TestWinnerSeNet:
             onnx_policy, onnx_wdl, onnx_mlh = winner_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -320,7 +316,7 @@ class TestWinnerSeNet:
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
             out = winner_senet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
@@ -328,7 +324,7 @@ class TestWinnerSeNet:
             onnx_policy, onnx_wdl, onnx_mlh = winner_senet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },

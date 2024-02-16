@@ -182,18 +182,14 @@ class ConceptDataset(Dataset):
             self.labels = [
                 self._concept.compute_label(board) for board in self.boards
             ]
-        self.tensors = [
-            board_utils.board_to_tensor112x8x8(board) for board in self.boards
-        ]
 
     def __len__(self):
         return len(self.boards)
 
     def __getitem__(self, idx) -> chess.Board:
-        tensor = self.tensors[idx]
         board = self.boards[idx]
         label = self.labels[idx]
-        return tensor, board, label
+        return board, label
 
     @property
     def concept(self):
@@ -223,10 +219,18 @@ class ConceptDataset(Dataset):
         return cls(concept, boards=board_dataset.boards, labels=labels)
 
     @staticmethod
-    def collate_fn(batch):
-        tensor_list, _, label_list = zip(*batch)
+    def collate_fn_tuple(batch):
+        boards, labels = zip(*batch)
+        return tuple(boards), tuple(labels)
+
+    @staticmethod
+    def collate_fn_tensor(batch):
+        boards, labels = zip(*batch)
+        tensor_list = [
+            board_utils.board_to_input_tensor(board) for board in boards
+        ]
         batched_tensor = torch.stack(tensor_list, dim=0)
-        return batched_tensor, label_list
+        return batched_tensor, tuple(labels)
 
 
 class UniqueConceptDataset(ConceptDataset):
