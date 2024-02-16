@@ -2,12 +2,12 @@
 """
 
 from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, Optional
 
 import chess
-import torch
+from torch.utils.data import Dataset
 
 from lczerolens.adapt.wrapper import ModelWrapper
-from lczerolens.game.dataset import GameDataset
 
 
 class Lens(ABC):
@@ -23,25 +23,27 @@ class Lens(ABC):
         pass
 
     @abstractmethod
-    def compute_heatmap(
+    def analyse_board(
         self,
         board: chess.Board,
         wrapper: ModelWrapper,
         **kwargs,
-    ) -> torch.Tensor:
+    ) -> Any:
         """
         Computes the heatmap for a given board.
         """
         pass
 
     @abstractmethod
-    def compute_statistics(
+    def analyse_dataset(
         self,
-        dataset: GameDataset,
+        dataset: Dataset,
         wrapper: ModelWrapper,
         batch_size: int,
+        collate_fn: Optional[Callable] = None,
+        save_to: Optional[str] = None,
         **kwargs,
-    ) -> dict:
+    ) -> Optional[Dict[int, Any]]:
         """
         Computes the statistics for a given board.
         """

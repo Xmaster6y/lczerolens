@@ -10,7 +10,7 @@ IterableBoardDataset
     A class for representing an iterable dataset of boards.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import chess
 import jsonlines
@@ -96,8 +96,8 @@ class BoardDataset(Dataset):
     def __len__(self):
         return len(self.boards)
 
-    def __getitem__(self, idx) -> chess.Board:
-        return self.boards[idx]
+    def __getitem__(self, idx) -> Tuple[int, chess.Board]:
+        return idx, self.boards[idx]
 
     @classmethod
     def from_game_dataset(
@@ -147,7 +147,8 @@ class BoardDataset(Dataset):
 
     @staticmethod
     def collate_fn_tuple(batch):
-        return batch
+        indices, boards = zip(*batch)
+        return indices, boards
 
     @staticmethod
     def collate_fn_tensor(batch):

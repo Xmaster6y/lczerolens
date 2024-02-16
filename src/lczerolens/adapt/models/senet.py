@@ -6,7 +6,8 @@ from tensordict import TensorDict
 from torch import nn
 
 from lczerolens.adapt import constants
-from lczerolens.adapt.network import ElementwiseMultiplyUniform, SumLayer
+from lczerolens.adapt.function import ElementwiseMultiplyUniform
+from lczerolens.adapt.network import SumLayer
 
 
 class SeLayer(nn.Module):
