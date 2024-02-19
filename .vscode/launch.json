@@ -25,6 +25,14 @@
             "module": "scripts.find_concepts",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "Script CRP Clusters",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "scripts.cluster_latent_relevances",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }

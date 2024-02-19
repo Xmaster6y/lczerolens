@@ -16,7 +16,9 @@ from lczerolens.xai.concepts import (
 )
 from lczerolens.xai.helpers import ModifiedFeatureVisualization
 
-#  HYPERPARAMETERS
+#######################################
+# HYPERPARAMETERS
+#######################################
 topk = 5
 ref_mode = "activation"
 batch_size = 500
