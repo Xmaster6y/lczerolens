@@ -1,21 +1,4 @@
 """Class for wrapping the LCZero models.
-
-Classes
--------
-ModelWrapper
-    A class for wrapping the LCZero models.
-
-PolicyFlow
-    A class for isolating the policy flow.
-
-ValueFlow
-    A class for isolating the value flow.
-
-WdlFlow
-    A class for isolating the value flow.
-
-MlhFlow
-    A class for isolating the value flow.
 """
 
 from typing import Iterable, Union
@@ -67,7 +50,7 @@ class ModelWrapper(nn.Module):
             raise ValueError("Invalid input type.")
 
         tensor_list = [
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            board_utils.board_to_input_tensor(board).unsqueeze(0)
             for board in board_list
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)
@@ -77,12 +60,20 @@ class ModelWrapper(nn.Module):
             out = self.forward(batched_tensor)
 
         if return_input:
-            out["input"] = batched_tensor
-        return out
+            return out, batched_tensor
+        return (out,)
 
 
 class PolicyFlow(ModelWrapper):
     """Class for isolating the policy flow."""
+
+    def __init__(
+        self,
+        model: nn.Module,
+    ):
+        if not hasattr(model, "policy"):
+            raise ValueError("The model does not have a policy head.")
+        super().__init__(model=model)
 
     def forward(self, x):
         """Forward pass."""
@@ -92,13 +83,29 @@ class PolicyFlow(ModelWrapper):
 class ValueFlow(ModelWrapper):
     """Class for isolating the value flow."""
 
+    def __init__(
+        self,
+        model: nn.Module,
+    ):
+        if not hasattr(model, "value"):
+            raise ValueError("The model does not have a value head.")
+        super().__init__(model=model)
+
     def forward(self, x):
         """Forward pass."""
         return self.model(x)["value"]
 
 
 class WdlFlow(ModelWrapper):
-    """Class for isolating the value flow."""
+    """Class for isolating the WDL flow."""
+
+    def __init__(
+        self,
+        model: nn.Module,
+    ):
+        if not hasattr(model, "wdl"):
+            raise ValueError("The model does not have a wdl head.")
+        super().__init__(model=model)
 
     def forward(self, x):
         """Forward pass."""
@@ -106,7 +113,15 @@ class WdlFlow(ModelWrapper):
 
 
 class MlhFlow(ModelWrapper):
-    """Class for isolating the value flow."""
+    """Class for isolating the MLH flow."""
+
+    def __init__(
+        self,
+        model: nn.Module,
+    ):
+        if not hasattr(model, "mlh"):
+            raise ValueError("The model does not have a mlh head.")
+        super().__init__(model=model)
 
     def forward(self, x):
         """Forward pass."""

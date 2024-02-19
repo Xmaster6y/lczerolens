@@ -7,8 +7,7 @@ import copy
 import chess
 import gradio as gr
 
-from demo import constants, utils
-from lczerolens import visualisation_utils
+from demo import constants, utils, visualisation
 
 cache = None
 boards = None
@@ -144,7 +143,7 @@ def make_plot(
         heatmap = attention_tensor[0, attention_head - 1]
     if board.turn == chess.BLACK:
         heatmap = heatmap.view(8, 8).flip(0).view(64)
-    svg_board, fig = visualisation_utils.render_heatmap(
+    svg_board, fig = visualisation.render_heatmap(
         board, heatmap, square=square
     )
     with open(f"{constants.FIGURE_DIRECTORY}/attention.svg", "w") as f:

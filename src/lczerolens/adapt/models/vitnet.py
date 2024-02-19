@@ -1,24 +1,4 @@
-"""
-Custom ViT network.
-
-Classes
--------
-SmolgenLayer
-    Smolgen layer.
-MlpLayer
-    MLP layer.
-EncoderBlock
-    Custom encoder block.
-PolicyHead
-    Policy head.
-MlhHead
-    MLH head.
-WdlHead
-    WDL head.
-VitConfig
-    Configuration for the ViT network.
-VitNet
-    Custom transformer model.
+"""Custom ViT network.
 """
 
 import warnings
@@ -29,8 +9,13 @@ import torch
 from tensordict import TensorDict
 from torch import nn
 
-from . import constants
-from .network import MultiplyLayer, ProdLayer, SofplusTanhMul, SumLayer
+from lczerolens.adapt import constants
+from lczerolens.adapt.network import (
+    MultiplyLayer,
+    ProdLayer,
+    SofplusTanhMul,
+    SumLayer,
+)
 
 
 class SmolgenLayer(nn.Module):
@@ -300,8 +285,10 @@ class VitConfig:
 
 
 class VitNet(nn.Module):
-    """
-    Custom transformer model.
+    """Custom transformer model.
+
+    .. warning::
+        The network is not yet fully implemented.
     """
 
     def __init__(
@@ -355,6 +342,7 @@ class VitNet(nn.Module):
             raise ValueError(f"Unknown activation mode {config.act_mode}.")
 
     def forward(self, x):
+        """Forward pass."""
         out = x.permute(0, 2, 3, 1).view(-1, 64, 112)
         positional_encodings = self.config.positional_encodings.view(
             1, 64, 64

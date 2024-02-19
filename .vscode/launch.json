@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Tests",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": ["tests", "--cov=src", "--capture=no"],
@@ -12,9 +12,25 @@
         },
         {
             "name": "Demo",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "demo.main",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Script CRP",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "scripts.crp_viz",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Script Concept",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "scripts.find_concepts",
             "console": "integratedTerminal",
             "justMyCode": false
         }

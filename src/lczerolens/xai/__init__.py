@@ -5,9 +5,15 @@ from .auto import AutoLens
 from .concept import (
     AndBinaryConcept,
     BinaryConcept,
+    ConceptDataset,
     OrBinaryConcept,
     UniqueConceptDataset,
 )
-from .concepts import HasPieceConcept, HasThreatConcept
+from .concepts import (
+    HasMaterialAdvantageConcept,
+    HasMateThreatConcept,
+    HasPieceConcept,
+    HasThreatConcept,
+)
 from .lens import Lens
-from .lenses import AttentionLens, CrpLens, LrpLens, PolicyLens, ProbingLens
+from .lenses import ActivationLens, CrpLens, LrpLens, PolicyLens, ProbingLens

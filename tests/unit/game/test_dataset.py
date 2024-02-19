@@ -2,29 +2,17 @@
 Test the dataset module.
 """
 
-import chess
-
-from lczerolens.game import GameDataset
+from lczerolens import BoardDataset, GameDataset
 
 
-class TestAcces:
+class TestGameDataset:
     def test_access(self, game_dataset_10: GameDataset):
         assert len(game_dataset_10.games) == 10
-        assert game_dataset_10[0] == chess.Board()
+        assert len(game_dataset_10[0].moves) == 129
 
-    def test_offset_access(self, game_dataset_10: GameDataset):
-        assert game_dataset_10.games[0].offset == 0
-        assert len(game_dataset_10.games[0].moves) == 129
-        assert game_dataset_10.games[1].offset == 130
-        assert game_dataset_10[130] == chess.Board()
 
-    def test_cache_access(self, game_dataset_10: GameDataset):
-        board = chess.Board()
-        assert game_dataset_10[130] == board
-        assert game_dataset_10[130] == board
-        board.push_san("e3")
-        assert game_dataset_10[131] == board
-        assert game_dataset_10.cache == (131, 1, board)
-        board.pop()
-        assert game_dataset_10[130] == board
-        assert game_dataset_10.cache == (130, 1, board)
+class TestBoardDataset:
+    def test_conversion(self, game_dataset_10: GameDataset):
+        board_dataset = BoardDataset.from_game_dataset(game_dataset_10)
+        assert len(board_dataset.boards) == 1169
+        assert len(board_dataset[0][1].move_stack) == 0

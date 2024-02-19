@@ -17,14 +17,14 @@ class TestT1VitNet:
         """
 
         board = chess.Board()
-        out = t1_vitnet(board_utils.board_to_tensor112x8x8(board).unsqueeze(0))
+        out = t1_vitnet(board_utils.board_to_input_tensor(board).unsqueeze(0))
         policy = out["policy"]
         wdl = out["wdl"]
         mlh = out["mlh"]
         onnx_policy, onnx_wdl, onnx_mlh = t1_vitnet_ort.run(
             None,
             {
-                "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                "/input/planes": board_utils.board_to_input_tensor(board)
                 .unsqueeze(0)
                 .numpy()
             },
@@ -47,7 +47,7 @@ class TestT1VitNet:
         move_list, board_list = random_move_board_list
         for i, board in enumerate(board_list):
             out = t1_vitnet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
@@ -55,7 +55,7 @@ class TestT1VitNet:
             onnx_policy, onnx_wdl, onnx_mlh = t1_vitnet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -78,7 +78,7 @@ class TestT1VitNet:
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
             out = t1_vitnet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
@@ -86,7 +86,7 @@ class TestT1VitNet:
             onnx_policy, onnx_wdl, onnx_mlh = t1_vitnet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },
@@ -109,7 +109,7 @@ class TestT1VitNet:
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
             out = t1_vitnet(
-                board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+                board_utils.board_to_input_tensor(board).unsqueeze(0)
             )
             policy = out["policy"]
             wdl = out["wdl"]
@@ -117,7 +117,7 @@ class TestT1VitNet:
             onnx_policy, onnx_wdl, onnx_mlh = t1_vitnet_ort.run(
                 None,
                 {
-                    "/input/planes": board_utils.board_to_tensor112x8x8(board)
+                    "/input/planes": board_utils.board_to_input_tensor(board)
                     .unsqueeze(0)
                     .numpy()
                 },

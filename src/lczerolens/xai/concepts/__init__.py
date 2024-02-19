@@ -1,5 +1,5 @@
-"""
-Concepts imports.
+"""Concepts module.
 """
 
-from .material import HasPieceConcept, HasThreatConcept
+from .material import HasMaterialAdvantageConcept, HasPieceConcept
+from .threat import HasMateThreatConcept, HasThreatConcept

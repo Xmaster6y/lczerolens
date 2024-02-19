@@ -11,29 +11,23 @@ import torch
 
 
 class RemovableHandleList(list):
-    """
-    A list of handles that can be removed.
-    """
+    """A list of handles that can be removed."""
 
-    def remove(self):
+    def clear(self):
         for handle in self:
             handle.remove()
         self.clear()
 
 
 class HookType(str, Enum):
-    """
-    Enum for hook type.
-    """
+    """Enum for hook type."""
 
     FORWARD = "forward"
     BACKWARD = "backward"
 
 
 class HookMode(str, Enum):
-    """
-    Enum for cache mode.
-    """
+    """Enum for cache mode."""
 
     INPUT = "input"
     OUTPUT = "output"
@@ -90,10 +84,13 @@ class Hook(ABC):
         return self.removable_handles
 
     def remove(self):
-        """
-        Removes the hook.
-        """
-        self.removable_handles.remove()
+        """Removes the hook."""
+        self.removable_handles.clear()
+
+    def clear(self):
+        """Clears the storage and removes the hook."""
+        self.storage.clear()
+        self.removable_handles.clear()
 
     @abstractmethod
     def forward_factory(self, name: str):

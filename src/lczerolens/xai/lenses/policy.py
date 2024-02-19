@@ -1,20 +1,13 @@
 """PolicyLens class for wrapping the LCZero models.
-
-Classes
--------
-PolicyLens
-    A class for wrapping the LCZero models.
 """
 
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 
 import chess
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
-from lczerolens.game.dataset import GameDataset
-from lczerolens.utils import move as move_utils
 from lczerolens.utils.constants import INVERTED_FROM_INDEX, INVERTED_TO_INDEX
 from lczerolens.xai.lens import Lens
 
@@ -27,77 +20,47 @@ class PolicyLens(Lens):
     """
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
-        """
-        Returns whether the lens is compatible with the model.
-        """
+        """Returns whether the lens is compatible with the model."""
         if hasattr(wrapper.model, "policy"):
             return True
         else:
             return False
 
-    def compute_heatmap(
+    def analyse_board(
         self,
         board: chess.Board,
         wrapper: ModelWrapper,
         **kwargs,
     ) -> torch.Tensor:
-        """
-        Compute the LRP heatmap for a given model and input.
-        """
-        aggregate_topk = kwargs.get("aggregate_topk", -1)
-        policy = kwargs.get("policy", None)
-        if policy is None:
-            policy = wrapper.predict(board)["policy"]
-        return self.aggregate_policy(policy, aggregate_topk=aggregate_topk)
+        """Compute the policy for a given board."""
+        policy_flow = PolicyFlow(wrapper.model)
+        (policy,) = policy_flow.predict(board)
+        return policy
 
-    def compute_statistics(
+    def analyse_dataset(
         self,
-        dataset: GameDataset,
+        dataset: Dataset,
         wrapper: ModelWrapper,
         batch_size: int,
+        collate_fn: Optional[Callable] = None,
+        save_to: Optional[str] = None,
         **kwargs,
-    ) -> dict:
-        """
-        Computes the statistics for a given board.
-        """
-        policy_flow = PolicyFlow(wrapper.model)
-        statistics: Dict[str, Dict[int, Any]] = {
-            "mean_legal_logits": {},
-            "mean_illegal_logits": {},
-        }
-        dataloader = DataLoader(
+    ) -> Optional[Dict[int, Any]]:
+        """Computes the statistics for a given board."""
+        loader = DataLoader(
             dataset,
             batch_size=batch_size,
             shuffle=False,
-            num_workers=0,
-            collate_fn=GameDataset.collate_fn_list,
+            collate_fn=collate_fn,
         )
-        for batch in dataloader:
-            policy = policy_flow.predict(batch)
-            for i, board in enumerate(batch):
-                legal_moves = [
-                    move_utils.encode_move(move, (board.turn, not board.turn))
-                    for move in board.legal_moves
-                ]
-                legal_mask = torch.Tensor(
-                    [move in legal_moves for move in range(1858)]
-                ).bool()
-                legal_mean = policy[i][legal_mask].mean().item()
-                illegal_mean = policy[i][~legal_mask].mean().item()
-                move_idx = len(board.move_stack)
-                if move_idx not in statistics["mean_legal_logits"]:
-                    statistics["mean_legal_logits"][move_idx] = [legal_mean]
-                    statistics["mean_illegal_logits"][move_idx] = [
-                        illegal_mean
-                    ]
-                else:
-                    statistics["mean_legal_logits"][move_idx].append(
-                        legal_mean
-                    )
-                    statistics["mean_illegal_logits"][move_idx].append(
-                        illegal_mean
-                    )
-        return statistics
+        policy_flow = PolicyFlow(wrapper.model)
+        policies = {}
+        for batch in loader:
+            indices, boards = batch
+            (batched_policies,) = policy_flow.predict(boards)
+            for idx in indices:
+                policies[idx] = batched_policies[idx]
+        return policies
 
     @staticmethod
     def aggregate_policy(

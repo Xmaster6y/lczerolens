@@ -2,4 +2,4 @@
 Import the game module.
 """
 
-from .dataset import GameDataset
+from .dataset import BoardDataset, GameDataset

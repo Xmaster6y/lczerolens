@@ -1,22 +1,19 @@
+"""Compute CRP heatmap for a given model and input.
 """
-Compute LRP heatmap for a given model and input.
-"""
+
+from typing import Any, Callable, List, Optional
 
 import chess
 import torch
 from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
-from zennit.canonizers import SequentialMergeBatchNorm
-from zennit.composites import SpecialFirstLayerMapComposite
-from zennit.rules import Epsilon, Flat, Pass, ZPlus
-from zennit.types import Activation, Convolution
-from zennit.types import Linear as AnyLinear
+from torch.utils.data import Dataset
 
-from lczerolens import board_utils
-from lczerolens.adapt.senet import SeNet
-from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
-from lczerolens.game.dataset import GameDataset
+from lczerolens.adapt.models.senet import SeNet
+from lczerolens.adapt.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
+
+from .lrp import LrpLens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -35,82 +32,51 @@ class CrpLens(Lens):
         else:
             return False
 
-    def compute_heatmap(
+    def analyse_board(
         self,
         board: chess.Board,
         wrapper: ModelWrapper,
         **kwargs,
     ) -> torch.Tensor:
-        """
-        Runs basic LRP on the model.
-        """
-        first_map_flat = kwargs.get("first_map_flat", False)
-        return self._compute_crp_heatmap(
-            wrapper.model, board, first_map_flat=first_map_flat
-        )
+        mode = kwargs.get("mode", "latent_relevances")
+        layer_names = kwargs.get("layer_names", None)
+        composite = kwargs.get("composite", None)
 
-    def compute_statistics(
+        if mode == "latent_relevances":
+            return self._compute_latent_relevances(
+                [board], wrapper, layer_names=layer_names, composite=composite
+            )
+        elif mode == "max_ref":
+            raise NotImplementedError
+        else:
+            raise ValueError(f"Invalid mode {mode}")
+
+    def analyse_dataset(
         self,
-        dataset: GameDataset,
+        dataset: Dataset,
         wrapper: ModelWrapper,
         batch_size: int,
+        collate_fn: Optional[Callable] = None,
+        save_to: Optional[str] = None,
         **kwargs,
     ) -> dict:
-        """
-        Computes the statistics for a given board.
-        """
         raise NotImplementedError
 
-    def _compute_crp_heatmap(
+    def _compute_latent_relevances(
         self,
-        model,
-        board: chess.Board,
-        first_map_flat: bool = False,
-    ):
-        """
-        Compute LRP heatmap for a given model and input.
-        """
+        boards: List[chess.Board],
+        wrapper: ModelWrapper,
+        layer_names: Optional[List[str]] = None,
+        composite: Optional[Any] = None,
+    ) -> torch.Tensor:
+        if layer_names is None:
+            layer_names = layer_names = get_layer_names(
+                wrapper, [torch.nn.Identity]
+            )
+        if composite is None:
+            composite = LrpLens.make_default_composite()
 
-        canonizers = [SequentialMergeBatchNorm()]
+        attribution = CondAttribution(wrapper)
 
-        if first_map_flat:
-            first_map = [(AnyLinear, Flat)]
-        else:
-            first_map = []
-        layer_map = [
-            (Activation, Pass()),
-            (Convolution, ZPlus()),
-            (AnyLinear, Epsilon(epsilon=1e-6)),
-        ]
-        composite = SpecialFirstLayerMapComposite(
-            layer_map=layer_map, first_map=first_map, canonizers=canonizers
-        )
-        policy_model = PolicyFlow(model)
-        layer_names = get_layer_names(
-            policy_model, [torch.nn.Conv2d, torch.nn.Linear]
-        )
-        attribution = CondAttribution(policy_model)
-        board_tensor = (
-            board_utils.board_to_tensor112x8x8(board)
-            .to(DEVICE)
-            .unsqueeze(0)
-            .requires_grad_(True)
-        )
-        conditions = [
-            {
-                "model.block4.conv1": [0],
-                "model.block3.conv1": [0],
-                "model.block2.conv1": [0],
-                "model.block1.conv1": [0],
-                "y": list(range(1858)),
-            }
-        ]
-        attr = attribution(
-            board_tensor,
-            conditions,
-            composite,
-            record_layer=layer_names,
-        )
-
-        heatmap = attr.heatmap
-        return heatmap
+        attr = attribution(boards, composite, record_layer=layer_names)
+        return attr.relevances

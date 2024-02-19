@@ -1,11 +1,4 @@
 """LCZero model builder.
-
-Classes
--------
-AutoBuilder
-    Class for automatically building a model.
-BuilderError
-    Error raised when the builder fails.
 """
 
 import os
@@ -17,8 +10,7 @@ from onnx2torch.onnx_graph import OnnxGraph
 from onnx2torch.utils.safe_shape_inference import safe_shape_inference
 from torch import nn
 
-from .senet import SeNet
-from .vitnet import VitConfig, VitNet
+from lczerolens.adapt.models import SeNet, VitConfig, VitNet
 
 
 class BuilderError(Exception):
@@ -264,8 +256,10 @@ class AutoBuilder:
 
     @classmethod
     def _build_vitnet_from_onnx(cls, onnx_graph):
-        """
-        Builds a VitNet from an onnx graph.
+        """Builds a VitNet from an onnx graph.
+
+        .. warning::
+            The network is not yet fully implemented.
         """
         state_dict = {}
         n_blocks = 0

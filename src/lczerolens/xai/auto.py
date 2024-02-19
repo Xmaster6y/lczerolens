@@ -2,7 +2,7 @@
 """
 
 from .lens import Lens
-from .lenses.attention import AttentionLens
+from .lenses.activation import ActivationLens
 from .lenses.crp import CrpLens
 from .lenses.lrp import LrpLens
 from .lenses.policy import PolicyLens
@@ -14,7 +14,7 @@ class AutoLens:
     Auto lens constructor.
     """
 
-    lens_types = ["attention", "lrp", "crp", "policy", "probing"]
+    lens_types = ["activation", "lrp", "crp", "policy", "probing"]
     exclude_from_wrapper = ["probing"]
 
     @staticmethod
@@ -22,8 +22,8 @@ class AutoLens:
         """
         Create a lens from the given type.
         """
-        if lens_type == "attention":
-            return AttentionLens()
+        if lens_type == "activation":
+            return ActivationLens()
         elif lens_type == "lrp":
             return LrpLens()
         elif lens_type == "crp":

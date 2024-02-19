@@ -4,11 +4,14 @@ Test cases for the concept module.
 
 import chess
 
+from lczerolens import BoardDataset, GameDataset
 from lczerolens.xai import (
     AndBinaryConcept,
     BinaryConcept,
+    ConceptDataset,
     HasPieceConcept,
     HasThreatConcept,
+    UniqueConceptDataset,
 )
 
 
@@ -24,9 +27,9 @@ class TestBinaryConcept:
         predictions = [0, 1, 0, 1]
         labels = [0, 1, 1, 1]
         metrics = BinaryConcept.compute_metrics(predictions, labels)
-        assert metrics["accuracy"] == 0.5
-        assert metrics["precision"] == 0.5
-        assert metrics["recall"] == 1.0
+        assert metrics["accuracy"] == 0.75
+        assert metrics["precision"] == 1.0
+        assert metrics["recall"] == 0.6666666666666666
 
     def test_compute_label(self):
         """
@@ -65,3 +68,26 @@ class TestBinaryConcept:
             concept.compute_label(chess.Board("R7/8/8/8/8/8/p7/8 b - - 0 1"))
             == 0
         )
+
+
+class TestDataset:
+    def test_unique_concept_dataset(self):
+        dataset = ConceptDataset(
+            concept=HasPieceConcept("p"),
+            boards=[
+                chess.Board("8/8/8/8/8/8/8/8 w - - 0 1"),
+                chess.Board("8/8/8/8/8/8/8/8 w - - 0 1"),
+            ],
+            labels=[0, 0],
+        )
+        unique_dataset = UniqueConceptDataset.from_concept_dataset(dataset)
+        assert len(unique_dataset) == 1
+
+    def test_conversion(self, game_dataset_10: GameDataset):
+        board_dataset = BoardDataset.from_game_dataset(game_dataset_10)
+        concept_dataset = UniqueConceptDataset.from_game_dataset(
+            game_dataset_10, concept=HasPieceConcept("p")
+        )
+        fen_set = set([board.fen() for _, board in board_dataset])
+        assert len(concept_dataset.boards) == len(fen_set)
+        assert len(concept_dataset[0][1].move_stack) == 0

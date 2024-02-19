@@ -4,9 +4,13 @@ Classes
 -------
 GameDataset
     A class for representing a dataset of games.
+BoardDataset
+    A class for representing a dataset of boards.
+IterableBoardDataset
+    A class for representing an iterable dataset of boards.
 """
 
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import chess
 import jsonlines
@@ -21,94 +25,135 @@ from .generate import Game
 class GameDataset(Dataset):
     """A class for representing a dataset of games.
 
-    Methods
-    -------
-    collate_fn_list(batch: List) -> List
-        Collate function for lists.
-    collate_fn_tensor(batch: List) -> torch.Tensor
-        Collate function for tensors.
+    Attributes
+    ----------
+    games : List[Game]
+        The list of games.
     """
 
     def __init__(
         self,
-        file_name: Optional[str],
+        file_name: Optional[str] = None,
+        games: Optional[List[Game]] = None,
     ):
-        self.games: List[Game] = []
-        if file_name is not None:
-            with jsonlines.open(file_name) as reader:
-                offset = 0
-                for obj in reader:
-                    parsed_moves = [
-                        m for m in obj["moves"].split() if not m.endswith(".")
-                    ]
-                    self.games.append(
-                        Game(
-                            offset=offset,
-                            gameid=obj["gameid"],
-                            moves=parsed_moves,
+        if games is None and file_name is None:
+            raise ValueError("Either games or file_name must be provided")
+        elif games is not None:
+            self.games = games
+        else:
+            self.games = []
+            if file_name is not None:
+                with jsonlines.open(file_name) as reader:
+                    for obj in reader:
+                        parsed_moves = [
+                            m
+                            for m in obj["moves"].split()
+                            if not m.endswith(".")
+                        ]
+                        self.games.append(
+                            Game(
+                                gameid=obj["gameid"],
+                                moves=parsed_moves,
+                            )
                         )
-                    )
-                    offset += len(parsed_moves) + 1
-        self.device = torch.device("cpu")
-        self.cache: Optional[Tuple[int, int, chess.Board]] = None
 
     def __len__(self):
-        last_game = self.games[-1]
-        return last_game.offset + len(last_game.moves) + 1
+        return len(self.games)
 
-    def _search_game(self, idx: int, inf_sup=None) -> int:
-        if idx >= self.__len__():
-            raise IndexError
-        elif idx < 0:
-            raise IndexError
-        if inf_sup is None:
-            inf = 0
-            sup = len(self.games) - 1
-        else:
-            inf, sup = inf_sup
-        if sup - inf <= 1:
-            return inf
-        mid = (inf + sup) // 2
-        if idx >= self.games[mid].offset:
-            return self._search_game(idx, (mid, sup))
-        else:
-            return self._search_game(idx, (inf, mid))
+    def __getitem__(self, idx) -> Game:
+        return self.games[idx]
 
-    def __getitem__(self, idx) -> chess.Board:
-        if self.cache is not None:
-            cache_idx, cache_game_idx, cache_board = self.cache
-            idx_rescaled = idx - self.games[cache_game_idx].offset
-            if idx_rescaled >= 0 and idx_rescaled < len(
-                self.games[cache_game_idx].moves
-            ):
-                board = cache_board
-                if cache_idx < idx:
-                    for move in self.games[cache_game_idx].moves[
-                        cache_idx
-                        - self.games[cache_game_idx].offset : idx_rescaled
-                    ]:
-                        board.push_san(move)
-                else:
-                    for _ in range(idx, cache_idx):
-                        board.pop()
-                self.cache = (idx, cache_game_idx, board.copy())
-                return board
-        game_idx = self._search_game(idx)
-        game = self.games[game_idx]
-        board = chess.Board()
-        for move in game.moves[: idx - game.offset]:
-            board.push_san(move)
-        self.cache = (idx, game_idx, board.copy())
-        return board
+
+class BoardDataset(Dataset):
+    """A class for representing a dataset of boards.
+
+    Attributes
+    ----------
+    boards : List[chess.Board]
+        The list of boards.
+    """
+
+    def __init__(
+        self,
+        file_name: Optional[str] = None,
+        boards: Optional[List[chess.Board]] = None,
+    ):
+        if boards is not None and file_name is not None:
+            raise ValueError("Either boards or file_name must be provided")
+        elif boards is not None:
+            self.boards = boards
+        else:
+            self.boards = []
+            if file_name is not None:
+                with jsonlines.open(file_name) as reader:
+                    for obj in reader:
+                        board = chess.Board(obj["fen"])
+                        for move in obj["moves"]:
+                            board.push_san(move)
+
+                        self.boards.append(board)
+
+    def __len__(self):
+        return len(self.boards)
+
+    def __getitem__(self, idx) -> Tuple[int, chess.Board]:
+        return idx, self.boards[idx]
+
+    @classmethod
+    def from_game_dataset(
+        cls,
+        game_dataset: GameDataset,
+        n_history: int = 0,
+    ):
+        boards = []
+        for game in game_dataset.games:
+            boards.extend(cls.game_to_board_list(game, n_history))
+        return cls(boards=boards)
 
     @staticmethod
-    def collate_fn_list(batch):
-        return batch
+    def preprocess_game(
+        game: Game,
+        n_history: int = 0,
+    ) -> List[Dict[str, Any]]:
+        board = chess.Board()
+        boards = [
+            {
+                "fen": board.fen(),
+                "moves": [],
+            }
+        ]
+        for i in range(len(game.moves)):
+            if i >= n_history:
+                board.push_san(game.moves[i - n_history])
+            boards.append(
+                {
+                    "fen": board.fen(),
+                    "moves": game.moves[i - n_history : i],
+                }
+            )
+        return boards
+
+    @staticmethod
+    def game_to_board_list(
+        game: Game,
+        n_history: int = 0,
+    ) -> List[Dict[str, Any]]:
+        working_board = chess.Board()
+        boards = [working_board.copy(stack=n_history)]
+        for move in game.moves:
+            working_board.push_san(move)
+            boards.append(working_board.copy(stack=n_history))
+        return boards
+
+    @staticmethod
+    def collate_fn_tuple(batch):
+        indices, boards = zip(*batch)
+        return indices, boards
 
     @staticmethod
     def collate_fn_tensor(batch):
         tensor_list = [
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
+            board_utils.board_to_input_tensor(board).unsqueeze(0)
             for board in batch
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)

@@ -1,10 +1,10 @@
-"""CRP lens tests.
+"""Activation lens tests.
 """
 
-from lczerolens.xai import CrpLens
+from lczerolens.xai import ActivationLens
 
 
 class TestLens:
     def test_is_compatible(self, tiny_wrapper):
-        lens = CrpLens()
+        lens = ActivationLens()
         assert lens.is_compatible(tiny_wrapper)

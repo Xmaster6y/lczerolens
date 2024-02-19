@@ -3,10 +3,17 @@
 
 import re
 from copy import deepcopy
+from enum import Enum
 from typing import Optional, Tuple
 
 import chess
 import torch
+
+
+class InputEncoding(int, Enum):
+    """Input encoding for the board tensor."""
+
+    INPUT_CLASSICAL_112_PLANE = 0
 
 
 def get_plane_order(us_them: Tuple[bool, bool]):
@@ -52,11 +59,12 @@ def get_piece_index(
     return f"{plane_order}0".index(piece)
 
 
-def board_to_tensor13x8x8(
+def board_to_config_tensor(
     board: chess.Board,
     us_them: Optional[Tuple[bool, bool]] = None,
+    input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
 ):
-    """Converts a chess.Board object to a 64 tensor.
+    """Converts a chess.Board to a tensor based on the pieces configuration.
 
     Parameters
     ----------
@@ -64,12 +72,18 @@ def board_to_tensor13x8x8(
         The board to convert.
     us_them : Optional[Tuple[bool, bool]]
         The us_them tuple.
+    input_encoding : InputEncoding
+        The input encoding method.
 
     Returns
     -------
     torch.Tensor
         The 13x8x8 tensor.
     """
+    if input_encoding != InputEncoding.INPUT_CLASSICAL_112_PLANE:
+        raise NotImplementedError(
+            f"Input encoding {input_encoding} not implemented."
+        )
     if us_them is None:
         us = board.turn
         them = not us
@@ -86,7 +100,7 @@ def board_to_tensor13x8x8(
     rev_rows = rows[::-1]
     ordered_fen = "".join(rev_rows)
 
-    tensor13x8x8 = torch.zeros((13, 8, 8), dtype=torch.float)
+    config_tensor = torch.zeros((13, 8, 8), dtype=torch.float)
     ordinal_board = torch.tensor(
         tuple(map(piece_to_index, ordered_fen)), dtype=torch.float
     )
@@ -95,17 +109,20 @@ def board_to_tensor13x8x8(
         tuple(map(piece_to_index, plane_order)), dtype=torch.float
     )
     piece_tensor = piece_tensor.reshape((12, 1, 1))
-    tensor13x8x8[:12] = (ordinal_board == piece_tensor).float()
-    if board.is_repetition(2):
-        tensor13x8x8[12] = torch.ones((8, 8), dtype=torch.float)
-    return tensor13x8x8 if us == chess.WHITE else tensor13x8x8.flip(1)
+    config_tensor[:12] = (ordinal_board == piece_tensor).float()
+    if board.is_repetition(
+        2
+    ):  # Might be wrong if the full history is not available
+        config_tensor[12] = torch.ones((8, 8), dtype=torch.float)
+    return config_tensor if us == chess.WHITE else config_tensor.flip(1)
 
 
-def board_to_tensor112x8x8(
+def board_to_input_tensor(
     last_board=chess.Board,
     with_history: bool = True,
+    input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
 ):
-    """Create the lc0 112x8x8 tensor from the history of a game.
+    """Create the lc0 input tensor from the history of a game.
 
     Parameters
     ----------
@@ -113,36 +130,42 @@ def board_to_tensor112x8x8(
         The last board in the game.
     with_history : bool
         Whether to include the history of the game.
+    input_encoding : InputEncoding
+        The input encoding method.
 
     Returns
     -------
     torch.Tensor
         The 112x8x8 tensor.
     """
+    if input_encoding != InputEncoding.INPUT_CLASSICAL_112_PLANE:
+        raise NotImplementedError(
+            f"Input encoding {input_encoding} not implemented."
+        )
     board = deepcopy(last_board)
-    tensor112x8x8 = torch.zeros((112, 8, 8), dtype=torch.float)
+    input_tensor = torch.zeros((112, 8, 8), dtype=torch.float)
     us = last_board.turn
     them = not us
     if with_history:
         for i in range(8):
-            tensor13x8x8 = board_to_tensor13x8x8(board, (us, them))
-            tensor112x8x8[i * 13 : (i + 1) * 13] = tensor13x8x8
+            config_tensor = board_to_config_tensor(board, (us, them))
+            input_tensor[i * 13 : (i + 1) * 13] = config_tensor
             try:
                 board.pop()
             except IndexError:
                 break
     if last_board.has_queenside_castling_rights(us):
-        tensor112x8x8[104] = torch.ones((8, 8), dtype=torch.float)
+        input_tensor[104] = torch.ones((8, 8), dtype=torch.float)
     if last_board.has_kingside_castling_rights(us):
-        tensor112x8x8[105] = torch.ones((8, 8), dtype=torch.float)
+        input_tensor[105] = torch.ones((8, 8), dtype=torch.float)
     if last_board.has_queenside_castling_rights(them):
-        tensor112x8x8[106] = torch.ones((8, 8), dtype=torch.float)
+        input_tensor[106] = torch.ones((8, 8), dtype=torch.float)
     if last_board.has_kingside_castling_rights(them):
-        tensor112x8x8[107] = torch.ones((8, 8), dtype=torch.float)
+        input_tensor[107] = torch.ones((8, 8), dtype=torch.float)
     if us == chess.BLACK:
-        tensor112x8x8[108] = torch.ones((8, 8), dtype=torch.float)
-    tensor112x8x8[109] = (
+        input_tensor[108] = torch.ones((8, 8), dtype=torch.float)
+    input_tensor[109] = (
         torch.ones((8, 8), dtype=torch.float) * last_board.halfmove_clock
     )
-    tensor112x8x8[111] = torch.ones((8, 8), dtype=torch.float)
-    return tensor112x8x8
+    input_tensor[111] = torch.ones((8, 8), dtype=torch.float)
+    return input_tensor

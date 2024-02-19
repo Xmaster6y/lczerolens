@@ -2,13 +2,15 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import chess
+import jsonlines
 import torch
 from sklearn import metrics
+from torch.utils.data import Dataset
 
-from lczerolens.game.dataset import GameDataset
+from lczerolens.game.dataset import BoardDataset, GameDataset
 from lczerolens.utils import board as board_utils
 
 
@@ -147,41 +149,88 @@ class ContinuousConcept(Concept):
         }
 
 
-class ConceptDataset(GameDataset):
+class ConceptDataset(Dataset):
     """
     Class for concept
     """
 
-    def __init__(self, concept: Concept, file_name: Optional[str]):
-        super().__init__(file_name=file_name)
-        self.concept = concept
+    def __init__(
+        self,
+        concept: Concept,
+        file_name: Optional[str] = None,
+        boards: Optional[List[chess.Board]] = None,
+        labels: Optional[List[Any]] = None,
+    ):
+        if boards is not None and file_name is not None:
+            raise ValueError("Either boards or file_name must be provided")
+        elif boards is not None:
+            self.boards = boards
+        else:
+            self.boards = []
+            if file_name is not None:
+                with jsonlines.open(file_name) as reader:
+                    for obj in reader:
+                        board = chess.Board(obj["fen"])
+                        for move in obj["moves"]:
+                            board.push_san(move)
 
-    def __getitem__(self, idx) -> chess.Board:
-        board = super().__getitem__(idx)
-        label = self.concept.compute_label(board)
-        return board, label
+                        self.boards.append(board)
+        self._concept = concept
+        if labels is not None:
+            self.labels = labels
+        else:
+            self.labels = [
+                self._concept.compute_label(board) for board in self.boards
+            ]
+
+    def __len__(self):
+        return len(self.boards)
+
+    def __getitem__(self, idx) -> Tuple[int, chess.Board, Any]:
+        board = self.boards[idx]
+        label = self.labels[idx]
+        return idx, board, label
+
+    @property
+    def concept(self):
+        return self._concept
+
+    @concept.setter
+    def concept(self, concept):
+        self._concept = concept
+        self.labels = [
+            self._concept.compute_label(board) for board in self.boards
+        ]
 
     @classmethod
-    def from_game_dataset(cls, game_dataset: GameDataset, concept: Concept):
-        instance = cls(concept=concept, file_name=None)
-        instance.games = game_dataset.games
-        instance.cache = None
-        return instance
+    def from_game_dataset(
+        cls, game_dataset: GameDataset, concept: Concept, n_history: int = 0
+    ):
+        board_dataset = BoardDataset.from_game_dataset(
+            game_dataset=game_dataset, n_history=n_history
+        )
+        return cls.from_board_dataset(board_dataset, concept)
+
+    @classmethod
+    def from_board_dataset(cls, board_dataset: BoardDataset, concept: Concept):
+        labels = [
+            concept.compute_label(board) for board in board_dataset.boards
+        ]
+        return cls(concept, boards=board_dataset.boards, labels=labels)
 
     @staticmethod
-    def collate_fn_list(batch):
-        board_list, label_list = zip(*batch)
-        return board_list, label_list
+    def collate_fn_tuple(batch):
+        indices, boards, labels = zip(*batch)
+        return tuple(indices), tuple(boards), tuple(labels)
 
     @staticmethod
     def collate_fn_tensor(batch):
-        board_list, label_list = zip(*batch)
+        indices, boards, labels = zip(*batch)
         tensor_list = [
-            board_utils.board_to_tensor112x8x8(board).unsqueeze(0)
-            for board in board_list
+            board_utils.board_to_input_tensor(board) for board in boards
         ]
-        batched_tensor = torch.cat(tensor_list, dim=0)
-        return batched_tensor, label_list
+        batched_tensor = torch.stack(tensor_list, dim=0)
+        return tuple(indices), batched_tensor, tuple(labels)
 
 
 class UniqueConceptDataset(ConceptDataset):
@@ -190,43 +239,47 @@ class UniqueConceptDataset(ConceptDataset):
     """
 
     def __init__(
-        self, concept: Concept, file_name: Optional[str], strict: bool = False
+        self,
+        concept: Concept,
+        file_name: Optional[str] = None,
+        boards: Optional[List[chess.Board]] = None,
+        labels: Optional[List[Any]] = None,
     ):
-        super().__init__(concept, file_name)
-        self._unique_resample(strict=strict)
-
-    def __getitem__(self, idx) -> chess.Board:
-        board = self.unique_boards[idx]
-        label = self.concept.compute_label(board)
-        return board, label
-
-    def __len__(self):
-        return len(self.unique_boards)
+        super().__init__(concept, file_name, boards, labels)
+        self._unique_resample()
 
     @classmethod
     def from_game_dataset(
-        cls, game_dataset: GameDataset, concept: Concept, strict: bool = False
+        cls, game_dataset: GameDataset, concept: Concept, n_history: int = 0
     ):
-        instance = super().from_game_dataset(game_dataset, concept)
-        instance._unique_resample(strict=strict)
+        instance = super().from_game_dataset(game_dataset, concept, n_history)
+        instance._unique_resample()
         return instance
 
-    def _unique_resample(self, strict: bool = False):
+    @classmethod
+    def from_board_dataset(
+        cls,
+        board_dataset: BoardDataset,
+        concept: Concept,
+    ):
+        instance = super().from_board_dataset(board_dataset, concept)
+        instance._unique_resample()
+        return instance
+
+    @classmethod
+    def from_concept_dataset(cls, concept_dataset: ConceptDataset):
+        return cls(
+            concept_dataset.concept,
+            boards=concept_dataset.boards,
+            labels=concept_dataset.labels,
+        )
+
+    def _unique_resample(self):
         unique_boards: List[chess.Board] = []
-        for game in self.games:
-            board = chess.Board()
-            for move in game.moves:
-                board.push_san(move)
-                if board not in unique_boards:
-                    if strict:
-                        for unique_board in unique_boards:
-                            if (
-                                board.move_stack[:8]
-                                == unique_board.move_stack[:8]
-                            ):  # Encodings can still be different
-                                break
-                        else:
-                            unique_boards.append(board.copy())
-                    else:
-                        unique_boards.append(board.copy())
-        self.unique_boards = unique_boards
+        labels = []
+        for board, label in zip(self.boards, self.labels):
+            if board not in unique_boards:
+                unique_boards.append(board)
+                labels.append(label)
+        self.boards = unique_boards
+        self.labels = labels

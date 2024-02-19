@@ -1,9 +1,12 @@
 lczerolens.adapt
-----------------
+================
 
 
 .. automodule:: lczerolens.adapt
    :members:
 
-.. automodule:: lczerolens.adapt.SeNet
-   :members:
+.. toctree::
+   :titlesonly:
+
+   adapt/builder
+   adapt/models
