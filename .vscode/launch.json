@@ -19,15 +19,7 @@
             "justMyCode": false
         },
         {
-            "name": "Script CRP",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scripts.crp_viz",
-            "console": "integratedTerminal",
-            "justMyCode": false
-        },
-        {
-            "name": "Script Concept",
+            "name": "Script CRP Concepts",
             "type": "debugpy",
             "request": "launch",
             "module": "scripts.find_concepts",
