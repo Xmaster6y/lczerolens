@@ -1,15 +1,18 @@
 """Compute CRP heatmap for a given model and input.
 """
 
-from typing import Callable, Optional
+from typing import Any, Callable, List, Optional
 
 import chess
 import torch
+from crp.attribution import CondAttribution
+from crp.helper import get_layer_names
 from torch.utils.data import Dataset
 
 from lczerolens.adapt.models.senet import SeNet
 from lczerolens.adapt.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
+from lczerolens.xai.lenses import LrpLens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,7 +37,18 @@ class CrpLens(Lens):
         wrapper: ModelWrapper,
         **kwargs,
     ) -> torch.Tensor:
-        raise NotImplementedError
+        mode = kwargs.get("mode", "latent_relevances")
+        layer_names = kwargs.get("layer_names", None)
+        composite = kwargs.get("composite", None)
+
+        if mode == "latent_relevances":
+            return self._compute_latent_relevances(
+                [board], wrapper, layer_names=layer_names, composite=composite
+            )
+        elif mode == "max_ref":
+            raise NotImplementedError
+        else:
+            raise ValueError(f"Invalid mode {mode}")
 
     def analyse_dataset(
         self,
@@ -46,3 +60,22 @@ class CrpLens(Lens):
         **kwargs,
     ) -> dict:
         raise NotImplementedError
+
+    def _compute_latent_relevances(
+        self,
+        boards: List[chess.Board],
+        wrapper: ModelWrapper,
+        layer_names: Optional[List[str]] = None,
+        composite: Optional[Any] = None,
+    ) -> torch.Tensor:
+        if layer_names is None:
+            layer_names = layer_names = get_layer_names(
+                wrapper, [torch.nn.Identity]
+            )
+        if composite is None:
+            composite = LrpLens.make_default_composite()
+
+        attribution = CondAttribution(wrapper)
+
+        attr = attribution(boards, composite, record_layer=layer_names)
+        return attr.relevances

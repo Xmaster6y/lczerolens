@@ -15,4 +15,4 @@ class TestBoardDataset:
     def test_conversion(self, game_dataset_10: GameDataset):
         board_dataset = BoardDataset.from_game_dataset(game_dataset_10)
         assert len(board_dataset.boards) == 1169
-        assert len(board_dataset[0].move_stack) == 0
+        assert len(board_dataset[0][1].move_stack) == 0

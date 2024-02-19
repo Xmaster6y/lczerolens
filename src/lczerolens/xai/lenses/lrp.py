@@ -61,8 +61,9 @@ class LrpLens(Lens):
             The heatmap for the given board.
         """
         composite = kwargs.get("composite", None)
+        target = kwargs.get("target", "policy")
         relevance = self._compute_lrp_relevance(
-            [board], wrapper, composite=composite
+            [board], wrapper, composite=composite, target=target
         )
         return relevance[0]
 
@@ -96,7 +97,8 @@ class LrpLens(Lens):
         self,
         boards: List[chess.Board],
         wrapper: ModelWrapper,
-        composite: Any = None,
+        composite: Optional[Any] = None,
+        target: Optional[str] = None,
     ):
         """
         Compute LRP heatmap for a given model and input.
@@ -106,14 +108,17 @@ class LrpLens(Lens):
             composite = self.make_default_composite()
 
         with composite.context(wrapper) as modified_model:
-            output = modified_model.predict(
+            output, input_tensor = modified_model.predict(
                 boards,
                 with_grad=True,
                 input_requires_grad=True,
                 return_input=True,
             )
-            output["policy"].backward(gradient=output["policy"])
-        return output["input"].grad
+            if target is None:
+                output.backward(gradient=output)
+            else:
+                output[target].backward(gradient=output[target])
+        return input_tensor.grad
 
     @staticmethod
     def make_default_composite():

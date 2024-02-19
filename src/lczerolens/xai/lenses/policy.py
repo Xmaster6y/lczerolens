@@ -7,7 +7,7 @@ import chess
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.utils.constants import INVERTED_FROM_INDEX, INVERTED_TO_INDEX
 from lczerolens.xai.lens import Lens
 
@@ -33,7 +33,8 @@ class PolicyLens(Lens):
         **kwargs,
     ) -> torch.Tensor:
         """Compute the policy for a given board."""
-        policy = wrapper.predict(board)["policy"]
+        policy_flow = PolicyFlow(wrapper.model)
+        (policy,) = policy_flow.predict(board)
         return policy
 
     def analyse_dataset(
@@ -52,10 +53,11 @@ class PolicyLens(Lens):
             shuffle=False,
             collate_fn=collate_fn,
         )
+        policy_flow = PolicyFlow(wrapper.model)
         policies = {}
         for batch in loader:
             indices, boards = batch
-            batched_policies = wrapper.predict(boards)["policy"]
+            (batched_policies,) = policy_flow.predict(boards)
             for idx in indices:
                 policies[idx] = batched_policies[idx]
         return policies

@@ -16,4 +16,4 @@ from .concepts import (
     HasThreatConcept,
 )
 from .lens import Lens
-from .lenses import AttentionLens, CrpLens, LrpLens, PolicyLens, ProbingLens
+from .lenses import ActivationLens, CrpLens, LrpLens, PolicyLens, ProbingLens

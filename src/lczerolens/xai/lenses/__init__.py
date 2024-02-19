@@ -2,7 +2,7 @@
 Lenses implementation for XAI
 """
 
-from .attention import AttentionLens
+from .activation import ActivationLens
 from .crp import CrpLens
 from .lrp import LrpLens
 from .policy import PolicyLens
