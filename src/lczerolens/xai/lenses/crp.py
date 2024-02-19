@@ -12,7 +12,8 @@ from torch.utils.data import Dataset
 from lczerolens.adapt.models.senet import SeNet
 from lczerolens.adapt.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
-from lczerolens.xai.lenses import LrpLens
+
+from .lrp import LrpLens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
