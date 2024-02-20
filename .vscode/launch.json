@@ -19,18 +19,18 @@
             "justMyCode": false
         },
         {
-            "name": "Script CRP",
+            "name": "Script CRP Concepts",
             "type": "debugpy",
             "request": "launch",
-            "module": "scripts.crp_viz",
+            "module": "scripts.find_concepts",
             "console": "integratedTerminal",
             "justMyCode": false
         },
         {
-            "name": "Script Concept",
+            "name": "Script CRP Clusters",
             "type": "debugpy",
             "request": "launch",
-            "module": "scripts.find_concepts",
+            "module": "scripts.cluster_latent_relevances",
             "console": "integratedTerminal",
             "justMyCode": false
         }

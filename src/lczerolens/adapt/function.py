@@ -16,7 +16,7 @@ from torch.autograd import Function
 
 
 def stabilize(tensor, epsilon=1e-6):
-    return tensor.add_(epsilon)
+    return tensor + epsilon
 
 
 class ElementwiseMultiplyUniform(Function):
@@ -49,10 +49,8 @@ class SoftmaxEpsilon(Function):
         inputs, output = ctx.saved_tensors
 
         relevance = (
-            grad_outputs[0].sub_(
-                output.mul_(grad_outputs[0].sum(-1, keepdim=True))
-            )
-        ).mul_(inputs)
+            grad_outputs[0] - (output * grad_outputs[0].sum(-1, keepdim=True))
+        ) * inputs
 
         return (relevance, None)
 
@@ -70,7 +68,7 @@ class MatrixMultiplicationEpsilon(Function):
         input_a, input_b, outputs = ctx.saved_tensors
         out_relevance = grad_outputs[0]
 
-        out_relevance = out_relevance.div_(stabilize(outputs.mul_(2)))
+        out_relevance = out_relevance / stabilize(2 * outputs)
 
         relevance_a = torch.matmul(
             out_relevance, input_b.permute(0, 1, -1, -2)
