@@ -8,6 +8,7 @@ import torch
 from onnx2torch import convert
 from onnx2torch.onnx_graph import OnnxGraph
 from onnx2torch.utils.safe_shape_inference import safe_shape_inference
+from tensordict import TensorDict
 from torch import nn
 
 from lczerolens.adapt.models import SeNet, VitConfig, VitNet
@@ -87,7 +88,11 @@ class AutoBuilder:
         try:
             onnx_model = safe_shape_inference(onnx_model_or_path)
             if not native:
+                onnx_model = safe_shape_inference(onnx_model_or_path)
                 onnx_torch_model = convert(onnx_model)
+                onnx_torch_model.forward = cls.make_onnx_td_forward(
+                    onnx_torch_model
+                )
                 return onnx_torch_model
             onnx_graph = OnnxGraph(onnx_model.graph)
         except Exception:
@@ -104,6 +109,23 @@ class AutoBuilder:
                     return cls._build_senet_from_onnx(onnx_graph)
         raise BuilderError(f"Could not load model at {onnx_model_or_path}.")
 
+    @staticmethod
+    def make_onnx_td_forward(onnx_model):
+        old_forward = onnx_model.forward
+        output_node = list(onnx_model.graph.nodes)[-1]
+        output_names = [
+            n.name.replace("output_", "") for n in output_node.all_input_nodes
+        ]
+
+        def td_forward(x):
+            old_out = old_forward(x)
+            return TensorDict(
+                {name: old_out[i] for i, name in enumerate(output_names)},
+                batch_size=x.shape[0],
+            )
+
+        return td_forward
+
     @classmethod
     def build_from_torch_path(cls, torch_model_path: str):
         """
@@ -119,8 +141,6 @@ class AutoBuilder:
             raise BuilderError(f"Could not load model at {torch_model_path}.")
         if isinstance(torch_model, nn.Module):
             return torch_model
-        elif isinstance(torch_model, dict):
-            return cls.build_from_state_dict(torch_model)
         else:
             raise BuilderError(f"Could not load model at {torch_model_path}.")
 

@@ -1,19 +1,20 @@
 """Compute LRP heatmap for a given model and input.
 """
 
+from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional
 
 import chess
+import onnx2torch
 import torch
 from torch.utils.data import DataLoader, Dataset
 from zennit.canonizers import SequentialMergeBatchNorm
-from zennit.composites import LayerMapComposite
+from zennit.composites import Composite, LayerMapComposite
 from zennit.rules import Epsilon, Pass, ZPlus
 from zennit.types import Activation
 
-from lczerolens.adapt.models.senet import SeNet
-from lczerolens.adapt.network import ProdLayer, SumLayer
 from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.xai.helpers import lrp as lrp_helpers
 from lczerolens.xai.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,10 +36,7 @@ class LrpLens(Lens):
         bool
             Whether the lens is compatible with the model.
         """
-        if isinstance(wrapper.model, SeNet):
-            return True
-        else:
-            return False
+        return isinstance(wrapper.model, torch.nn.Module)
 
     def analyse_board(
         self,
@@ -62,8 +60,13 @@ class LrpLens(Lens):
         """
         composite = kwargs.get("composite", None)
         target = kwargs.get("target", "policy")
+        replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         relevance = self._compute_lrp_relevance(
-            [board], wrapper, composite=composite, target=target
+            [board],
+            wrapper,
+            composite=composite,
+            target=target,
+            replace_onnx2torch=replace_onnx2torch,
         )
         return relevance[0]
 
@@ -80,6 +83,8 @@ class LrpLens(Lens):
         if save_to is not None:
             raise NotImplementedError("Saving to file is not implemented.")
         composite = kwargs.get("composite", None)
+        target = kwargs.get("target", "policy")
+        replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         dataloader = DataLoader(
             dataset, batch_size=batch_size, collate_fn=collate_fn
         )
@@ -87,7 +92,11 @@ class LrpLens(Lens):
         for batch in dataloader:
             inidices, boards = batch
             batched_relevances = self._compute_lrp_relevance(
-                boards, wrapper, composite=composite
+                boards,
+                wrapper,
+                composite=composite,
+                target=target,
+                replace_onnx2torch=replace_onnx2torch,
             )
             for idx, relevance in zip(inidices, batched_relevances):
                 relevances[idx] = relevance
@@ -99,15 +108,15 @@ class LrpLens(Lens):
         wrapper: ModelWrapper,
         composite: Optional[Any] = None,
         target: Optional[str] = None,
+        replace_onnx2torch: bool = True,
     ):
         """
         Compute LRP heatmap for a given model and input.
         """
 
-        if composite is None:
-            composite = self.make_default_composite()
-
-        with composite.context(wrapper) as modified_model:
+        with self.context(
+            wrapper, composite, replace_onnx2torch
+        ) as modified_model:
             output, input_tensor = modified_model.predict(
                 boards,
                 with_grad=True,
@@ -128,8 +137,45 @@ class LrpLens(Lens):
             (Activation, Pass()),
             (torch.nn.Conv2d, ZPlus()),
             (torch.nn.Linear, Epsilon(epsilon=1e-6)),
-            (SumLayer, Epsilon(epsilon=1e-6)),
-            (ProdLayer, Epsilon(epsilon=1e-6)),
             (torch.nn.AdaptiveAvgPool2d, Epsilon(epsilon=1e-6)),
         ]
         return LayerMapComposite(layer_map=layer_map, canonizers=canonizers)
+
+    @staticmethod
+    @contextmanager
+    def context(
+        wrapper: ModelWrapper,
+        composite: Optional[Composite] = None,
+        replace_onnx2torch: bool = True,
+    ):
+        """Context manager for the lens."""
+        if composite is None:
+            composite = LrpLens.make_default_composite()
+        if replace_onnx2torch:
+            new_module_mapping = {}
+            old_module_mapping = {}
+            for name, module in wrapper.model.named_modules():
+                if isinstance(
+                    module, onnx2torch.node_converters.OnnxBinaryMathOperation
+                ):
+                    if module.math_op_function is torch.add:
+                        new_module_mapping[name] = lrp_helpers.AddEpsilon()
+                        old_module_mapping[name] = module
+                elif isinstance(module, onnx2torch.node_converters.OnnxMatMul):
+                    new_module_mapping[name] = lrp_helpers.MatMulEpsilon()
+                    old_module_mapping[name] = module
+                elif isinstance(
+                    module, onnx2torch.node_converters.OnnxFunction
+                ):
+                    if module.function is torch.tanh:
+                        new_module_mapping[name] = torch.nn.Tanh()
+                        old_module_mapping[name] = module
+            for name, module in new_module_mapping.items():
+                setattr(wrapper.model, name, module)
+
+        with composite.context(wrapper) as modified_model:
+            yield modified_model
+
+        if replace_onnx2torch:
+            for name, module in old_module_mapping.items():
+                setattr(wrapper.model, name, module)

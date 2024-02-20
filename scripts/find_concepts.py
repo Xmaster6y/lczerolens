@@ -19,7 +19,7 @@ from lczerolens.xai.concepts import (
     HasMateThreatConcept,
     HasThreatConcept,
 )
-from lczerolens.xai.helpers import ModifiedFeatureVisualization
+from lczerolens.xai.helpers import crp as crp_helpers
 
 #######################################
 # HYPERPARAMETERS
@@ -59,7 +59,7 @@ layer_map = {layer: cc for layer in layer_names}
 
 
 fv_path = f"scripts/im_viz/{model_name}-{dataset_name}"
-fv = ModifiedFeatureVisualization(
+fv = crp_helpers.ModifiedFeatureVisualization(
     attribution, unique_dataset, layer_map, preprocess_fn=None, path=fv_path
 )
 
