@@ -1,3 +1,11 @@
+"""Script to cluster the latent relevances of the model for a given dataset.
+
+Run with:
+```bash
+poetry run python -m scripts.cluster_latent_relevances
+```
+"""
+
 import os
 
 import chess
@@ -32,6 +40,7 @@ conv_sum_dims = (2, 3)
 model_name = "tinygyal-8.onnx"
 dataset_name = "test_stockfish_10.jsonl"
 only_config_rel = True
+#######################################
 
 
 class MaxLogitFlow(PolicyFlow):

@@ -63,6 +63,16 @@ class GameDataset(Dataset):
     def __getitem__(self, idx) -> Game:
         return self.games[idx]
 
+    def save(self, file_name: str):
+        with jsonlines.open(file_name, "w") as writer:
+            for game in self.games:
+                writer.write(
+                    {
+                        "gameid": game.gameid,
+                        "moves": " ".join(game.moves),
+                    }
+                )
+
 
 class BoardDataset(Dataset):
     """A class for representing a dataset of boards.
@@ -77,13 +87,19 @@ class BoardDataset(Dataset):
         self,
         file_name: Optional[str] = None,
         boards: Optional[List[chess.Board]] = None,
+        game_ids: Optional[List[str]] = None,
     ):
         if boards is not None and file_name is not None:
             raise ValueError("Either boards or file_name must be provided")
         elif boards is not None:
             self.boards = boards
+            if game_ids is not None:
+                self.game_ids = game_ids
+            else:
+                self.game_ids = ["none"] * len(boards)
         else:
             self.boards = []
+            self.game_ids = []
             if file_name is not None:
                 with jsonlines.open(file_name) as reader:
                     for obj in reader:
@@ -92,6 +108,7 @@ class BoardDataset(Dataset):
                             board.push_san(move)
 
                         self.boards.append(board)
+                        self.game_ids.append(obj["gameid"])
 
     def __len__(self):
         return len(self.boards)
@@ -99,16 +116,31 @@ class BoardDataset(Dataset):
     def __getitem__(self, idx) -> Tuple[int, chess.Board]:
         return idx, self.boards[idx]
 
+    def save(self, file_name: str):
+        with jsonlines.open(file_name, "w") as writer:
+            for board, gameid in zip(self.boards, self.game_ids):
+                writer.write(
+                    {
+                        "fen": board.fen(),
+                        "moves": [move.uci() for move in board.move_stack],
+                        "gameid": gameid,
+                    }
+                )
+
     @classmethod
     def from_game_dataset(
         cls,
         game_dataset: GameDataset,
         n_history: int = 0,
     ):
-        boards = []
+        boards: List[chess.Board] = []
+        game_ids: List[str] = []
         for game in game_dataset.games:
-            boards.extend(cls.game_to_board_list(game, n_history))
-        return cls(boards=boards)
+            new_boards, new_ids = cls.game_to_board_list(game, n_history)
+            boards.extend(new_boards)
+            game_ids.extend(new_ids)
+
+        return cls(boards=boards, game_ids=game_ids)
 
     @staticmethod
     def preprocess_game(
@@ -120,6 +152,7 @@ class BoardDataset(Dataset):
             {
                 "fen": board.fen(),
                 "moves": [],
+                "gameid": game.gameid,
             }
         ]
         for i in range(len(game.moves)):
@@ -129,6 +162,7 @@ class BoardDataset(Dataset):
                 {
                     "fen": board.fen(),
                     "moves": game.moves[i - n_history : i],
+                    "gameid": game.gameid,
                 }
             )
         return boards
@@ -137,13 +171,13 @@ class BoardDataset(Dataset):
     def game_to_board_list(
         game: Game,
         n_history: int = 0,
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[chess.Board], List[str]]:
         working_board = chess.Board()
         boards = [working_board.copy(stack=n_history)]
         for move in game.moves:
             working_board.push_san(move)
             boards.append(working_board.copy(stack=n_history))
-        return boards
+        return boards, [game.gameid] * len(boards)
 
     @staticmethod
     def collate_fn_tuple(batch):

@@ -1,4 +1,9 @@
 """Script to find concepts in a model using LRP and a dataset of boards.
+
+Run with:
+```bash
+poetry run python -m scripts.find_concepts
+```
 """
 
 import torch
@@ -25,9 +30,10 @@ batch_size = 500
 save_files = False
 model_name = "tinygyal-8.onnx"
 dataset_name = "test_stockfish_10.jsonl"
+#######################################
+
 
 model = PolicyFlow.from_path(f"./assets/{model_name}")
-
 dataset = GameDataset(f"./assets/{dataset_name}")
 check_concept = HasThreatConcept("K", relative=True)
 unique_dataset = UniqueConceptDataset.from_game_dataset(dataset, check_concept)
