@@ -85,6 +85,7 @@ class TestDataset:
     def test_conversion(self, game_dataset_10: GameDataset):
         board_dataset = BoardDataset.from_game_dataset(game_dataset_10)
         concept_dataset = ConceptDataset.from_game_dataset(game_dataset_10)
+        concept_dataset.unique_resample()
         concept_dataset.concept = HasPieceConcept("p")
         fen_set = set([board.fen() for _, board in board_dataset])
         assert len(concept_dataset.boards) == len(fen_set)
