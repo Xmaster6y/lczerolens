@@ -6,16 +6,15 @@ import gradio as gr
 
 from demo import utils, visualisation
 from lczerolens import GameDataset
-from lczerolens.xai import HasThreatConcept, UniqueConceptDataset
+from lczerolens.xai import ConceptDataset, HasThreatConcept
 
 current_policy_statistics = None
 current_lrp_statistics = None
 current_probing_statistics = None
 dataset = GameDataset("assets/test_stockfish_10.jsonl")
 check_concept = HasThreatConcept("K", relative=True)
-unique_check_dataset = UniqueConceptDataset.from_game_dataset(
-    dataset, check_concept
-)
+unique_check_dataset = ConceptDataset.from_game_dataset(dataset)
+unique_check_dataset.concept = check_concept
 
 
 def list_models():

@@ -33,6 +33,14 @@
             "module": "scripts.cluster_latent_relevances",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "Script Make Datasets",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "scripts.make_datasets",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }

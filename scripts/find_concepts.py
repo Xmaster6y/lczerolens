@@ -11,9 +11,9 @@ from crp.attribution import CondAttribution
 from crp.concepts import ChannelConcept
 from crp.helper import get_layer_names
 
-from lczerolens import GameDataset
+from lczerolens import BoardDataset
 from lczerolens.game import PolicyFlow
-from lczerolens.xai import LrpLens, UniqueConceptDataset
+from lczerolens.xai import ConceptDataset, LrpLens
 from lczerolens.xai.concepts import (
     HasMaterialAdvantageConcept,
     HasMateThreatConcept,
@@ -28,15 +28,15 @@ topk = 5
 ref_mode = "activation"
 batch_size = 500
 save_files = False
-model_name = "tinygyal-8.onnx"
-dataset_name = "test_stockfish_10.jsonl"
+model_name = "64x6-2018_0627_1913_08_161.onnx"
+dataset_name = "test_stockfish_5000_boards.jsonl"
 #######################################
 
 
 model = PolicyFlow.from_path(f"./assets/{model_name}")
-dataset = GameDataset(f"./assets/{dataset_name}")
+dataset = BoardDataset(f"./assets/{dataset_name}")
 check_concept = HasThreatConcept("K", relative=True)
-unique_dataset = UniqueConceptDataset.from_game_dataset(dataset, check_concept)
+unique_dataset = ConceptDataset.from_board_dataset(dataset, check_concept)
 print(f"[INFO] Board dataset len: {len(unique_dataset)}")
 
 
@@ -65,13 +65,13 @@ fv = crp_helpers.ModifiedFeatureVisualization(
 
 
 def collate_fn_tensor(batch):
-    _, board_tensor, targets = UniqueConceptDataset.collate_fn_tensor(batch)
+    _, board_tensor, targets = ConceptDataset.collate_fn_tensor(batch)
     board_tensor.requires_grad = True
     return board_tensor, targets
 
 
 def collate_fn_tuple(batch):
-    _, boards, targets = UniqueConceptDataset.collate_fn_tuple(batch)
+    _, boards, targets = ConceptDataset.collate_fn_tuple(batch)
     return boards, targets
 
 

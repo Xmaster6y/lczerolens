@@ -1,16 +1,15 @@
 """Class for concept-based XAI methods.
 """
 
+import random
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Tuple
 
 import chess
-import jsonlines
 import torch
 from sklearn import metrics
-from torch.utils.data import Dataset
 
-from lczerolens.game.dataset import BoardDataset, GameDataset
+from lczerolens.game.dataset import BoardDataset
 from lczerolens.utils import board as board_utils
 
 
@@ -60,6 +59,21 @@ class BinaryConcept(Concept):
             "recall": metrics.recall_score(labels, predictions),
             "f1": metrics.f1_score(labels, predictions),
         }
+
+
+class NullConcept(BinaryConcept):
+    """
+    Class for binary concept-based XAI methods.
+    """
+
+    def compute_label(
+        self,
+        board: chess.Board,
+    ) -> Any:
+        """
+        Compute the label for a given model and input.
+        """
+        return 0
 
 
 class OrBinaryConcept(BinaryConcept):
@@ -149,33 +163,21 @@ class ContinuousConcept(Concept):
         }
 
 
-class ConceptDataset(Dataset):
+class ConceptDataset(BoardDataset):
     """
     Class for concept
     """
 
     def __init__(
         self,
-        concept: Concept,
         file_name: Optional[str] = None,
         boards: Optional[List[chess.Board]] = None,
+        game_ids: Optional[List[str]] = None,
+        concept: Optional[Concept] = None,
         labels: Optional[List[Any]] = None,
     ):
-        if boards is not None and file_name is not None:
-            raise ValueError("Either boards or file_name must be provided")
-        elif boards is not None:
-            self.boards = boards
-        else:
-            self.boards = []
-            if file_name is not None:
-                with jsonlines.open(file_name) as reader:
-                    for obj in reader:
-                        board = chess.Board(obj["fen"])
-                        for move in obj["moves"]:
-                            board.push_san(move)
-
-                        self.boards.append(board)
-        self._concept = concept
+        super().__init__(file_name, boards, game_ids)
+        self._concept = concept if concept is not None else NullConcept()
         if labels is not None:
             self.labels = labels
         else:
@@ -183,10 +185,7 @@ class ConceptDataset(Dataset):
                 self._concept.compute_label(board) for board in self.boards
             ]
 
-    def __len__(self):
-        return len(self.boards)
-
-    def __getitem__(self, idx) -> Tuple[int, chess.Board, Any]:
+    def __getitem__(self, idx) -> Tuple[int, chess.Board, Any]:  # type: ignore
         board = self.boards[idx]
         label = self.labels[idx]
         return idx, board, label
@@ -196,27 +195,23 @@ class ConceptDataset(Dataset):
         return self._concept
 
     @concept.setter
-    def concept(self, concept):
+    def concept(self, concept: Concept):
         self._concept = concept
         self.labels = [
             self._concept.compute_label(board) for board in self.boards
         ]
 
     @classmethod
-    def from_game_dataset(
-        cls, game_dataset: GameDataset, concept: Concept, n_history: int = 0
-    ):
-        board_dataset = BoardDataset.from_game_dataset(
-            game_dataset=game_dataset, n_history=n_history
-        )
-        return cls.from_board_dataset(board_dataset, concept)
-
-    @classmethod
     def from_board_dataset(cls, board_dataset: BoardDataset, concept: Concept):
         labels = [
             concept.compute_label(board) for board in board_dataset.boards
         ]
-        return cls(concept, boards=board_dataset.boards, labels=labels)
+        return cls(
+            boards=board_dataset.boards,
+            game_ids=board_dataset.game_ids,
+            concept=concept,
+            labels=labels,
+        )
 
     @staticmethod
     def collate_fn_tuple(batch):
@@ -232,49 +227,7 @@ class ConceptDataset(Dataset):
         batched_tensor = torch.stack(tensor_list, dim=0)
         return tuple(indices), batched_tensor, tuple(labels)
 
-
-class UniqueConceptDataset(ConceptDataset):
-    """
-    Class for unique board concept
-    """
-
-    def __init__(
-        self,
-        concept: Concept,
-        file_name: Optional[str] = None,
-        boards: Optional[List[chess.Board]] = None,
-        labels: Optional[List[Any]] = None,
-    ):
-        super().__init__(concept, file_name, boards, labels)
-        self._unique_resample()
-
-    @classmethod
-    def from_game_dataset(
-        cls, game_dataset: GameDataset, concept: Concept, n_history: int = 0
-    ):
-        instance = super().from_game_dataset(game_dataset, concept, n_history)
-        instance._unique_resample()
-        return instance
-
-    @classmethod
-    def from_board_dataset(
-        cls,
-        board_dataset: BoardDataset,
-        concept: Concept,
-    ):
-        instance = super().from_board_dataset(board_dataset, concept)
-        instance._unique_resample()
-        return instance
-
-    @classmethod
-    def from_concept_dataset(cls, concept_dataset: ConceptDataset):
-        return cls(
-            concept_dataset.concept,
-            boards=concept_dataset.boards,
-            labels=concept_dataset.labels,
-        )
-
-    def _unique_resample(self):
+    def unique_resample(self):
         unique_boards: List[chess.Board] = []
         labels = []
         for board, label in zip(self.boards, self.labels):
@@ -283,3 +236,33 @@ class UniqueConceptDataset(ConceptDataset):
                 labels.append(label)
         self.boards = unique_boards
         self.labels = labels
+
+    def label_resample(self, filter_label: Any):
+        if isinstance(self._concept, ContinuousConcept):
+            raise ValueError("Continuous concept does not support resampling")
+        tuple_boards, tuple_labels = zip(
+            *[
+                [board, label]
+                for board, label in zip(self.boards, self.labels)
+                if label == filter_label
+            ]
+        )
+        self.boards, self.labels = list(tuple_boards), list(tuple_labels)
+
+    def even_resample(self, seed: int = 0):
+        if isinstance(self._concept, ContinuousConcept):
+            raise ValueError("Continuous concept does not support resampling")
+        per_label_boards = {}
+        for board, label in zip(self.boards, self.labels):
+            if label not in per_label_boards:
+                per_label_boards[label] = [board]
+            else:
+                per_label_boards[label].append(board)
+
+        min_len = min(len(boards) for boards in per_label_boards.values())
+        self.boards = []
+        self.labels = []
+        random.seed(seed)
+        for label, label_boards in per_label_boards.items():
+            self.boards.extend(random.sample(label_boards, min_len))
+            self.labels.extend([label] * min_len)

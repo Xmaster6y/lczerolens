@@ -23,9 +23,9 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from tqdm import tqdm
 
-from lczerolens import GameDataset, move_utils
+from lczerolens import BoardDataset, move_utils
 from lczerolens.game import PolicyFlow
-from lczerolens.xai import LrpLens, UniqueConceptDataset
+from lczerolens.xai import ConceptDataset, LrpLens
 from lczerolens.xai.concepts import BestLegalMoveConcept
 from scripts.create_figure import add_plot, create_heatmap_string
 
@@ -37,8 +37,8 @@ layer_index = -1
 batch_size = 500
 save_files = False
 conv_sum_dims = (2, 3)
-model_name = "tinygyal-8.onnx"
-dataset_name = "test_stockfish_10.jsonl"
+model_name = "64x6-2018_0627_1913_08_161.onnx"
+dataset_name = "test_stockfish_5000_boards.jsonl"
 only_config_rel = True
 #######################################
 
@@ -50,9 +50,9 @@ class MaxLogitFlow(PolicyFlow):
 
 
 model = MaxLogitFlow.from_path(f"./assets/{model_name}")
-dataset = GameDataset(f"./assets/{dataset_name}")
+dataset = BoardDataset(f"./assets/{dataset_name}")
 concept = BestLegalMoveConcept(model)
-unique_dataset = UniqueConceptDataset.from_game_dataset(dataset, concept)
+unique_dataset = ConceptDataset.from_board_dataset(dataset, concept)
 print(f"[INFO] Board dataset len: {len(unique_dataset)}")
 
 composite = LrpLens.make_default_composite()
@@ -69,7 +69,7 @@ dataloader = torch.utils.data.DataLoader(
     unique_dataset,
     batch_size=batch_size,
     shuffle=False,
-    collate_fn=UniqueConceptDataset.collate_fn_tensor,
+    collate_fn=ConceptDataset.collate_fn_tensor,
 )
 
 if save_files:
@@ -153,7 +153,7 @@ for layer_name, relevances in all_relevances.items():
         # compute heatmap for each nearest neighbor
         for idx_sample in nearest_neighbors:
             _, board, label = unique_dataset[idx_sample]
-            _, board_tensor, _ = UniqueConceptDataset.collate_fn_tensor(
+            _, board_tensor, _ = ConceptDataset.collate_fn_tensor(
                 [unique_dataset[idx_sample]]
             )
             board_tensor.requires_grad = True

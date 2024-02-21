@@ -7,7 +7,7 @@ import re
 import subprocess
 
 from demo import constants, state
-from lczerolens import AutoLens, ModelWrapper
+from lczerolens import Lens, ModelWrapper
 from lczerolens.utils import lczero as lczero_utils
 
 
@@ -122,7 +122,7 @@ def get_wrapper_lens_from_state(
     if lens_name in state.lenses[lens_type]:
         lens = state.lenses[lens_type][lens_name]
     else:
-        lens = AutoLens.from_type(lens_type, **kwargs)
+        lens = Lens.from_name(lens_type, **kwargs)
         if not lens.is_compatible(wrapper):
             raise ValueError(
                 f"Lens of type {lens_type} not compatible with model."

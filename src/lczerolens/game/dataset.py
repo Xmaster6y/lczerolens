@@ -45,15 +45,27 @@ class GameDataset(Dataset):
             if file_name is not None:
                 with jsonlines.open(file_name) as reader:
                     for obj in reader:
-                        parsed_moves = [
-                            m
-                            for m in obj["moves"].split()
-                            if not m.endswith(".")
+                        *pre, post = obj["moves"].split(" { Book exit } ")
+                        if pre:
+                            if len(pre) > 1:
+                                raise ValueError("More than one book exit")
+                            (pre,) = pre
+                            parsed_pre_moves = [
+                                m for m in pre.split() if not m.endswith(".")
+                            ]
+                            book_exit = len(parsed_pre_moves)
+                        else:
+                            parsed_pre_moves = []
+                            book_exit = None
+                        parsed_moves = parsed_pre_moves + [
+                            m for m in post.split() if not m.endswith(".")
                         ]
+
                         self.games.append(
                             Game(
                                 gameid=obj["gameid"],
                                 moves=parsed_moves,
+                                book_exit=book_exit,
                             )
                         )
 
@@ -62,16 +74,6 @@ class GameDataset(Dataset):
 
     def __getitem__(self, idx) -> Game:
         return self.games[idx]
-
-    def save(self, file_name: str):
-        with jsonlines.open(file_name, "w") as writer:
-            for game in self.games:
-                writer.write(
-                    {
-                        "gameid": game.gameid,
-                        "moves": " ".join(game.moves),
-                    }
-                )
 
 
 class BoardDataset(Dataset):
@@ -116,13 +118,24 @@ class BoardDataset(Dataset):
     def __getitem__(self, idx) -> Tuple[int, chess.Board]:
         return idx, self.boards[idx]
 
-    def save(self, file_name: str):
+    def save(self, file_name: str, n_history: int = 0):
+        """Save the dataset to a file.
+
+        Note
+        ----
+        As the board needs to be unpiled use the preprocess_game method.
+        """
         with jsonlines.open(file_name, "w") as writer:
             for board, gameid in zip(self.boards, self.game_ids):
+                working_board = board.copy(stack=n_history)
+
                 writer.write(
                     {
-                        "fen": board.fen(),
-                        "moves": [move.uci() for move in board.move_stack],
+                        "fen": working_board.root().fen(),
+                        "moves": [
+                            working_board.san(move)
+                            for move in working_board.move_stack
+                        ],
                         "gameid": gameid,
                     }
                 )
@@ -132,11 +145,15 @@ class BoardDataset(Dataset):
         cls,
         game_dataset: GameDataset,
         n_history: int = 0,
+        skip_book_exit: bool = False,
+        skip_first_n: int = 0,
     ):
         boards: List[chess.Board] = []
         game_ids: List[str] = []
         for game in game_dataset.games:
-            new_boards, new_ids = cls.game_to_board_list(game, n_history)
+            new_boards, new_ids = cls.game_to_board_list(
+                game, n_history, skip_book_exit, skip_first_n
+            )
             boards.extend(new_boards)
             game_ids.extend(new_ids)
 
@@ -146,22 +163,37 @@ class BoardDataset(Dataset):
     def preprocess_game(
         game: Game,
         n_history: int = 0,
+        skip_book_exit: bool = False,
+        skip_first_n: int = 0,
     ) -> List[Dict[str, Any]]:
-        board = chess.Board()
-        boards = [
-            {
-                "fen": board.fen(),
-                "moves": [],
-                "gameid": game.gameid,
-            }
-        ]
-        for i in range(len(game.moves)):
+        working_board = chess.Board()
+        if skip_first_n > 0 or (
+            skip_book_exit and (game.book_exit is not None)
+        ):
+            boards = []
+        else:
+            boards = [
+                {
+                    "fen": working_board.fen(),
+                    "moves": [],
+                    "gameid": game.gameid,
+                }
+            ]
+        for i in range(
+            len(game.moves) - 1
+        ):  # skip the last move as it can be over
             if i >= n_history:
-                board.push_san(game.moves[i - n_history])
+                working_board.push_san(game.moves[i - n_history])
+            if (i < skip_first_n) or (
+                skip_book_exit
+                and (game.book_exit is not None)
+                and (i < game.book_exit)
+            ):
+                continue
             boards.append(
                 {
-                    "fen": board.fen(),
-                    "moves": game.moves[i - n_history : i],
+                    "fen": working_board.fen(),
+                    "moves": game.moves[i - n_history + 1 : i + 1],
                     "gameid": game.gameid,
                 }
             )
@@ -171,11 +203,26 @@ class BoardDataset(Dataset):
     def game_to_board_list(
         game: Game,
         n_history: int = 0,
+        skip_book_exit: bool = False,
+        skip_first_n: int = 0,
     ) -> Tuple[List[chess.Board], List[str]]:
         working_board = chess.Board()
-        boards = [working_board.copy(stack=n_history)]
-        for move in game.moves:
+        if skip_first_n > 0 or (
+            skip_book_exit and (game.book_exit is not None)
+        ):
+            boards = []
+        else:
+            boards = [working_board.copy(stack=n_history)]
+        for i, move in enumerate(
+            game.moves[:-1]
+        ):  # skip the last move as it can be over
             working_board.push_san(move)
+            if (i < skip_first_n) or (
+                skip_book_exit
+                and (game.book_exit is not None)
+                and (i < game.book_exit)
+            ):
+                continue
             boards.append(working_board.copy(stack=n_history))
         return boards, [game.gameid] * len(boards)
 
