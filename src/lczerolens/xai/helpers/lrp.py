@@ -21,77 +21,91 @@ def stabilize(tensor, epsilon=1e-6):
 
 class AddEpsilonFunction(Function):
     @staticmethod
-    def forward(ctx, input_a, input_b):
+    def forward(ctx, input_a, input_b, epsilon=1e-6):
         output = input_a + input_b
-        ctx.save_for_backward(input_a, input_b, output)
+        ctx.save_for_backward(input_a, input_b, output, torch.tensor(epsilon))
         return output
 
     @staticmethod
     def backward(ctx, *grad_output):
-        input_a, input_b, output = ctx.saved_tensors
-        out_relevance = grad_output[0] / stabilize(output)
-        return out_relevance * input_a, out_relevance * input_b
+        input_a, input_b, output, epsilon = ctx.saved_tensors
+        out_relevance = grad_output[0] / stabilize(output, epsilon)
+        return out_relevance * input_a, out_relevance * input_b, None
 
 
 class AddEpsilon(torch.nn.Module):
+    def __init__(self, epsilon=1e-6):
+        super().__init__()
+        self.epsilon = epsilon
+
     def forward(self, x, y):
-        return AddEpsilonFunction.apply(x, y)
+        return AddEpsilonFunction.apply(x, y, self.epsilon)
 
 
 class MatMulEpsilonFunction(Function):
     @staticmethod
-    def forward(ctx, input, param):
+    def forward(ctx, input, param, epsilon=1e-6):
         output = torch.matmul(input, param)
-        ctx.save_for_backward(input, param, output)
+        ctx.save_for_backward(input, param, output, torch.tensor(epsilon))
 
         return output
 
     @staticmethod
     def backward(ctx, *grad_outputs):
-        input, param, output = ctx.saved_tensors
+        input, param, output, epsilon = ctx.saved_tensors
         out_relevance = grad_outputs[0]
 
-        out_relevance = out_relevance / stabilize(output)
+        out_relevance = out_relevance / stabilize(output, epsilon)
         relevance = (out_relevance @ param.T) * input
-        return relevance, None
+        return relevance, None, None
 
 
 class MatMulEpsilon(torch.nn.Module):
+    def __init__(self, epsilon=1e-6):
+        super().__init__()
+        self.epsilon = epsilon
+
     def forward(self, x, y):
-        return MatMulEpsilonFunction.apply(x, y)
+        return MatMulEpsilonFunction.apply(x, y, self.epsilon)
 
 
 class BilinearMatMulEpsilonFunction(Function):
     @staticmethod
-    def forward(ctx, input_a, input_b):
+    def forward(ctx, input_a, input_b, epsilon=1e-6):
         outputs = torch.matmul(input_a, input_b)
-        ctx.save_for_backward(input_a, input_b, outputs)
+        ctx.save_for_backward(input_a, input_b, outputs, torch.tensor(epsilon))
 
         return outputs
 
     @staticmethod
     def backward(ctx, *grad_outputs):
-        input_a, input_b, outputs = ctx.saved_tensors
+        input_a, input_b, outputs, epsilon = ctx.saved_tensors
         out_relevance = grad_outputs[0]
 
-        out_relevance = out_relevance / stabilize(2 * outputs)
+        out_relevance = out_relevance / stabilize(2 * outputs, epsilon)
 
-        relevance_a = torch.matmul(
-            out_relevance, input_b.permute(0, 1, -1, -2)
-        ).mul_(input_a)
-        relevance_b = torch.matmul(
-            input_a.permute(0, 1, -1, -2), out_relevance
-        ).mul_(input_b)
+        relevance_a = (
+            torch.matmul(out_relevance, input_b.permute(0, 1, -1, -2))
+            * input_a
+        )
+        relevance_b = (
+            torch.matmul(input_a.permute(0, 1, -1, -2), out_relevance)
+            * input_b
+        )
 
-        return (relevance_a, relevance_b)
+        return relevance_a, relevance_b, None
 
 
 class BilinearMatMulEpsilon(torch.nn.Module):
+    def __init__(self, epsilon=1e-6):
+        super().__init__()
+        self.epsilon = epsilon
+
     def forward(self, x, y):
-        return BilinearMatMulEpsilonFunction.apply(x, y)
+        return BilinearMatMulEpsilonFunction.apply(x, y, self.epsilon)
 
 
-class ElementwiseMultiplyUniformFunction(Function):
+class MulUniformFunction(Function):
     @staticmethod
     def forward(ctx, input_a, input_b):
         return input_a * input_b
@@ -101,6 +115,11 @@ class ElementwiseMultiplyUniformFunction(Function):
         relevance = grad_outputs[0] * 0.5
 
         return relevance, relevance
+
+
+class MulUniform(torch.nn.Module):
+    def forward(self, x, y):
+        return MulUniformFunction.apply(x, y)
 
 
 class SoftmaxEpsilonFunction(Function):

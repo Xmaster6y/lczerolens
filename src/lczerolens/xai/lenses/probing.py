@@ -7,10 +7,11 @@ import chess
 import torch
 from torch.utils.data import Dataset
 
-from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.game.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
 
 
+@Lens.register("probing")
 class ProbingLens(Lens):
     """
     Class for probing-based XAI methods.

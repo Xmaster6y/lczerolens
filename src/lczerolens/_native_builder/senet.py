@@ -5,9 +5,23 @@ import torch
 from tensordict import TensorDict
 from torch import nn
 
-from lczerolens.adapt import constants
-from lczerolens.adapt.function import ElementwiseMultiplyUniform
-from lczerolens.adapt.network import SumLayer
+from lczerolens.xai.helpers.lrp import MulUniformFunction
+
+from . import constants
+
+
+class SumLayer(nn.Module):
+    """
+    Compute the sum along an axis.
+    """
+
+    def __init__(self, dim=-1):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, x):
+        """Computes the sum along a dimension."""
+        return torch.sum(x, dim=self.dim)
 
 
 class SeLayer(nn.Module):
@@ -37,7 +51,7 @@ class SeLayer(nn.Module):
 
         out1, out2 = out.split(self.n_hidden, dim=1)
         non_lin = self.sigmoid(out1)
-        out1 = ElementwiseMultiplyUniform.apply(x, non_lin)
+        out1 = MulUniformFunction.apply(x, non_lin)
         return self.sum_layer(
             torch.stack([out1, out2.repeat(1, 1, 8, 8)], dim=-1)
         )
@@ -147,10 +161,9 @@ class MlhHead(nn.Module):
 class WdlHead(nn.Module):
     """WDL head."""
 
-    def __init__(self, n_hidden, softmax: bool = False) -> None:
+    def __init__(self, n_hidden) -> None:
         super().__init__()
         self.n_hidden = n_hidden
-        self.softmax = softmax
 
         self.conv = nn.Conv2d(n_hidden, 32, 1)
         self.linear1 = nn.Linear(32 * 64, 128)
@@ -166,8 +179,7 @@ class WdlHead(nn.Module):
         out = self.linear1(out)
         out = self.relu(out)
         out = self.linear2(out)
-        if self.softmax:
-            out = self.softmax(out)
+        out = self.softmax(out)
         return out
 
 

@@ -12,7 +12,7 @@ from crp.concepts import ChannelConcept
 from crp.helper import get_layer_names
 
 from lczerolens import GameDataset
-from lczerolens.adapt import PolicyFlow
+from lczerolens.game import PolicyFlow
 from lczerolens.xai import LrpLens, UniqueConceptDataset
 from lczerolens.xai.concepts import (
     HasMaterialAdvantageConcept,

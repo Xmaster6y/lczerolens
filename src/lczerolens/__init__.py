@@ -4,8 +4,7 @@
 __version__ = "0.1.2"
 
 
-from .adapt import AutoBuilder, ModelWrapper
-from .game import BoardDataset, GameDataset
+from .game import BoardDataset, GameDataset, ModelWrapper
 from .utils import board as board_utils
 from .utils import move as move_utils
-from .xai import AutoLens, Lens
+from .xai import Lens

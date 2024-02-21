@@ -24,7 +24,7 @@ from sklearn.manifold import TSNE
 from tqdm import tqdm
 
 from lczerolens import GameDataset, move_utils
-from lczerolens.adapt import PolicyFlow
+from lczerolens.game import PolicyFlow
 from lczerolens.xai import LrpLens, UniqueConceptDataset
 from lczerolens.xai.concepts import BestLegalMoveConcept
 from scripts.create_figure import add_plot, create_heatmap_string

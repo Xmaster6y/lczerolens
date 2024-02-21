@@ -4,12 +4,14 @@
 import chess
 import torch
 
+from lczerolens import Lens
 from lczerolens.xai import LrpLens
 
 
 class TestLens:
     def test_is_compatible(self, tiny_wrapper):
-        lens = LrpLens()
+        lens = Lens.from_name("lrp")
+        assert isinstance(lens, LrpLens)
         assert lens.is_compatible(tiny_wrapper)
 
     def test_empty_board(self, tiny_wrapper):

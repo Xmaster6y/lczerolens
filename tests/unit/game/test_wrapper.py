@@ -6,7 +6,7 @@ import pytest
 import torch
 from lczero.backends import GameState
 
-from lczerolens.adapt import MlhFlow, PolicyFlow, ValueFlow, WdlFlow
+from lczerolens.game import MlhFlow, PolicyFlow, ValueFlow, WdlFlow
 from lczerolens.utils import lczero as lczero_utils
 
 

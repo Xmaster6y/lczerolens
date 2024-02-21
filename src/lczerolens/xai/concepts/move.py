@@ -4,7 +4,7 @@
 import chess
 import torch
 
-from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
+from lczerolens.game.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.utils import move as move_utils
 from lczerolens.xai.concept import MulticlassConcept
 
