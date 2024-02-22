@@ -63,6 +63,7 @@ class LrpLens(Lens):
         target = kwargs.get("target", "policy")
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         linearise_softmax = kwargs.get("linearise_softmax", False)
+        init_rel_fn = kwargs.get("init_rel_fn", None)
         relevance = self._compute_lrp_relevance(
             [board],
             wrapper,
@@ -70,6 +71,7 @@ class LrpLens(Lens):
             target=target,
             replace_onnx2torch=replace_onnx2torch,
             linearise_softmax=linearise_softmax,
+            init_rel_fn=init_rel_fn,
         )
         return relevance[0]
 
@@ -81,7 +83,7 @@ class LrpLens(Lens):
         collate_fn: Optional[Callable] = None,
         save_to: Optional[str] = None,
         **kwargs,
-    ) -> Optional[Dict[int, Any]]:
+    ) -> Optional[Dict[int, torch.Tensor]]:
         """Cache the activations for a given model and dataset."""
         if save_to is not None:
             raise NotImplementedError("Saving to file is not implemented.")
@@ -89,6 +91,7 @@ class LrpLens(Lens):
         target = kwargs.get("target", "policy")
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         linearise_softmax = kwargs.get("linearise_softmax", False)
+        init_rel_fn = kwargs.get("init_rel_fn", None)
         dataloader = DataLoader(
             dataset, batch_size=batch_size, collate_fn=collate_fn
         )
@@ -102,6 +105,7 @@ class LrpLens(Lens):
                 target=target,
                 replace_onnx2torch=replace_onnx2torch,
                 linearise_softmax=linearise_softmax,
+                init_rel_fn=init_rel_fn,
             )
             for idx, relevance in zip(inidices, batched_relevances):
                 relevances[idx] = relevance
@@ -115,6 +119,7 @@ class LrpLens(Lens):
         target: Optional[str] = None,
         replace_onnx2torch: bool = True,
         linearise_softmax: bool = False,
+        init_rel_fn: Optional[Callable] = None,
     ):
         """
         Compute LRP heatmap for a given model and input.
@@ -130,9 +135,17 @@ class LrpLens(Lens):
                 return_input=True,
             )
             if target is None:
-                output.backward(gradient=output)
+                output.backward(
+                    gradient=output
+                    if init_rel_fn is None
+                    else init_rel_fn(output)
+                )
             else:
-                output[target].backward(gradient=output[target])
+                output[target].backward(
+                    gradient=output[target]
+                    if init_rel_fn is None
+                    else init_rel_fn(output[target])
+                )
         return input_tensor.grad
 
     @staticmethod

@@ -67,7 +67,7 @@ def compute_policy(
             gr.Warning("Invalid action sequence.")
             return (None, None, "", None)
     wrapper = utils.get_wrapper_from_state(model_name)
-    output = wrapper.predict(board)
+    (output,) = wrapper.predict(board)
     current_raw_policy = output["policy"][0]
     policy = torch.softmax(output["policy"][0], dim=-1)
 

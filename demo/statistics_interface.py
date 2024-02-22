@@ -46,7 +46,7 @@ def compute_policy_statistics(
         )
         return None
     wrapper, lens = utils.get_wrapper_lens_from_state(model_name, "policy")
-    current_policy_statistics = lens.compute_statistics(dataset, wrapper, 10)
+    current_policy_statistics = lens.analyse_dataset(dataset, wrapper, 10)
     return make_policy_plot()
 
 

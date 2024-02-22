@@ -102,7 +102,7 @@ def render_architecture(model, name: str = "model", directory: str = ""):
 def render_policy_distribution(
     policy,
     legal_moves,
-    n_bins=10,
+    n_bins=20,
 ):
     """
     Render the policy distribution histogram.
@@ -112,11 +112,12 @@ def render_policy_distribution(
     ).bool()
     fig = plt.figure(figsize=(6, 6))
     ax = plt.gca()
-    _, bins, _ = ax.hist(
+    _, bins = np.histogram(policy, bins=n_bins)
+    ax.hist(
         policy[~legal_mask],
-        bins=n_bins,
-        density=True,
+        bins=bins,
         alpha=0.5,
+        density=True,
         label="Illegal moves",
     )
     ax.hist(

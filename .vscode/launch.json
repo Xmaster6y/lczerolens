@@ -19,7 +19,7 @@
             "justMyCode": false
         },
         {
-            "name": "Script CRP Concepts",
+            "name": "Script CRP concepts",
             "type": "debugpy",
             "request": "launch",
             "module": "scripts.find_concepts",
@@ -27,7 +27,7 @@
             "justMyCode": false
         },
         {
-            "name": "Script CRP Clusters",
+            "name": "Script CRP clusters",
             "type": "debugpy",
             "request": "launch",
             "module": "scripts.cluster_latent_relevances",
@@ -35,10 +35,19 @@
             "justMyCode": false
         },
         {
-            "name": "Script Make Datasets",
+            "name": "Script make datasets",
             "type": "debugpy",
             "request": "launch",
             "module": "scripts.make_datasets",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+        ,
+        {
+            "name": "Script sample exploration",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "scripts.sample_exploration",
             "console": "integratedTerminal",
             "justMyCode": false
         }

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import chess
 import jsonlines
 import torch
+import tqdm
 from torch.utils.data import Dataset
 
 from lczerolens.utils import board as board_utils
@@ -42,32 +43,31 @@ class GameDataset(Dataset):
             self.games = games
         else:
             self.games = []
-            if file_name is not None:
-                with jsonlines.open(file_name) as reader:
-                    for obj in reader:
-                        *pre, post = obj["moves"].split(" { Book exit } ")
-                        if pre:
-                            if len(pre) > 1:
-                                raise ValueError("More than one book exit")
-                            (pre,) = pre
-                            parsed_pre_moves = [
-                                m for m in pre.split() if not m.endswith(".")
-                            ]
-                            book_exit = len(parsed_pre_moves)
-                        else:
-                            parsed_pre_moves = []
-                            book_exit = None
-                        parsed_moves = parsed_pre_moves + [
-                            m for m in post.split() if not m.endswith(".")
+            with jsonlines.open(file_name) as reader:
+                for obj in reader:
+                    *pre, post = obj["moves"].split("{ Book exit }")
+                    if pre:
+                        if len(pre) > 1:
+                            raise ValueError("More than one book exit")
+                        (pre,) = pre
+                        parsed_pre_moves = [
+                            m for m in pre.split() if not m.endswith(".")
                         ]
+                        book_exit = len(parsed_pre_moves)
+                    else:
+                        parsed_pre_moves = []
+                        book_exit = None
+                    parsed_moves = parsed_pre_moves + [
+                        m for m in post.split() if not m.endswith(".")
+                    ]
 
-                        self.games.append(
-                            Game(
-                                gameid=obj["gameid"],
-                                moves=parsed_moves,
-                                book_exit=book_exit,
-                            )
+                    self.games.append(
+                        Game(
+                            gameid=obj["gameid"],
+                            moves=parsed_moves,
+                            book_exit=book_exit,
                         )
+                    )
 
     def __len__(self):
         return len(self.games)
@@ -102,15 +102,14 @@ class BoardDataset(Dataset):
         else:
             self.boards = []
             self.game_ids = []
-            if file_name is not None:
-                with jsonlines.open(file_name) as reader:
-                    for obj in reader:
-                        board = chess.Board(obj["fen"])
-                        for move in obj["moves"]:
-                            board.push_san(move)
+            with jsonlines.open(file_name) as reader:
+                for obj in reader:
+                    board = chess.Board(obj["fen"])
+                    for move in obj["moves"]:
+                        board.push_uci(move)
 
-                        self.boards.append(board)
-                        self.game_ids.append(obj["gameid"])
+                    self.boards.append(board)
+                    self.game_ids.append(obj["gameid"])
 
     def __len__(self):
         return len(self.boards)
@@ -125,16 +124,18 @@ class BoardDataset(Dataset):
         ----
         As the board needs to be unpiled use the preprocess_game method.
         """
+        print(f"[INFO] Saving boards to {file_name}")
         with jsonlines.open(file_name, "w") as writer:
-            for board, gameid in zip(self.boards, self.game_ids):
+            for board, gameid in tqdm.tqdm(
+                zip(self.boards, self.game_ids), total=len(self.boards)
+            ):
                 working_board = board.copy(stack=n_history)
 
                 writer.write(
                     {
                         "fen": working_board.root().fen(),
                         "moves": [
-                            working_board.san(move)
-                            for move in working_board.move_stack
+                            move.uci() for move in working_board.move_stack
                         ],
                         "gameid": gameid,
                     }
@@ -150,7 +151,8 @@ class BoardDataset(Dataset):
     ):
         boards: List[chess.Board] = []
         game_ids: List[str] = []
-        for game in game_dataset.games:
+        print("[INFO] Converting games to boards")
+        for game in tqdm.tqdm(game_dataset.games):
             new_boards, new_ids = cls.game_to_board_list(
                 game, n_history, skip_book_exit, skip_first_n
             )
@@ -179,21 +181,21 @@ class BoardDataset(Dataset):
                     "gameid": game.gameid,
                 }
             ]
-        for i in range(
-            len(game.moves) - 1
+        for i, move in enumerate(
+            game.moves[:-1]
         ):  # skip the last move as it can be over
-            if i >= n_history:
-                working_board.push_san(game.moves[i - n_history])
+            working_board.push_san(move)
             if (i < skip_first_n) or (
                 skip_book_exit
                 and (game.book_exit is not None)
                 and (i < game.book_exit)
             ):
                 continue
+            save_board = working_board.copy(stack=n_history)
             boards.append(
                 {
-                    "fen": working_board.fen(),
-                    "moves": game.moves[i - n_history + 1 : i + 1],
+                    "fen": save_board.root().fen(),
+                    "moves": [move.uci() for move in save_board.move_stack],
                     "gameid": game.gameid,
                 }
             )
