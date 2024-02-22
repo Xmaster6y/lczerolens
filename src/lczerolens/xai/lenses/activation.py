@@ -7,11 +7,12 @@ import chess
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.game.wrapper import ModelWrapper
 from lczerolens.xai.hook import CacheHook, HookConfig
 from lczerolens.xai.lens import Lens
 
 
+@Lens.register("activation")
 class ActivationLens(Lens):
     """Class for activation-based XAI methods."""
 

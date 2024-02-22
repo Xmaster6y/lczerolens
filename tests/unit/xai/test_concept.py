@@ -11,7 +11,6 @@ from lczerolens.xai import (
     ConceptDataset,
     HasPieceConcept,
     HasThreatConcept,
-    UniqueConceptDataset,
 )
 
 
@@ -80,14 +79,14 @@ class TestDataset:
             ],
             labels=[0, 0],
         )
-        unique_dataset = UniqueConceptDataset.from_concept_dataset(dataset)
-        assert len(unique_dataset) == 1
+        dataset.filter_unique_()
+        assert len(dataset) == 1
 
     def test_conversion(self, game_dataset_10: GameDataset):
         board_dataset = BoardDataset.from_game_dataset(game_dataset_10)
-        concept_dataset = UniqueConceptDataset.from_game_dataset(
-            game_dataset_10, concept=HasPieceConcept("p")
-        )
+        concept_dataset = ConceptDataset.from_game_dataset(game_dataset_10)
+        concept_dataset.filter_unique_()
+        concept_dataset.concept = HasPieceConcept("p")
         fen_set = set([board.fen() for _, board in board_dataset])
         assert len(concept_dataset.boards) == len(fen_set)
         assert len(concept_dataset[0][1].move_stack) == 0

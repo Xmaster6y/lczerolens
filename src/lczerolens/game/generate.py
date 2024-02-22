@@ -9,7 +9,7 @@ GameGenerator
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from .search import SearchAlgorithm
 
@@ -18,6 +18,7 @@ from .search import SearchAlgorithm
 class Game:
     gameid: str
     moves: List[str]
+    book_exit: Optional[int] = None
 
 
 class GameGenerator:

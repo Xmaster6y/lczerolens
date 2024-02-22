@@ -1,19 +1,19 @@
 """XAI module.
 """
 
-from .auto import AutoLens
 from .concept import (
     AndBinaryConcept,
     BinaryConcept,
     ConceptDataset,
     OrBinaryConcept,
-    UniqueConceptDataset,
 )
 from .concepts import (
+    BestLegalMoveConcept,
     HasMaterialAdvantageConcept,
     HasMateThreatConcept,
     HasPieceConcept,
     HasThreatConcept,
+    PieceBestLegalMoveConcept,
 )
 from .lens import Lens
 from .lenses import ActivationLens, CrpLens, LrpLens, PolicyLens, ProbingLens

@@ -9,8 +9,7 @@ from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
 from torch.utils.data import Dataset
 
-from lczerolens.adapt.models.senet import SeNet
-from lczerolens.adapt.wrapper import ModelWrapper
+from lczerolens.game.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
 
 from .lrp import LrpLens
@@ -18,6 +17,7 @@ from .lrp import LrpLens
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+@Lens.register("crp")
 class CrpLens(Lens):
     """
     Class for wrapping the LCZero models.
@@ -27,10 +27,7 @@ class CrpLens(Lens):
         """
         Returns whether the lens is compatible with the model.
         """
-        if isinstance(wrapper.model, SeNet):
-            return True
-        else:
-            return False
+        return isinstance(wrapper.model, torch.nn.Module)
 
     def analyse_board(
         self,

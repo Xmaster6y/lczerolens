@@ -7,13 +7,14 @@ import chess
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from lczerolens.adapt.wrapper import ModelWrapper, PolicyFlow
+from lczerolens.game.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.utils.constants import INVERTED_FROM_INDEX, INVERTED_TO_INDEX
 from lczerolens.xai.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+@Lens.register("policy")
 class PolicyLens(Lens):
     """
     Class for wrapping the LCZero models.
@@ -21,10 +22,7 @@ class PolicyLens(Lens):
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
         """Returns whether the lens is compatible with the model."""
-        if hasattr(wrapper.model, "policy"):
-            return True
-        else:
-            return False
+        return PolicyFlow.is_compatible(wrapper.model)
 
     def analyse_board(
         self,

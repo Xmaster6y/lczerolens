@@ -6,9 +6,18 @@ import chess
 from pylatex import Figure, MiniPage, NoEscape
 
 
-def add_plot(doc, label, heatmap_str, current_piece_pos=None, next_move=None):
+def add_plot(
+    doc,
+    label,
+    heatmap_str,
+    current_piece_pos=None,
+    next_move=None,
+    caption=None,
+):
     # Put some data inside the Figure environment
-    with doc.create(Figure()):
+    with doc.create(Figure()) as fig:
+        if caption is not None:
+            fig.add_caption(caption)
         verbatim = NoEscape(
             r"\storechessboardstyle{8x8}{maxfield=h8,showmover=true}"
         )

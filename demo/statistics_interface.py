@@ -6,16 +6,15 @@ import gradio as gr
 
 from demo import utils, visualisation
 from lczerolens import GameDataset
-from lczerolens.xai import HasThreatConcept, UniqueConceptDataset
+from lczerolens.xai import ConceptDataset, HasThreatConcept
 
 current_policy_statistics = None
 current_lrp_statistics = None
 current_probing_statistics = None
 dataset = GameDataset("assets/test_stockfish_10.jsonl")
 check_concept = HasThreatConcept("K", relative=True)
-unique_check_dataset = UniqueConceptDataset.from_game_dataset(
-    dataset, check_concept
-)
+unique_check_dataset = ConceptDataset.from_game_dataset(dataset)
+unique_check_dataset.concept = check_concept
 
 
 def list_models():
@@ -47,7 +46,7 @@ def compute_policy_statistics(
         )
         return None
     wrapper, lens = utils.get_wrapper_lens_from_state(model_name, "policy")
-    current_policy_statistics = lens.compute_statistics(dataset, wrapper, 10)
+    current_policy_statistics = lens.analyse_dataset(dataset, wrapper, 10)
     return make_policy_plot()
 
 
