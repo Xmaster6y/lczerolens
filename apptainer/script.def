@@ -1,0 +1,9 @@
+Bootstrap: localimage
+From: ./apptainer/base.sif
+
+%files
+  ./scripts/*.py /opt/scripts/
+
+%runscript
+  cd /opt/
+  echo "Running script"

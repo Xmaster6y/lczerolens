@@ -1,0 +1,5 @@
+*
+!.gitignore
+!base.def
+!script.def
+!script-start.sh

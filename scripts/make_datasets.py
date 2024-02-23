@@ -32,6 +32,7 @@ make_test_10_knight = False
 make_tcec_knight = False
 tcec_10_random_seed = 42
 make_tcec_knight_10 = False
+make_tcec_board_full_bestlegal = True
 model_name = "64x6-2018_0627_1913_08_161.onnx"
 #######################################
 
@@ -119,7 +120,10 @@ for dataset_name in sample_knights:
         move = move_utils.decode_move(
             label, (board.turn, not board.turn), board
         )
-        return board.piece_at(move.from_square) == chess.Piece.from_symbol("N")
+        from_piece = board.piece_at(move.from_square)
+        return (from_piece == chess.Piece.from_symbol("N")) or (
+            from_piece == chess.Piece.from_symbol("n")
+        )
 
     concept_dataset.filter_(filter_fn)
     concept_dataset.save(
@@ -129,9 +133,8 @@ for dataset_name in sample_knights:
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
 
 if make_tcec_knight_10:
-    concept_dataset = ConceptDataset(
-        "./assets/TCEC_game_collection_random_boards_bestlegal.jsonl"
-    )
+    dataset_name = "TCEC_game_collection_random_boards_bestlegal_knight.jsonl"
+    concept_dataset = ConceptDataset(f"./assets/{dataset_name}")
     print(f"[INFO] Board dataset len: {len(concept_dataset)}")
     random.seed(tcec_10_random_seed)
     indices = random.sample(range(len(concept_dataset)), 10)
@@ -144,8 +147,26 @@ if make_tcec_knight_10:
 
     concept_dataset.filter_(filter_fn)
     concept_dataset.save(
-        "./assets/TCEC_game_collection"
-        "_random_boards_bestlegal_knight_10.jsonl",
+        f"./assets/{dataset_name.replace('.jsonl', '_10.jsonl')}",
         n_history=n_history,
     )
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
+
+if make_tcec_board_full_bestlegal:
+    dataset_name = "TCEC_game_collection.jsonl"
+    dataset = GameDataset(f"./assets/{dataset_name}")
+
+    model = ModelWrapper.from_path(f"./assets/{model_name}")
+    concept = BestLegalMoveConcept(model)
+
+    concept_dataset = ConceptDataset.from_game_dataset(
+        dataset, n_history=n_history
+    )
+    concept_dataset.concept = concept
+    new_dataset_name = dataset_name.replace(
+        ".jsonl", "_boards_bestlegal.jsonl"
+    )
+    concept_dataset.save(
+        f"./assets/{new_dataset_name}",
+        n_history=n_history,
+    )
