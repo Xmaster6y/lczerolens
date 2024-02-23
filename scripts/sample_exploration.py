@@ -101,8 +101,8 @@ for i, (_, board, label) in enumerate(concept_dataset):
         )
 
     doc.generate_pdf(
-        "scripts/results/exploration"
-        f"_{'best' if best_legal else 'full'}"
+        "scripts/results/exploration/"
+        f"{'best' if best_legal else 'full'}"
         f"_{'all' if all_planes else '12'}"
         f"_{target}_{i}",
         clean_tex=True,

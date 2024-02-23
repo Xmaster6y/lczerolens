@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from crp.attribution import CondAttribution
-from crp.concepts import ChannelConcept
 from pylatex import Document
 from pylatex.package import Package
 from safetensors import safe_open
@@ -32,14 +31,20 @@ from scripts.create_figure import add_plot, create_heatmap_string
 #######################################
 n_clusters = 10
 batch_size = 500
-save_files = True
-conv_sum_dims = (2, 3)
+save_files = False
 model_name = "64x6-2018_0627_1913_08_161.onnx"
 dataset_name = "TCEC_game_collection_random_boards_bestlegal_knight.jsonl"
 only_config_rel = True
 best_legal = True
 run_name = (
     f"bestres_tcec_bestlegal_knight_{'expbest' if best_legal else 'full'}"
+)
+conv_sum_dims = ()
+cosine_sim = False
+kmeans_on_tsne = True
+viz_name = (
+    f"nosum_{'cosine' if cosine_sim else 'norm'}"
+    f"_{'after' if kmeans_on_tsne else 'before'}-tsne"
 )
 #######################################
 
@@ -60,7 +65,6 @@ concept_dataset = ConceptDataset(f"./assets/{dataset_name}")
 print(f"[INFO] Board dataset len: {len(concept_dataset)}")
 
 composite = LrpLens.make_default_composite()
-cc = ChannelConcept()
 layer_names = [f"model.block{b}/conv2/relu" for b in [0, 3, 5]]
 print(layer_names)
 
@@ -96,9 +100,6 @@ if save_files:
 
             for layer_name in layer_names:
                 latent_rel = attr.relevances[layer_name]
-                latent_rel = cc.attribute(latent_rel, abs_norm=True)
-                if len(latent_rel.shape) == 4:
-                    latent_rel = latent_rel.sum(conv_sum_dims)
                 if layer_name not in all_relevances:
                     all_relevances[layer_name] = latent_rel.detach().cpu()
                 else:
@@ -131,15 +132,24 @@ else:
 #######################################
 
 print("############ Clustering ...")
-os.makedirs(f"scripts/results/{run_name}", exist_ok=True)
+os.makedirs(f"scripts/results/{run_name}/{viz_name}", exist_ok=True)
 
 for layer_name, relevances in all_relevances.items():
-    kmeans = KMeans(n_clusters=n_clusters, init="k-means++")
-    kmeans.fit(relevances)
+    if conv_sum_dims:
+        relevances = relevances.sum(dim=conv_sum_dims).view(
+            relevances.shape[0], -1
+        )
+    else:
+        relevances = relevances.view(relevances.shape[0], -1)
 
     # Perform t-SNE dimensionality reduction
     tsne = TSNE(n_components=2)
     latent_rel_tsne = tsne.fit_transform(relevances)
+
+    if kmeans_on_tsne:
+        relevances = latent_rel_tsne
+    kmeans = KMeans(n_clusters=n_clusters, init="k-means++")
+    kmeans.fit(relevances)
 
     # Plot the clustered data
     plt.scatter(latent_rel_tsne[:, 0], latent_rel_tsne[:, 1], c=kmeans.labels_)
@@ -147,7 +157,8 @@ for layer_name, relevances in all_relevances.items():
     plt.xlabel("Dimension 1")
     plt.ylabel("Dimension 2")
     plt.savefig(
-        f"scripts/results/{run_name}/{layer_name.replace('/','.')}_t-sne.png"
+        f"scripts/results/{run_name}/{viz_name}/"
+        f"{layer_name.replace('/','.')}_t-sne.png"
     )
     plt.close()
 
@@ -160,8 +171,16 @@ for layer_name, relevances in all_relevances.items():
         attribution = CondAttribution(modifed_model)
         for idx_cluster in tqdm(range(n_clusters)):
             cluster_center = kmeans.cluster_centers_[idx_cluster]
-            distances = np.linalg.norm(relevances - cluster_center, axis=1)
-            nearest_neighbors = np.argsort(distances)[:8]
+            if cosine_sim:
+                dot_prod = relevances @ cluster_center.T
+                similarities = dot_prod / (
+                    np.linalg.norm(relevances, axis=1)
+                    * np.linalg.norm(cluster_center)
+                )
+                nearest_neighbors = np.argsort(similarities)[-8:]
+            else:
+                distances = np.linalg.norm(relevances - cluster_center, axis=1)
+                nearest_neighbors = np.argsort(distances)[:8]
 
             doc = Document()  # create a new document
             doc.packages.append(Package("xskak"))
@@ -210,6 +229,7 @@ for layer_name, relevances in all_relevances.items():
             # Generate pdf
             doc.generate_pdf(
                 f"scripts/results/{run_name}"
-                f"/{layer_name.replace('/','.')}_cluster_{idx_cluster}",
+                f"/{viz_name}/{layer_name.replace('/','.')}"
+                f"_cluster_{idx_cluster}",
                 clean_tex=True,
             )
