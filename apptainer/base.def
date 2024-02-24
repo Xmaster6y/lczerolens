@@ -6,6 +6,7 @@ From: python:3.9.18
   ./src /opt/src
   ./pyproject.toml /opt/pyproject.toml
   ./poetry.lock /opt/poetry.lock
+  ./README.md /opt/README.md
 
 %environment
   export "PATH=/opt/.venv/bin:$PATH"

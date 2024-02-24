@@ -2,4 +2,4 @@
 !.gitignore
 !base.def
 !script.def
-!script-start.sh
+!make-datasets.sh

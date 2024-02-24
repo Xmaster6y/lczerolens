@@ -19,9 +19,9 @@ source "/etc/slurm/local_job_dir.sh"
 # Launch the apptainer image with --nv for nvidia support. Two bind mounts are used:
 # - One for the ImageNet dataset and
 # - One for the results (e.g. checkpoint data that you may store in $LOCAL_JOB_DIR on the node
-# apptainer build --fakeroot --force ./apptainer/leela_train.sif ./apptainer/leela_train.def
 timeout 24h apptainer exec --nv --bind ${LOCAL_JOB_DIR}:/opt/output \
-    ./apptainer/script.sif python -m script.make_datasets
+    ./apptainer/script.sif python -m scripts.make_datasets \
+    --output-root /opt/output
 
 # This command copies all results generated in $LOCAL_JOB_DIR back to the submit folder regarding the job id.
 cp -r ${LOCAL_JOB_DIR} ${SLURM_SUBMIT_DIR}/${SLURM_JOB_ID}

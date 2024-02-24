@@ -200,7 +200,7 @@ class ConceptDataset(BoardDataset):
             print("[INFO] Computing labels")
             self.labels = [
                 self._concept.compute_label(board)
-                for board in tqdm.tqdm(self.boards)
+                for board in tqdm.tqdm(self.boards, bar_format="{l_bar}{bar}")
             ]
 
     def __getitem__(self, idx) -> Tuple[int, chess.Board, Any]:  # type: ignore
@@ -214,6 +214,7 @@ class ConceptDataset(BoardDataset):
             for board, gameid, label in tqdm.tqdm(
                 zip(self.boards, self.game_ids, self.labels),
                 total=len(self.boards),
+                bar_format="{l_bar}{bar}",
             ):
                 working_board = board.copy(stack=n_history)
 
@@ -232,21 +233,26 @@ class ConceptDataset(BoardDataset):
     def concept(self):
         return self._concept
 
-    @concept.setter
-    def concept(self, concept: Concept):
+    def set_concept(self, concept: Concept, **pbar_kwargs):
         self._concept = concept
         print("[INFO] Computing labels")
         self.labels = [
             self._concept.compute_label(board)
-            for board in tqdm.tqdm(self.boards)
+            for board in tqdm.tqdm(
+                self.boards, bar_format="{l_bar}{bar}", **pbar_kwargs
+            )
         ]
 
     @classmethod
-    def from_board_dataset(cls, board_dataset: BoardDataset, concept: Concept):
+    def from_board_dataset(
+        cls, board_dataset: BoardDataset, concept: Concept, **pbar_kwargs
+    ):
         print("[INFO] Computing labels")
         labels = [
             concept.compute_label(board)
-            for board in tqdm.tqdm(board_dataset.boards)
+            for board in tqdm.tqdm(
+                board_dataset.boards, bar_format="{l_bar}{bar}", **pbar_kwargs
+            )
         ]
         return cls(
             boards=board_dataset.boards,

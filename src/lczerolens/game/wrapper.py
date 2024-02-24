@@ -30,6 +30,16 @@ class ModelWrapper(nn.Module):
         """Forward pass."""
         return self.model(x)
 
+    @property
+    def device(self):
+        """Returns the device."""
+        return next(self.parameters()).device
+
+    @device.setter
+    def device(self, device: torch.device):
+        """Sets the device."""
+        self.to(device)
+
     @classmethod
     def from_path(cls, model_path: str):
         """Creates a wrapper from a model path."""
@@ -43,7 +53,7 @@ class ModelWrapper(nn.Module):
             )
 
     @classmethod
-    def from_onnx_path(cls, onnx_model_path: str):
+    def from_onnx_path(cls, onnx_model_path: str, check: bool = True):
         """
         Builds a model from a given path.
         """
@@ -52,7 +62,8 @@ class ModelWrapper(nn.Module):
                 f"Model path {onnx_model_path} does not exist."
             )
         try:
-            onnx_model = safe_shape_inference(onnx_model_path)
+            if check:
+                onnx_model = safe_shape_inference(onnx_model_path)
             onnx_torch_model = convert(onnx_model)
             onnx_torch_model.forward = cls.make_onnx_td_forward(
                 onnx_torch_model
@@ -120,6 +131,7 @@ class ModelWrapper(nn.Module):
         batched_tensor = torch.cat(tensor_list, dim=0)
         if input_requires_grad:
             batched_tensor.requires_grad = True
+        batched_tensor = batched_tensor.to(self.device)
         with torch.set_grad_enabled(with_grad):
             out = self.forward(batched_tensor)
 

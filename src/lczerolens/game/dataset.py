@@ -127,7 +127,9 @@ class BoardDataset(Dataset):
         print(f"[INFO] Saving boards to {file_name}")
         with jsonlines.open(file_name, "w") as writer:
             for board, gameid in tqdm.tqdm(
-                zip(self.boards, self.game_ids), total=len(self.boards)
+                zip(self.boards, self.game_ids),
+                total=len(self.boards),
+                bar_format="{l_bar}{bar}",
             ):
                 working_board = board.copy(stack=n_history)
 
@@ -152,7 +154,7 @@ class BoardDataset(Dataset):
         boards: List[chess.Board] = []
         game_ids: List[str] = []
         print("[INFO] Converting games to boards")
-        for game in tqdm.tqdm(game_dataset.games):
+        for game in tqdm.tqdm(game_dataset.games, bar_format="{l_bar}{bar}"):
             new_boards, new_ids = cls.game_to_board_list(
                 game, n_history, skip_book_exit, skip_first_n
             )

@@ -6,10 +6,13 @@ poetry run python -m scripts.make_datasets
 ```
 """
 
+import argparse
+import os
 import random
 
 import chess
 import jsonlines
+import torch
 import tqdm
 
 from lczerolens import BoardDataset, GameDataset, ModelWrapper, move_utils
@@ -18,6 +21,8 @@ from lczerolens.xai import BestLegalMoveConcept, ConceptDataset
 #######################################
 # HYPERPARAMETERS
 #######################################
+parser = argparse.ArgumentParser("leela")
+parser.add_argument("--output-root", type=str, default=".")
 make_test_10 = False
 make_test_5000 = False
 n_history = 7
@@ -36,6 +41,9 @@ make_tcec_board_full_bestlegal = True
 model_name = "64x6-2018_0627_1913_08_161.onnx"
 #######################################
 
+ARGS = parser.parse_args()
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+os.makedirs(f"{ARGS.output_root}/assets", exist_ok=True)
 
 convert_to_boards = []
 
@@ -50,7 +58,9 @@ for dataset_name in convert_to_boards:
     written_boards = 0
     print(f"[INFO] Converting games to boards: {dataset_name}")
     with jsonlines.open(
-        f"./assets/{dataset_name.replace('.jsonl', '_boards.jsonl')}", "w"
+        f"{ARGS.output_root}/assets/"
+        f"{dataset_name.replace('.jsonl', '_boards.jsonl')}",
+        "w",
     ) as writer:
         for game in tqdm.tqdm(dataset.games):
             lines = BoardDataset.preprocess_game(
@@ -70,7 +80,8 @@ if make_tcec_random:
     written_boards = 0
     random.seed(tcec_random_seed)
     with jsonlines.open(
-        f"./assets/{dataset_name.replace('.jsonl', '_random_boards.jsonl')}",
+        f"{ARGS.output_root}/assets/"
+        f"{dataset_name.replace('.jsonl', '_random_boards.jsonl')}",
         "w",
     ) as writer:
         for game in tqdm.tqdm(dataset.games):
@@ -96,11 +107,13 @@ if make_tcec_bestlegal:
 for dataset_name in sample_bestlegal:
     dataset = BoardDataset(f"./assets/{dataset_name}")
     model = ModelWrapper.from_path(f"./assets/{model_name}")
+    model.to(DEVICE)
     concept = BestLegalMoveConcept(model)
 
     concept_dataset = ConceptDataset.from_board_dataset(dataset, concept)
     concept_dataset.save(
-        f"./assets/{dataset_name.replace('.jsonl', '_bestlegal.jsonl')}",
+        f"{ARGS.output_root}/assets/"
+        f"{dataset_name.replace('.jsonl', '_bestlegal.jsonl')}",
         n_history=n_history,
     )
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
@@ -127,7 +140,8 @@ for dataset_name in sample_knights:
 
     concept_dataset.filter_(filter_fn)
     concept_dataset.save(
-        f"./assets/{dataset_name.replace('.jsonl', '_knight.jsonl')}",
+        f"{ARGS.output_root}/assets/"
+        f"{dataset_name.replace('.jsonl', '_knight.jsonl')}",
         n_history=n_history,
     )
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
@@ -147,7 +161,8 @@ if make_tcec_knight_10:
 
     concept_dataset.filter_(filter_fn)
     concept_dataset.save(
-        f"./assets/{dataset_name.replace('.jsonl', '_10.jsonl')}",
+        f"{ARGS.output_root}/assets/"
+        f"{dataset_name.replace('.jsonl', '_10.jsonl')}",
         n_history=n_history,
     )
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
@@ -157,16 +172,17 @@ if make_tcec_board_full_bestlegal:
     dataset = GameDataset(f"./assets/{dataset_name}")
 
     model = ModelWrapper.from_path(f"./assets/{model_name}")
+    model.to(DEVICE)
     concept = BestLegalMoveConcept(model)
 
     concept_dataset = ConceptDataset.from_game_dataset(
         dataset, n_history=n_history
     )
-    concept_dataset.concept = concept
+    concept_dataset.set_concept(concept, mininterval=10)
     new_dataset_name = dataset_name.replace(
         ".jsonl", "_boards_bestlegal.jsonl"
     )
     concept_dataset.save(
-        f"./assets/{new_dataset_name}",
+        f"{ARGS.output_root}/assets/{new_dataset_name}",
         n_history=n_history,
     )
