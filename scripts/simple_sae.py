@@ -98,6 +98,7 @@ import argparse
 import os
 
 import einops
+import numpy as np
 import torch
 import wandb
 from safetensors import safe_open
@@ -400,14 +401,13 @@ if ARGS.compute_evals:
             )
             feature_act_count += (f > 0).sum(dim=0).cpu()
             activated_features += (f > 0).sum().cpu()
-        data = [[c / len(test_dataset)] for c in feature_act_count.numpy()]
-        table = wandb.Table(data=data, columns=["density"])  # type: ignore
+        hist = np.histogram(
+            feature_act_count.numpy() / len(test_dataset),
+            density=True,
+            range=(0.0, 1.0),
+        )
         wandb.log(  # type: ignore
-            {
-                "test/feature_density": wandb.plot.histogram(  # type: ignore
-                    table, "density"
-                )
-            }
+            {"test/feature_density": wandb.Histogram(hist)}  # type: ignore
         )
         wandb.log(  # type: ignore
             {"test/ativated_features": activated_features / len(test_dataset)}
