@@ -165,14 +165,14 @@ def resample_neurons(deads, activations, ae, optimizer):
 
     # resample decoder vectors for dead neurons
     indices = t.multinomial(losses, num_samples=deads.sum(), replacement=True)
-    ae.decoder.weight[:, deads] = out_acts[indices].T
-    ae.decoder.weight /= ae.decoder.weight.norm(dim=0, keepdim=True)
+    ae.W_dec[deads] = out_acts[indices]
+    ae.W_dec /= ae.W_dec.norm(dim=1, keepdim=True)
 
     # resample encoder vectors for dead neurons
-    ae.encoder.weight[deads] = ae.encoder.weight[~deads].mean(dim=0) * 0.2
+    ae.W_enc[:, deads] = ae.W_enc[:, ~deads].mean(dim=0) * 0.2
 
     # reset bias vectors for dead neurons
-    ae.encoder.bias[deads] = 0.0
+    ae.b_enc[:, deads] = 0.0
 
     # reset Adam parameters for dead neurons
     state_dict = optimizer.state_dict()["state"]

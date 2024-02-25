@@ -23,22 +23,22 @@ parameters:
     distribution: inv_log_uniform_values
     max: 1
     min: 0.9
-    value: 0.99
+    # value: 0.99
   beta2:
     distribution: inv_log_uniform_values
     max: 1
     min: 0.99
-    value: 0.999
+    # value: 0.999
   dict_size_scale:
     distribution: int_uniform
     max: 126
     min: 8
-    value: 50
+    # value: 50
   ghost_threshold:
     distribution: int_uniform
     max: 8000
     min: 100
-    value: 4000
+    # value: 4000
   lr:
     distribution: log_uniform_values
     max: 1e-3
@@ -66,30 +66,30 @@ parameters:
     min: 5e-3
   pre_bias:
     values: [true, false]
-    value: false
+    # value: false
   use_constraint_optim:
     values: [true, false]
-    value: true
+    # value: true
   use_constraint_loss:
     values: [true, false]
-    value: false
+    # value: false
   constraint_penalty:
     distribution: log_uniform_values
     max: 1
     min: 1e-3
-    value: 5e-3
+    # value: 5e-3
   train_batch_size:
     value: 250
   warmup_steps:
     distribution: int_uniform
     max: 200
     min: 10
-    value: 50
+    # value: 50
   cooldown_steps:
     distribution: int_uniform
     max: 400
     min: 10
-    value: 150
+    # value: 150
 program: scripts.simple_sae
 ```
 """
