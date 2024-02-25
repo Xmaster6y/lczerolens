@@ -1,7 +1,7 @@
 """Main module for the lczerolens package.
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 
 from .game import BoardDataset, GameDataset, ModelWrapper

@@ -22,19 +22,23 @@ parameters:
   beta1:
     distribution: inv_log_uniform_values
     max: 1
-    min: 1e-5
+    min: 0.9
+    value: 0.99
   beta2:
     distribution: inv_log_uniform_values
     max: 1
-    min: 0.9
+    min: 0.99
+    value: 0.999
   dict_size_scale:
     distribution: int_uniform
     max: 126
     min: 8
+    value: 50
   ghost_threshold:
     distribution: int_uniform
     max: 8000
     min: 100
+    value: 4000
   lr:
     distribution: log_uniform_values
     max: 1e-3
@@ -43,40 +47,49 @@ parameters:
     value: maia-1100.onnx
   n_epochs:
     distribution: int_uniform
-    max: 6
+    max: 30
     min: 1
   h_patch_size:
-    values: [1, 2, 4]
+    # values: [1, 2, 4]
+    value: 4
   make_symetric_patch:
-    values: [true, false]
+    # values: [true, false]
+    value: true
   w_patch_size:
-    values: [1, 2, 4]
+    # values: [1, 2, 4]
+    value: 4
   sae_module_name:
-    value: block1/conv2/relu
+    value: block3/conv2/relu
   sparsity_penalty:
     distribution: log_uniform_values
-    max: 0.1
-    min: 5e-05
+    max: 1
+    min: 5e-3
   pre_bias:
     values: [true, false]
+    value: false
   use_constraint_optim:
     values: [true, false]
+    value: true
   use_constraint_loss:
     values: [true, false]
+    value: false
   constraint_penalty:
     distribution: log_uniform_values
     max: 1
-    min: 1e-5
+    min: 1e-3
+    value: 5e-3
   train_batch_size:
     value: 250
   warmup_steps:
     distribution: int_uniform
     max: 200
     min: 10
+    value: 50
   cooldown_steps:
     distribution: int_uniform
-    max: 200
+    max: 400
     min: 10
+    value: 150
 program: scripts.simple_sae
 ```
 """
@@ -89,7 +102,7 @@ import torch
 import wandb
 from safetensors import safe_open
 from safetensors.torch import save_file
-from sklearn.metrics import r2_score
+from sklearn.metrics import explained_variance_score, r2_score
 
 from lczerolens import BoardDataset, ModelWrapper
 from lczerolens.xai import ActivationLens, PatchingLens
@@ -133,7 +146,9 @@ parser.add_argument("--use_constraint_optim", type=bool, default=False)
 parser.add_argument("--use_constraint_loss", type=bool, default=False)
 parser.add_argument("--constraint_penalty", type=float, default=0.1)
 parser.add_argument("--ghost_threshold", type=int, default=4000)
+parser.add_argument("--resample_steps", type=int, default=4000)
 parser.add_argument("--train_batch_size", type=int, default=250)
+parser.add_argument("--eval_batch_size", type=int, default=500)
 parser.add_argument("--warmup_steps", type=int, default=100)
 parser.add_argument("--cooldown_steps", type=int, default=100)
 parser.add_argument("--log_steps", type=int, default=50)
@@ -167,10 +182,17 @@ wandb.init(  # type: ignore
         "beta2": ARGS.beta2,
         "n_epochs": ARGS.n_epochs,
         "sparsity_penalty": ARGS.sparsity_penalty,
-        "train_batch_size": ARGS.train_batch_size,
+        "pre_bias": ARGS.pre_bias,
+        "use_constraint_optim": ARGS.use_constraint_optim,
+        "use_constraint_loss": ARGS.use_constraint_loss,
+        "constraint_penalty": ARGS.constraint_penalty,
         "ghost_threshold": ARGS.ghost_threshold,
-        "log_steps": ARGS.log_steps,
+        "resample_steps": ARGS.resample_steps,
+        "train_batch_size": ARGS.train_batch_size,
+        "eval_batch_size": ARGS.eval_batch_size,
         "warmup_steps": ARGS.warmup_steps,
+        "cooldown_steps": ARGS.cooldown_steps,
+        "log_steps": ARGS.log_steps,
         "val_steps": ARGS.val_steps,
     },
 )
@@ -301,7 +323,14 @@ if ARGS.train_sae:
         torch.utils.data.TensorDataset(
             val_activations,
         ),
-        batch_size=ARGS.train_batch_size,
+        batch_size=ARGS.eval_batch_size,
+        collate_fn=collate_fn,
+    )
+    test_dataloader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(
+            test_activations,
+        ),
+        batch_size=ARGS.eval_batch_size,
         collate_fn=collate_fn,
     )
 
@@ -320,7 +349,7 @@ if ARGS.train_sae:
         warmup_steps=ARGS.warmup_steps,
         n_epochs=ARGS.n_epochs,
         ghost_threshold=ARGS.ghost_threshold,
-        resample_steps=None,
+        resample_steps=ARGS.resample_steps,
         device=DEVICE,
         from_checkpoint=ARGS.from_checkpoint,
         wandb=wandb,
@@ -351,6 +380,41 @@ if ARGS.compute_evals:
         f"{ARGS.sae_module_name.replace('/', '_')}.pt"
     )
     ae.to(DEVICE)
+    test_losses = {
+        "explained_variance": 0.0,
+        "r2_score": 0.0,
+    }
+    feature_act_count = torch.zeros(ae.dict_size)
+    activated_features = 0
+    with torch.no_grad():
+        for acts in test_dataloader:
+            out = ae(acts.to(DEVICE), output_features=True)
+            f = out["features"]
+            x_hat = out["x_hat"]
+            test_losses["explained_variance"] += (
+                explained_variance_score(acts.cpu(), x_hat.cpu())
+                * acts.shape[0]
+            )
+            test_losses["r2_score"] += (
+                r2_score(acts.cpu(), x_hat.cpu()) * acts.shape[0]
+            )
+            feature_act_count += (f > 0).sum(dim=0)
+            activated_features += (f > 0).sum()
+        data = [c / len(test_dataset) for c in feature_act_count.cpu().numpy()]
+        table = wandb.Table(data=data, columns=["density"])  # type: ignore
+        wandb.log(  # type: ignore
+            {
+                "test/feature_density": wandb.plot.histogram(  # type: ignore
+                    table, "density"
+                )
+            }
+        )
+        wandb.log(  # type: ignore
+            {"test/ativated_features": activated_features / len(test_dataset)}
+        )
+        for k in test_losses.keys():
+            test_losses[k] /= len(test_dataloader)
+            wandb.log({f"test/{k}": test_losses[k]})  # type: ignore
 
     def sae_patch(x, **kwargs):
         x_c_batched = rearrange_activations(x)
