@@ -45,6 +45,12 @@ parameters:
     distribution: int_uniform
     max: 6
     min: 1
+  h_patch_size:
+    values: [1, 2, 4]
+  make_symetric_patch:
+    values: [true, false]
+  w_patch_size:
+    values: [1, 2, 4]
   sae_module_name:
     value: block5/conv2/relu
   sparsity_penalty:
@@ -57,30 +63,6 @@ parameters:
     distribution: int_uniform
     max: 200
     min: 10
-patches:
-  parameters:
-    asymetric:
-      parameters:
-        h_patch_size:
-          values:
-            - 1
-            - 2
-            - 4
-        make_symetric_patch:
-          value: false
-        w_patch_size:
-          values:
-            - 1
-            - 2
-            - 4
-    symetric:
-      parameters:
-        h_patch_size:
-          value: 4
-        make_symetric_patch:
-          value: true
-        w_patch_size:
-          value: 4
 program: scripts.simple_sae
 ```
 """
@@ -124,7 +106,7 @@ parser.add_argument("--h_patch_size", type=int, default=1)
 parser.add_argument("--w_patch_size", type=int, default=1)
 parser.add_argument(
     "--make_symetric_patch",
-    action=argparse.BooleanOptionalAction,
+    type=bool,
     default=True,
 )
 parser.add_argument("--lr", type=float, default=1e-3)
