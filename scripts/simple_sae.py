@@ -398,9 +398,9 @@ if ARGS.compute_evals:
             test_losses["r2_score"] += (
                 r2_score(acts.cpu(), x_hat.cpu()) * acts.shape[0]
             )
-            feature_act_count += (f > 0).sum(dim=0)
-            activated_features += (f > 0).sum()
-        data = [c / len(test_dataset) for c in feature_act_count.cpu().numpy()]
+            feature_act_count += (f > 0).sum(dim=0).cpu()
+            activated_features += (f > 0).sum().cpu()
+        data = [c / len(test_dataset) for c in feature_act_count.numpy()]
         table = wandb.Table(data=data, columns=["density"])  # type: ignore
         wandb.log(  # type: ignore
             {
