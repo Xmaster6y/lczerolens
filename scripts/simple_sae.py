@@ -20,13 +20,13 @@ metric:
   name: val/r2_score
 parameters:
   beta1:
-    distribution: inv_log_uniform
+    distribution: inv_log_uniform_values
     max: 1
-    min: 0
+    min: 1e-5
   beta2:
-    distribution: inv_log_uniform
+    distribution: inv_log_uniform_values
     max: 1
-    min: 0
+    min: 0.9
   dict_size_scale:
     distribution: int_uniform
     max: 126
@@ -36,9 +36,9 @@ parameters:
     max: 8000
     min: 100
   lr:
-    distribution: log_uniform
-    max: 0.1
-    min: 5e-05
+    distribution: log_uniform_values
+    max: 1e-3
+    min: 1e-6
   model_name:
     value: maia-1100.onnx
   n_epochs:
@@ -52,14 +52,28 @@ parameters:
   w_patch_size:
     values: [1, 2, 4]
   sae_module_name:
-    value: block5/conv2/relu
+    value: block1/conv2/relu
   sparsity_penalty:
-    distribution: log_uniform
+    distribution: log_uniform_values
     max: 0.1
     min: 5e-05
+  pre_bias:
+    values: [true, false]
+  use_constraint_optim:
+    values: [true, false]
+  use_constraint_loss:
+    values: [true, false]
+  constraint_penalty:
+    distribution: log_uniform_values
+    max: 1
+    min: 1e-5
   train_batch_size:
     value: 250
   warmup_steps:
+    distribution: int_uniform
+    max: 200
+    min: 10
+  cooldown_steps:
     distribution: int_uniform
     max: 200
     min: 10
@@ -114,10 +128,15 @@ parser.add_argument("--beta1", type=float, default=0.9)
 parser.add_argument("--beta2", type=float, default=0.999)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--sparsity_penalty", type=float, default=1e-2)
-parser.add_argument("--train_batch_size", type=int, default=250)
+parser.add_argument("--pre_bias", type=bool, default=False)
+parser.add_argument("--use_constraint_optim", type=bool, default=False)
+parser.add_argument("--use_constraint_loss", type=bool, default=False)
+parser.add_argument("--constraint_penalty", type=float, default=0.1)
 parser.add_argument("--ghost_threshold", type=int, default=4000)
-parser.add_argument("--log_steps", type=int, default=50)
+parser.add_argument("--train_batch_size", type=int, default=250)
 parser.add_argument("--warmup_steps", type=int, default=100)
+parser.add_argument("--cooldown_steps", type=int, default=100)
+parser.add_argument("--log_steps", type=int, default=50)
 parser.add_argument("--val_steps", type=int, default=200)
 # Test
 parser.add_argument(

@@ -20,7 +20,7 @@ class ConstrainedAdam(t.optim.Adam):
     def step(self, closure=None):
         with t.no_grad():
             for p in self.constrained_params:
-                normed_p = p / p.norm(dim=0, keepdim=True)
+                normed_p = p / p.norm(dim=1, keepdim=True)
                 # project away the parallel component of the gradient
                 p.grad -= (p.grad * normed_p).sum(
                     dim=0, keepdim=True
@@ -29,7 +29,7 @@ class ConstrainedAdam(t.optim.Adam):
         with t.no_grad():
             for p in self.constrained_params:
                 # renormalize the constrained parameters
-                p /= p.norm(dim=0, keepdim=True)
+                p /= p.norm(dim=1, keepdim=True)
 
 
 def entropy(p, eps=1e-8):
@@ -54,6 +54,8 @@ def sae_loss(
     ghost_threshold=None,
     explained_variance=False,
     r2=False,
+    use_constraint_loss=False,
+    constraint_penalty=0.1,
 ):
     """
     Compute the loss of an autoencoder on some activations
@@ -115,6 +117,13 @@ def sae_loss(
     out_losses = {"mse_loss": mse_loss, "sparsity_loss": sparsity_loss}
     classical_loss = mse_loss + sparsity_penalty * sparsity_loss
     out_losses["ghost_loss"] = ghost_loss
+    if use_constraint_loss:
+        # constraint less than 1
+        constraint_loss = (f.norm(p=2, dim=-1) - 1).clamp(min=0).mean()
+        out_losses["constraint_loss"] = constraint_loss
+        classical_loss += constraint_penalty * constraint_loss
+    else:
+        out_losses["constraint_loss"] = 0
     if ghost_loss is None:
         out_losses["total_loss"] = classical_loss
     else:
@@ -185,9 +194,11 @@ def trainSAE(
     beta1=0.9,
     beta2=0.999,
     n_epochs=1,
+    pre_bias=False,
     val_dataloader=None,
     entropy=False,
     warmup_steps=1000,
+    cooldown_steps=1000,
     resample_steps=None,
     ghost_threshold=None,
     save_steps=None,
@@ -198,11 +209,16 @@ def trainSAE(
     from_checkpoint=None,
     wandb=None,
     do_print=True,
+    use_constraint_optim=False,
+    use_constraint_loss=False,
+    constraint_penalty=0.1,
 ):
     """
     Train and return a sparse autoencoder
     """
-    ae = AutoEncoder(activation_dim, dictionary_size).to(device)
+    ae = AutoEncoder(activation_dim, dictionary_size, pre_bias=pre_bias).to(
+        device
+    )
     if from_checkpoint is not None:
         loaded = t.load(from_checkpoint)
         if isinstance(loaded, t.nn.Module):
@@ -217,21 +233,24 @@ def trainSAE(
     # set up optimizer and scheduler
     optimizer = ConstrainedAdam(
         ae.parameters(),
-        ae.decoder.parameters(),
+        [ae.W_dec] if use_constraint_optim else [],
         lr=lr,
         betas=(beta1, beta2),
     )
-    if resample_steps is None:
+    total_steps = n_epochs * len(train_dataloader)
 
-        def warmup_fn(step):
-            return min(step / warmup_steps, 1.0)
+    def lr_fn(step):
+        # cooldown
+        cooldown_ratio = min(1.0, (total_steps - step) / cooldown_steps)
 
-    else:
+        # warmup
+        if resample_steps is not None:
+            ini_step = step % resample_steps
+        else:
+            ini_step = step
+        return min(ini_step / warmup_steps, 1.0) * cooldown_ratio
 
-        def warmup_fn(step):
-            return min((step % resample_steps) / warmup_steps, 1.0)
-
-    scheduler = t.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_fn)
+    scheduler = t.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_fn)
     step = 0
     for _ in range(n_epochs):
         for acts in train_dataloader:
@@ -248,6 +267,8 @@ def trainSAE(
                 acts,
                 ae,
                 sparsity_penalty,
+                use_constraint_loss=use_constraint_loss,
+                constraint_penalty=constraint_penalty,
                 use_entropy=entropy,
                 num_samples_since_activated=num_samples_since_activated,
                 ghost_threshold=ghost_threshold,
@@ -273,6 +294,8 @@ def trainSAE(
                         ae,
                         sparsity_penalty,
                         entropy,
+                        use_constraint_loss=use_constraint_loss,
+                        constraint_penalty=constraint_penalty,
                         num_samples_since_activated=(
                             num_samples_since_activated
                         ),
@@ -300,6 +323,7 @@ def trainSAE(
                             "total_loss": 0,
                             "mse_loss": 0,
                             "sparsity_loss": 0,
+                            "constraint_loss": 0,
                             "explained_variance": 0,
                             "r2_score": 0,
                         }
@@ -309,6 +333,8 @@ def trainSAE(
                                 ae,
                                 sparsity_penalty,
                                 use_entropy=entropy,
+                                use_constraint_loss=use_constraint_loss,
+                                constraint_penalty=constraint_penalty,
                                 num_samples_since_activated=(
                                     num_samples_since_activated
                                 ),
