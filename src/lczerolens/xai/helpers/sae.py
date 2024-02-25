@@ -23,29 +23,23 @@ class AutoEncoder(nn.Module):
                 torch.empty(
                     self.activation_dim,
                     self.dict_size,
-                    dtype=self.dtype,
-                    device=self.device,
                 )
             )
         )
-        self.b_enc = nn.Parameter(
-            torch.zeros(self.dict_size, dtype=self.dtype, device=self.device)
-        )
+        self.b_enc = nn.Parameter(torch.zeros(self.dict_size))
         self.relu = nn.ReLU()
         self.W_dec = nn.Parameter(
             torch.nn.init.kaiming_uniform_(
                 torch.empty(
                     self.dict_size,
                     self.activation_dim,
-                    dtype=self.dtype,
-                    device=self.device,
                 )
             )
         )
         self.normalize_decoder_()
         self.b_dec = nn.Parameter(
             torch.zeros(
-                self.activation_dim, dtype=self.dtype, device=self.device
+                self.activation_dim,
             )
         )
 
