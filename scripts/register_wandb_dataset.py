@@ -13,6 +13,8 @@ import random
 import wandb
 from lczerolens import BoardDataset
 
+from .secret import WANDB_API_KEY
+
 #######################################
 # HYPERPARAMETERS
 #######################################
@@ -28,7 +30,6 @@ log_dataset = False
 
 ARGS = parser.parse_args()
 os.makedirs(f"{ARGS.output_root}/assets", exist_ok=True)
-
 
 if make_dataset:
     dataset = BoardDataset("./assets/TCEC_game_collection_random_boards.jsonl")
@@ -59,6 +60,7 @@ if make_dataset:
 
 #  type: ignore
 if log_dataset:
+    wandb.login(key=WANDB_API_KEY)  # type: ignore
     with wandb.init(  # type: ignore
         project="lczerolens-saes", job_type="make-datasets"
     ) as run:
