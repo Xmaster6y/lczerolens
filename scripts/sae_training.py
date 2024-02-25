@@ -169,7 +169,7 @@ def resample_neurons(deads, activations, ae, optimizer):
     ae.W_dec /= ae.W_dec.norm(dim=1, keepdim=True)
 
     # resample encoder vectors for dead neurons
-    ae.W_enc[:, deads] = ae.W_enc[:, ~deads].mean(dim=0) * 0.2
+    ae.W_enc[:, deads] = ae.W_enc[:, ~deads].mean(dim=1) * 0.2
 
     # reset bias vectors for dead neurons
     ae.b_enc[:, deads] = 0.0

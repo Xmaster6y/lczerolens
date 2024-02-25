@@ -6,19 +6,25 @@ poetry run python -m scripts.register_wandb_models
 ```
 """
 
+import argparse
+
 import wandb
 
 #######################################
 # HYPERPARAMETERS
 #######################################
+parser = argparse.ArgumentParser("register-wandb-models")
 models = {
     "maia-1100": "maia-1100.onnx",
 }
-log_models = True
+parser.add_argument(
+    "--log_models", action=argparse.BooleanOptionalAction, default=False
+)
 #######################################
 
+ARGS = parser.parse_args()
 
-if log_models:
+if ARGS.log_models:
     wandb.login()  # type: ignore
     with wandb.init(  # type: ignore
         project="lczerolens-saes", job_type="make-models"
