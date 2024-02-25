@@ -316,8 +316,8 @@ def trainSAE(
                                 explained_variance=True,
                                 r2=True,
                             )
-                            for k, v in val_losses.items():
-                                val_losses[k] += v
+                            for k, _ in val_losses.items():
+                                val_losses[k] += losses[k]
 
                         for k, v in val_losses.items():
                             val_losses[k] /= len(val_dataloader)

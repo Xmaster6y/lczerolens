@@ -51,5 +51,14 @@
             "console": "integratedTerminal",
             "justMyCode": false
         }
+        ,
+        {
+            "name": "Script simple sae",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "scripts.simple_sae",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
     ]
 }
