@@ -1,8 +1,8 @@
-"""Register a dataset in Weights & Biases.
+"""Register datasets in Weights & Biases.
 
 Run with:
 ```bash
-poetry run python -m scripts.register_wandb_dataset
+poetry run python -m scripts.register_wandb_datasets
 ```
 """
 
@@ -17,28 +17,32 @@ from lczerolens import BoardDataset
 #######################################
 # HYPERPARAMETERS
 #######################################
-parser = argparse.ArgumentParser("make-datasets")
-parser.add_argument("--output-root", type=str, default=".")
-make_dataset = False
-seed = 42
-train_samples = 10_000
-val_samples = 1_000
-test_samples = 1_000
-log_dataset = False
+parser = argparse.ArgumentParser("register-wandb-datasets")
+parser.add_argument("--output_root", type=str, default=".")
+parser.add_argument(
+    "--make_dataset", action=argparse.BooleanOptionalAction, default=False
+)
+parser.add_argument("--seed", type=int, default=42)
+parser.add_argument("--train_samples", type=int, default=10_000)
+parser.add_argument("--val_samples", type=int, default=1_000)
+parser.add_argument("--test_samples", type=int, default=1_000)
+parser.add_argument(
+    "--log_dataset", action=argparse.BooleanOptionalAction, default=False
+)
 #######################################
 
 ARGS = parser.parse_args()
 os.makedirs(f"{ARGS.output_root}/assets", exist_ok=True)
 
-if make_dataset:
+if ARGS.make_dataset:
     dataset = BoardDataset("./assets/TCEC_game_collection_random_boards.jsonl")
     all_indices = list(range(len(dataset)))
-    random.seed(seed)
+    random.seed(ARGS.seed)
     random.shuffle(all_indices)
-    train_indices = all_indices[:train_samples]
-    val_slice = train_samples + val_samples
-    val_indices = all_indices[train_samples:val_slice]
-    test_slice = val_slice + test_samples
+    train_indices = all_indices[: ARGS.train_samples]
+    val_slice = ARGS.train_samples + ARGS.val_samples
+    val_indices = all_indices[ARGS.train_samples : val_slice]
+    test_slice = val_slice + ARGS.test_samples
     test_indices = all_indices[val_slice:test_slice]
 
     dataset.save(
@@ -57,7 +61,7 @@ if make_dataset:
         indices=test_indices,
     )
 
-if log_dataset:
+if ARGS.log_dataset:
     wandb.login()  # type: ignore
     with wandb.init(  # type: ignore
         project="lczerolens-saes", job_type="make-datasets"
