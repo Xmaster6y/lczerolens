@@ -14,10 +14,74 @@ command:
   - -m
   - ${program}
   - ${args}
-program: ignored.simple_sae
+method: bayes
 metric:
-  goal: minimize
-  name: val_mse
+  goal: maximize
+  name: val/r2_score
+parameters:
+  beta1:
+    distribution: inv_log_uniform
+    max: 1
+    min: 0
+  beta2:
+    distribution: inv_log_uniform
+    max: 1
+    min: 0
+  dict_size_scale:
+    distribution: int_uniform
+    max: 126
+    min: 8
+  ghost_threshold:
+    distribution: int_uniform
+    max: 8000
+    min: 100
+  lr:
+    distribution: log_uniform
+    max: 0.1
+    min: 5e-05
+  model_name:
+    value: maia-1100.onnx
+  n_epochs:
+    distribution: int_uniform
+    max: 6
+    min: 1
+  sae_module_name:
+    value: block5/conv2/relu
+  sparsity_penalty:
+    distribution: log_uniform
+    max: 0.1
+    min: 5e-05
+  train_batch_size:
+    value: 250
+  warmup_steps:
+    distribution: int_uniform
+    max: 200
+    min: 10
+patches:
+  parameters:
+    asymetric:
+      parameters:
+        h_patch_size:
+          values:
+            - 1
+            - 2
+            - 4
+        make_symetric_patch:
+          value: false
+        w_patch_size:
+          values:
+            - 1
+            - 2
+            - 4
+    symetric:
+      parameters:
+        h_patch_size:
+          value: 4
+        make_symetric_patch:
+          value: true
+        w_patch_size:
+          value: 4
+program: scripts.simple_sae
 ```
 """
 
@@ -35,7 +99,6 @@ from lczerolens import BoardDataset, ModelWrapper
 from lczerolens.xai import ActivationLens, PatchingLens
 
 from .sae_training import trainSAE
-from .secret import WANDB_API_KEY
 
 #######################################
 # HYPERPARAMETERS
@@ -88,7 +151,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 run_name = f"{ARGS.model_name}_{ARGS.sae_module_name.replace('/', '_')}"
 os.makedirs(f"{ARGS.output_root}/ignored/saes", exist_ok=True)
-wandb.login(key=WANDB_API_KEY)  # type: ignore
+wandb.login()  # type: ignore
 wandb.init(  # type: ignore
     project="lczerolens-saes",
     config={

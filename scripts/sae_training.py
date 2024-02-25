@@ -305,7 +305,7 @@ def trainSAE(
                         }
                         for val_acts in val_dataloader:
                             losses = sae_loss(
-                                val_acts,
+                                val_acts.to(device),
                                 ae,
                                 sparsity_penalty,
                                 use_entropy=entropy,
@@ -317,7 +317,7 @@ def trainSAE(
                                 r2=True,
                             )
                             for k, v in val_losses.items():
-                                val_losses[k] += losses[k]
+                                val_losses[k] += v
 
                         for k, v in val_losses.items():
                             val_losses[k] /= len(val_dataloader)

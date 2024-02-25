@@ -14,8 +14,6 @@ import wandb
 
 from lczerolens import BoardDataset
 
-from .secret import WANDB_API_KEY
-
 #######################################
 # HYPERPARAMETERS
 #######################################
@@ -59,9 +57,8 @@ if make_dataset:
         indices=test_indices,
     )
 
-#  type: ignore
 if log_dataset:
-    wandb.login(key=WANDB_API_KEY)  # type: ignore
+    wandb.login()  # type: ignore
     with wandb.init(  # type: ignore
         project="lczerolens-saes", job_type="make-datasets"
     ) as run:
