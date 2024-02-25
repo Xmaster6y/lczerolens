@@ -21,7 +21,7 @@ from lczerolens.xai import BestLegalMoveConcept, ConceptDataset
 #######################################
 # HYPERPARAMETERS
 #######################################
-parser = argparse.ArgumentParser("leela")
+parser = argparse.ArgumentParser("make-datasets")
 parser.add_argument("--output-root", type=str, default=".")
 make_test_10 = False
 make_test_5000 = False

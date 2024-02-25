@@ -208,14 +208,19 @@ class ConceptDataset(BoardDataset):
         label = self.labels[idx]
         return idx, board, label
 
-    def save(self, file_name: str, n_history: int = 0):
+    def save(self, file_name: str, n_history: int = 0, indices=None):
         print(f"[INFO] Saving boards to {file_name}")
         with jsonlines.open(file_name, "w") as writer:
+            idx = 0
             for board, gameid, label in tqdm.tqdm(
                 zip(self.boards, self.game_ids, self.labels),
                 total=len(self.boards),
                 bar_format="{l_bar}{bar}",
             ):
+                if indices is not None and idx not in indices:
+                    idx += 1
+                    continue
+                idx += 1
                 working_board = board.copy(stack=n_history)
 
                 writer.write(

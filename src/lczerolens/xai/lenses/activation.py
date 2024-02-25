@@ -19,17 +19,7 @@ class ActivationLens(Lens):
     def __init__(self, module_exp: Optional[str] = None):
         if module_exp is None:
             module_exp = r"block\d+$"
-        self._module_exp = module_exp
-        self._cache_hook = CacheHook(HookConfig(module_exp=module_exp))
-
-    @property
-    def module_exp(self):
-        return self._module_exp
-
-    @module_exp.setter
-    def module_exp(self, value):
-        self._module_exp = value
-        self.cache_hook = CacheHook(HookConfig(module_exp=value))
+        self.cache_hook = CacheHook(HookConfig(module_exp=module_exp))
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
         """Caching is compatible with all torch models."""
@@ -55,7 +45,7 @@ class ActivationLens(Lens):
         collate_fn: Optional[Callable] = None,
         save_to: Optional[str] = None,
         **kwargs,
-    ) -> Optional[Dict[int, Any]]:
+    ) -> Optional[Dict[str, Any]]:
         """Cache the activations for a given model and dataset."""
         if save_to is not None:
             raise NotImplementedError("Saving to file is not implemented.")
@@ -64,12 +54,16 @@ class ActivationLens(Lens):
         )
         self.cache_hook.clear()
         self.cache_hook.register(wrapper.model)
-        cache: Dict[int, Any] = {}
+        batched_activations: Dict[str, Any] = {}
         for batch in dataloader:
-            inidices, boards = batch
+            _, boards = batch
             wrapper.predict(boards)
-            for idx in inidices:
-                cache[idx] = {}
-                for key, value in self.cache_hook.storage.items():
-                    cache[idx][key] = value[idx]
-        return cache
+            for key, value in self.cache_hook.storage.items():
+                if key not in batched_activations:
+                    batched_activations[key] = value
+                else:
+                    batched_activations[key] = torch.cat(
+                        (batched_activations[key], value), dim=0
+                    )
+        self.cache_hook.clear()
+        return batched_activations

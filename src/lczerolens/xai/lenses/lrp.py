@@ -136,15 +136,17 @@ class LrpLens(Lens):
             )
             if target is None:
                 output.backward(
-                    gradient=output
-                    if init_rel_fn is None
-                    else init_rel_fn(output)
+                    gradient=(
+                        output if init_rel_fn is None else init_rel_fn(output)
+                    )
                 )
             else:
                 output[target].backward(
-                    gradient=output[target]
-                    if init_rel_fn is None
-                    else init_rel_fn(output[target])
+                    gradient=(
+                        output[target]
+                        if init_rel_fn is None
+                        else init_rel_fn(output[target])
+                    )
                 )
         return input_tensor.grad
 

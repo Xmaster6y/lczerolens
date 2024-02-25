@@ -16,7 +16,7 @@ class RemovableHandleList(list):
     def clear(self):
         for handle in self:
             handle.remove()
-        self.clear()
+        super().clear()
 
 
 class HookType(str, Enum):
@@ -43,7 +43,7 @@ class HookConfig(ABC):
     hook_mode: HookMode = HookMode.OUTPUT
     module_exp: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
-    data_fn: Optional[Callable[[torch.Tensor, Any], Any]] = None
+    data_fn: Optional[Callable] = None
 
 
 class Hook(ABC):
@@ -147,14 +147,14 @@ class MeasureHook(Hook):
 
             def hook(module, input, output):
                 self.storage[name] = self.config.data_fn(
-                    input.detach(), measure_data
+                    input.detach(), measure_data=measure_data
                 )
 
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
                 self.storage[name] = self.config.data_fn(
-                    output.detach(), measure_data
+                    output.detach(), measure_data=measure_data
                 )
 
         else:
@@ -181,13 +181,13 @@ class ModifyHook(Hook):
         if self.config.hook_mode is HookMode.INPUT:
 
             def hook(module, input, output):
-                input = self.config.data_fn(input, modify_data)
+                input = self.config.data_fn(input, modify_data=modify_data)
                 return input
 
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
-                output = self.config.data_fn(output, modify_data)
+                output = self.config.data_fn(output, modify_data=modify_data)
                 return output
 
         else:

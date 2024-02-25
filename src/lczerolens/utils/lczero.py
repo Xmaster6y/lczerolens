@@ -5,6 +5,7 @@ Notes
 The lczero bindings are not installed by default. You can install them by
 running `pip install lczero`.
 """
+
 import subprocess
 
 import chess

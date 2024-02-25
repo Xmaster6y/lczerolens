@@ -16,4 +16,11 @@ from .concepts import (
     PieceBestLegalMoveConcept,
 )
 from .lens import Lens
-from .lenses import ActivationLens, CrpLens, LrpLens, PolicyLens, ProbingLens
+from .lenses import (
+    ActivationLens,
+    CrpLens,
+    LrpLens,
+    PatchingLens,
+    PolicyLens,
+    ProbingLens,
+)

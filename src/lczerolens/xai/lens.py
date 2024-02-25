@@ -65,7 +65,7 @@ class Lens(ABC):
         collate_fn: Optional[Callable] = None,
         save_to: Optional[str] = None,
         **kwargs,
-    ) -> Optional[Dict[int, Any]]:
+    ) -> Optional[Dict[Any, Any]]:
         """
         Computes the statistics for a given board.
         """
