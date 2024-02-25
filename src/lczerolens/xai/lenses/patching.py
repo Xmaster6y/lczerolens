@@ -5,7 +5,6 @@ from typing import Callable, Dict, Optional
 
 import chess
 import torch
-from tensordict import TensorDict
 from torch.utils.data import Dataset
 
 from lczerolens.game.wrapper import ModelWrapper
@@ -67,14 +66,17 @@ class PatchingLens(Lens):
         dataloader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, collate_fn=collate_fn
         )
-        batched_outs = TensorDict({}, batch_size=[])
+        batched_outs = None
         for modify_hook in self.modify_hooks.values():
             modify_hook.clear()
             modify_hook.register(wrapper.model)
         for batch in dataloader:
             _, boards = batch
-            out = wrapper.predict(boards)
-            batched_outs = torch.cat([batched_outs, out])
+            (out,) = wrapper.predict(boards)
+            if batched_outs is None:
+                batched_outs = out
+            else:
+                batched_outs = torch.cat([batched_outs, out])
         for modify_hook in self.modify_hooks.values():
             modify_hook.clear()
-        return batched_outs
+        return batched_outs  # type: ignore

@@ -5,6 +5,7 @@ Training dictionaries
 import os
 
 import torch as t
+from sklearn.metrics import explained_variance_score, r2_score
 
 from lczerolens.xai.helpers.sae import AutoEncoder
 
@@ -12,8 +13,8 @@ EPS = 1e-8
 
 
 class ConstrainedAdam(t.optim.Adam):
-    def __init__(self, params, constrained_params, lr):
-        super().__init__(params, lr=lr)
+    def __init__(self, params, constrained_params, **kwargs):
+        super().__init__(params, **kwargs)
         self.constrained_params = list(constrained_params)
 
     def step(self, closure=None):
@@ -51,6 +52,8 @@ def sae_loss(
     use_entropy=False,
     num_samples_since_activated=None,
     ghost_threshold=None,
+    explained_variance=False,
+    r2=False,
 ):
     """
     Compute the loss of an autoencoder on some activations
@@ -118,6 +121,14 @@ def sae_loss(
         out_losses["total_loss"] = classical_loss + ghost_loss * (
             mse_loss.detach() / (ghost_loss.detach() + EPS)
         )
+    if explained_variance:
+        out_losses["explained_variance"] = explained_variance_score(
+            out_acts.detach().cpu(), x_hat.detach().cpu()
+        )
+    if r2:
+        out_losses["r2_score"] = r2_score(
+            out_acts.detach().cpu(), x_hat.detach().cpu()
+        )
     return out_losses
 
 
@@ -170,9 +181,11 @@ def trainSAE(
     dictionary_size,
     lr,
     sparsity_penalty,
+    *,
+    beta1=0.9,
+    beta2=0.999,
     n_epochs=1,
     val_dataloader=None,
-    test_dataloader=None,
     entropy=False,
     warmup_steps=1000,
     resample_steps=None,
@@ -184,13 +197,18 @@ def trainSAE(
     device="cpu",
     from_checkpoint=None,
     wandb=None,
+    do_print=True,
 ):
     """
     Train and return a sparse autoencoder
     """
     ae = AutoEncoder(activation_dim, dictionary_size).to(device)
     if from_checkpoint is not None:
-        ae.load_state_dict(t.load(from_checkpoint))
+        loaded = t.load(from_checkpoint)
+        if isinstance(loaded, t.nn.Module):
+            ae.load_state_dict(loaded.state_dict())
+        else:
+            ae.load_state_dict(loaded)
 
     num_samples_since_activated = t.zeros(dictionary_size, dtype=int).to(
         device
@@ -198,7 +216,10 @@ def trainSAE(
 
     # set up optimizer and scheduler
     optimizer = ConstrainedAdam(
-        ae.parameters(), ae.decoder.parameters(), lr=lr
+        ae.parameters(),
+        ae.decoder.parameters(),
+        lr=lr,
+        betas=(beta1, beta2),
     )
     if resample_steps is None:
 
@@ -258,10 +279,9 @@ def trainSAE(
                         ghost_threshold=ghost_threshold,
                     )
                     if wandb is not None:
-                        wandb.log(
-                            losses,
-                        )
-                    print(f"step {step}: {losses}")
+                        wandb.log({f"train/{k}": l for k, l in losses.items()})
+                    if do_print:
+                        print(f"[INFO] Train step {step}: {losses}")
             if (
                 save_steps is not None
                 and save_dir is not None
@@ -274,27 +294,38 @@ def trainSAE(
                     os.path.join(save_dir, "checkpoints", f"ae_{step}.pt"),
                 )
             if val_steps is not None and val_dataloader is not None:
-                if step % val_steps == 0:
-                    total_losses = []
-                    mse_losses = []
-                    for val_acts in val_dataloader:
-                        val_losses = sae_loss(
-                            val_acts,
-                            ae,
-                            sparsity_penalty,
-                            use_entropy=entropy,
-                            num_samples_since_activated=(
-                                num_samples_since_activated
-                            ),
-                            ghost_threshold=ghost_threshold,
-                        )
-                        total_losses.append(val_losses["total_loss"])
-                        mse_losses.append(val_losses["mse_loss"])
-                    val_loss = t.stack(total_losses).mean()
-                    val_mse = t.stack(mse_losses).mean()
-                    if wandb is not None:
-                        wandb.log({"val_loss": val_loss})
-                        wandb.log({"val_mse": val_mse})
-                    print(f"val_loss: {val_loss}")
+                with t.no_grad():
+                    if step % val_steps == 0:
+                        val_losses = {
+                            "total_loss": 0,
+                            "mse_loss": 0,
+                            "sparsity_loss": 0,
+                            "explained_variance": 0,
+                            "r2_score": 0,
+                        }
+                        for val_acts in val_dataloader:
+                            losses = sae_loss(
+                                val_acts,
+                                ae,
+                                sparsity_penalty,
+                                use_entropy=entropy,
+                                num_samples_since_activated=(
+                                    num_samples_since_activated
+                                ),
+                                ghost_threshold=ghost_threshold,
+                                explained_variance=True,
+                                r2=True,
+                            )
+                            for k, v in val_losses.items():
+                                val_losses[k] += losses[k]
+
+                        for k, v in val_losses.items():
+                            val_losses[k] /= len(val_dataloader)
+                        if wandb is not None:
+                            wandb.log(
+                                {f"val/{k}": l for k, l in val_losses.items()}
+                            )
+                        if do_print:
+                            print(f"[INFO] Val step {step}: {val_losses}")
 
     return ae

@@ -1,7 +1,6 @@
 """Nice plotting of chessboard and heatmap with arrows.
 """
 
-
 import chess
 from pylatex import Figure, NoEscape, SubFigure
 
