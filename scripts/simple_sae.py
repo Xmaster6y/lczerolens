@@ -26,11 +26,11 @@ import os
 
 import einops
 import torch
+import wandb
 from safetensors import safe_open
 from safetensors.torch import save_file
 from sklearn.metrics import r2_score
 
-import wandb
 from lczerolens import BoardDataset, ModelWrapper
 from lczerolens.xai import ActivationLens, PatchingLens
 

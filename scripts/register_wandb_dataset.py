@@ -11,6 +11,7 @@ import os
 import random
 
 import wandb
+
 from lczerolens import BoardDataset
 
 from .secret import WANDB_API_KEY
