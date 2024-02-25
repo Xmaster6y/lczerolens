@@ -26,8 +26,8 @@ model_names = {
     "3555 (best)": "64x6-2018_0627_1913_08_161.onnx",
 }
 best_legal = True
-all_planes = False
 target = "value"
+n_samples = 3
 #######################################
 
 
@@ -66,6 +66,8 @@ for elo, model_name in model_names.items():
 
 
 for i, (_, board, label) in enumerate(concept_dataset):
+    if i >= n_samples:
+        break
     doc = Document(
         geometry_options={
             "lmargin": "3cm",
@@ -76,34 +78,48 @@ for i, (_, board, label) in enumerate(concept_dataset):
     )
     doc.packages.append(Package("xskak"))
     for elo, relevances in all_relevances.items():
-        if i > 10:
-            break
         move = move_utils.decode_move(
             label, (board.turn, not board.turn), board
         )
         uci_move = move.uci()
-        if all_planes:
-            heatmap = relevances[i].sum(dim=0)  # type: ignore
-        else:
-            heatmap = relevances[i][:12].sum(dim=0)  # type: ignore
+        input_relevances = relevances[i]  # type: ignore
         if not board.turn:
-            heatmap = heatmap.view(8, 8).flip(0).view(64)
-        heatmap = heatmap.view(64) / heatmap.abs().max()
-        heatmap_str = create_heatmap_string(heatmap)
+            input_relevances = input_relevances.flip(1)
+        input_relevances = input_relevances.view(112, 64)
+        heatmap_str_list = [
+            create_heatmap_string(input_relevances.sum(dim=0), abs_max=True),
+            create_heatmap_string(
+                input_relevances[:12].sum(dim=0), abs_max=True
+            ),
+            create_heatmap_string(
+                input_relevances[104:].sum(dim=0), abs_max=True
+            ),
+        ]
+        heatmap_caption_list = [
+            "Total relevance",
+            "Current config relevance",
+            "Meta relevance",
+        ]
+
+        h0 = input_relevances[:13].abs().sum()
+        hist = input_relevances[13:104].abs().sum()
+        meta = input_relevances[104:].abs().sum()
+        total = (h0 + hist + meta) / 100
 
         doc = add_plot(
             doc,
             board.fen(),
-            heatmap_str,
+            heatmap_str_list,
             current_piece_pos=uci_move[:2],
             next_move=uci_move[2:4],
-            caption=f"Sample {i} - Model ELO {elo}",
+            caption=f"Sample {i} - Model ELO {elo} "
+            f"- {h0/total:.0f}%|{hist/total:.0f}%|{meta/total:.0f}%",
+            heatmap_caption_list=heatmap_caption_list,
         )
 
     doc.generate_pdf(
-        "scripts/results/exploration"
-        f"_{'best' if best_legal else 'full'}"
-        f"_{'all' if all_planes else '12'}"
+        "scripts/results/exploration/"
+        f"{'best' if best_legal else 'full'}"
         f"_{target}_{i}",
         clean_tex=True,
     )

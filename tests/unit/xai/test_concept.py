@@ -86,7 +86,7 @@ class TestDataset:
         board_dataset = BoardDataset.from_game_dataset(game_dataset_10)
         concept_dataset = ConceptDataset.from_game_dataset(game_dataset_10)
         concept_dataset.filter_unique_()
-        concept_dataset.concept = HasPieceConcept("p")
+        concept_dataset.set_concept(HasPieceConcept("p"))
         fen_set = set([board.fen() for _, board in board_dataset])
         assert len(concept_dataset.boards) == len(fen_set)
         assert len(concept_dataset[0][1].move_stack) == 0
