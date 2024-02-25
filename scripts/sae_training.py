@@ -172,7 +172,7 @@ def resample_neurons(deads, activations, ae, optimizer):
     ae.W_enc[:, deads] = ae.W_enc[:, ~deads].mean(dim=1, keepdim=True) * 0.2
 
     # reset bias vectors for dead neurons
-    ae.b_enc[:, deads] = 0.0
+    ae.b_enc[deads] = 0.0
 
     # reset Adam parameters for dead neurons
     state_dict = optimizer.state_dict()["state"]
