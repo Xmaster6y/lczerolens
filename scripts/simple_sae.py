@@ -477,3 +477,5 @@ if ARGS.compute_evals:
             batched_outs["mlh"].cpu(), patched_batched_outs["mlh"].cpu()
         )
         wandb.log({"test/mlh_r2": mlh_r2})  # type: ignore
+
+    print("[INFO] evaluation done")
