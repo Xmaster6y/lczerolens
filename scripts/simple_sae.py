@@ -19,12 +19,6 @@ metric:
   goal: maximize
   name: val/r2_score
 parameters:
-  compte_activations:
-    value: true
-  train_sae:
-    value: true
-  compute_evals:
-    value: true
   beta1:
     distribution: inv_log_uniform_values
     max: 1
@@ -414,7 +408,7 @@ if ARGS.compute_evals:
         hist = np.histogram(
             feature_act_count.numpy() / len(test_dataset),
             density=True,
-            range=(0.0, 1.0),
+            bins=20,
         )
         wandb.log(  # type: ignore
             {
