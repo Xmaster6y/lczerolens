@@ -19,6 +19,12 @@ metric:
   goal: maximize
   name: val/r2_score
 parameters:
+  compte_activations:
+    value: true
+  train_sae:
+    value: true
+  compute_evals:
+    value: true
   beta1:
     distribution: inv_log_uniform_values
     max: 1
@@ -125,7 +131,7 @@ parser.add_argument("--act_batch_size", type=int, default=100)
 parser.add_argument("--model_name", type=str, default="maia-1100.onnx")
 # SAE training
 parser.add_argument(
-    "--train_sae", action=argparse.BooleanOptionalAction, default=False
+    "--train_sae", action=argparse.BooleanOptionalAction, default=True
 )
 parser.add_argument("--from_checkpoint", type=str, default=None)
 parser.add_argument("--sae_module_name", type=str, default="block1/conv2/relu")
