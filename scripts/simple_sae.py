@@ -418,10 +418,16 @@ if ARGS.compute_evals:
             }
         )
         wandb.log(  # type: ignore
-            {"test/ativated_features": activated_features / len(test_dataset)}
+            {
+                "test/ativated_features": activated_features
+                / len(test_dataset),
+                "test/frac_activated_features": activated_features
+                / ae.dict_size
+                / len(test_dataset),
+            }
         )
         for k in test_losses.keys():
-            test_losses[k] /= len(test_dataloader)
+            test_losses[k] /= len(test_dataset)
             wandb.log({f"test/{k}": test_losses[k]})  # type: ignore
 
     def sae_patch(x, **kwargs):
