@@ -125,10 +125,10 @@ parser.add_argument("--act_batch_size", type=int, default=100)
 parser.add_argument("--model_name", type=str, default="maia-1100.onnx")
 # SAE training
 parser.add_argument(
-    "--train_sae", action=argparse.BooleanOptionalAction, default=True
+    "--train_sae", action=argparse.BooleanOptionalAction, default=False
 )
 parser.add_argument("--from_checkpoint", type=str, default=None)
-parser.add_argument("--sae_module_name", type=str, default="block5/conv2/relu")
+parser.add_argument("--sae_module_name", type=str, default="block1/conv2/relu")
 parser.add_argument("--dict_size_scale", type=int, default=16)
 parser.add_argument("--h_patch_size", type=int, default=1)
 parser.add_argument("--w_patch_size", type=int, default=1)
@@ -232,6 +232,65 @@ if ARGS.compte_activations:
             f"{dataset_type}_activations.safetensors",
         )
 
+
+def collate_fn(b):
+    (acts,) = zip(*b)
+    return torch.stack(acts)
+
+
+if ARGS.make_symetric_patch:
+
+    def rearrange_activations(activations):
+        p1 = activations[:, :, :4, :4]
+        p2 = activations[:, :, :4, 4:].flip(dims=(3,))
+        p3 = activations[:, :, 4:, :4].flip(dims=(2,))
+        p4 = activations[:, :, 4:, 4:].flip(dims=(2, 3))
+        patches = torch.cat([p1, p2, p3, p4], dim=1)
+        return einops.rearrange(patches, "b c h w -> (b h w) c")
+
+    def invert_rearrange_activations(activations):
+        patches = einops.rearrange(
+            activations, "(b h w) c -> b c h w", h=4, w=4
+        )
+        p1 = patches[:, :64]
+        p2 = patches[:, 64:128].flip(dims=(3,))
+        p3 = patches[:, 128:192].flip(dims=(2,))
+        p4 = patches[:, 192:].flip(dims=(2, 3))
+        return torch.cat(
+            [
+                torch.cat([p1, p2], dim=3),
+                torch.cat([p3, p4], dim=3),
+            ],
+            dim=2,
+        )
+
+else:
+
+    def rearrange_activations(activations):
+        split_batch = einops.rearrange(
+            activations,
+            "b c (h ph) (w pw) -> b c h ph w pw",
+            ph=ARGS.h_patch_size,
+            pw=ARGS.w_patch_size,
+        )
+        return einops.rearrange(
+            split_batch, "b c h ph w pw -> (b h w) (c ph pw)"
+        )
+
+    def invert_rearrange_activations(activations):
+        split_batch = einops.rearrange(
+            activations,
+            "(b h w) (c ph pw) -> b c h ph w pw",
+            h=8 // ARGS.h_patch_size,
+            w=8 // ARGS.w_patch_size,
+            ph=ARGS.h_patch_size,
+            pw=ARGS.w_patch_size,
+        )
+        return einops.rearrange(
+            split_batch, "b c h ph w pw -> b c (h ph) (w pw)"
+        )
+
+
 if ARGS.train_sae:
     with safe_open(
         f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
@@ -245,72 +304,9 @@ if ARGS.train_sae:
         framework="pt",
     ) as f:
         val_activations = f.get_tensor(ARGS.sae_module_name)
-    with safe_open(
-        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        "test_activations.safetensors",
-        framework="pt",
-    ) as f:
-        test_activations = f.get_tensor(ARGS.sae_module_name)
-
-    if ARGS.make_symetric_patch:
-
-        def rearrange_activations(activations):
-            p1 = activations[:, :, :4, :4]
-            p2 = activations[:, :, :4, 4:].flip(dims=(3,))
-            p3 = activations[:, :, 4:, :4].flip(dims=(2,))
-            p4 = activations[:, :, 4:, 4:].flip(dims=(2, 3))
-            patches = torch.cat([p1, p2, p3, p4], dim=1)
-            return einops.rearrange(patches, "b c h w -> (b h w) c")
-
-        def invert_rearrange_activations(activations):
-            patches = einops.rearrange(
-                activations, "(b h w) c -> b c h w", h=4, w=4
-            )
-            p1 = patches[:, :64]
-            p2 = patches[:, 64:128].flip(dims=(3,))
-            p3 = patches[:, 128:192].flip(dims=(2,))
-            p4 = patches[:, 192:].flip(dims=(2, 3))
-            return torch.cat(
-                [
-                    torch.cat([p1, p2], dim=3),
-                    torch.cat([p3, p4], dim=3),
-                ],
-                dim=2,
-            )
-
-    else:
-
-        def rearrange_activations(activations):
-            split_batch = einops.rearrange(
-                activations,
-                "b c (h ph) (w pw) -> b c h ph w pw",
-                ph=ARGS.h_patch_size,
-                pw=ARGS.w_patch_size,
-            )
-            return einops.rearrange(
-                split_batch, "b c h ph w pw -> (b h w) (c ph pw)"
-            )
-
-        def invert_rearrange_activations(activations):
-            split_batch = einops.rearrange(
-                activations,
-                "(b h w) (c ph pw) -> b c h ph w pw",
-                h=8 // ARGS.h_patch_size,
-                w=8 // ARGS.w_patch_size,
-                ph=ARGS.h_patch_size,
-                pw=ARGS.w_patch_size,
-            )
-            return einops.rearrange(
-                split_batch, "b c h ph w pw -> b c (h ph) (w pw)"
-            )
 
     train_activations = rearrange_activations(train_activations)
     val_activations = rearrange_activations(val_activations)
-    test_activations = rearrange_activations(test_activations)
-
-    def collate_fn(b):
-        (acts,) = zip(*b)
-        return torch.stack(acts)
 
     train_dataloader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(
@@ -323,13 +319,6 @@ if ARGS.train_sae:
     val_dataloader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(
             val_activations,
-        ),
-        batch_size=ARGS.eval_batch_size,
-        collate_fn=collate_fn,
-    )
-    test_dataloader = torch.utils.data.DataLoader(
-        torch.utils.data.TensorDataset(
-            test_activations,
         ),
         batch_size=ARGS.eval_batch_size,
         collate_fn=collate_fn,
@@ -378,9 +367,24 @@ if ARGS.train_sae:
 if ARGS.compute_evals:
     ae = torch.load(
         f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        f"{ARGS.sae_module_name.replace('/', '_')}.pt"
+        f"{ARGS.sae_module_name.replace('/', '_')}.pt",
+        map_location=torch.device(DEVICE),
     )
-    ae.to(DEVICE)
+    with safe_open(
+        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
+        "test_activations.safetensors",
+        framework="pt",
+    ) as f:
+        test_activations = f.get_tensor(ARGS.sae_module_name)
+    test_activations = rearrange_activations(test_activations)
+
+    test_dataloader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(
+            test_activations,
+        ),
+        batch_size=ARGS.eval_batch_size,
+        collate_fn=collate_fn,
+    )
     test_losses = {
         "explained_variance": 0.0,
         "r2_score": 0.0,
@@ -407,7 +411,11 @@ if ARGS.compute_evals:
             range=(0.0, 1.0),
         )
         wandb.log(  # type: ignore
-            {"test/feature_density": wandb.Histogram(hist)}  # type: ignore
+            {
+                "test/feature_density": wandb.Histogram(  # type: ignore
+                    np_histogram=hist
+                )
+            }
         )
         wandb.log(  # type: ignore
             {"test/ativated_features": activated_features / len(test_dataset)}
