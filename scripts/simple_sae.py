@@ -396,13 +396,10 @@ if ARGS.compute_evals:
             out = ae(acts.to(DEVICE), output_features=True)
             f = out["features"]
             x_hat = out["x_hat"]
-            test_losses["explained_variance"] += (
-                explained_variance_score(acts.cpu(), x_hat.cpu())
-                * acts.shape[0]
+            test_losses["explained_variance"] += explained_variance_score(
+                acts.cpu(), x_hat.cpu()
             )
-            test_losses["r2_score"] += (
-                r2_score(acts.cpu(), x_hat.cpu()) * acts.shape[0]
-            )
+            test_losses["r2_score"] += r2_score(acts.cpu(), x_hat.cpu())
             feature_act_count += (f > 0).sum(dim=0).cpu()
             activated_features += (f > 0).sum().cpu()
         hist = np.histogram(
@@ -427,7 +424,7 @@ if ARGS.compute_evals:
             }
         )
         for k in test_losses.keys():
-            test_losses[k] /= len(test_dataset)
+            test_losses[k] /= len(test_dataloader)
             wandb.log({f"test/{k}": test_losses[k]})  # type: ignore
 
     def sae_patch(x, **kwargs):
