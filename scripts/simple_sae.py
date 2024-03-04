@@ -365,11 +365,12 @@ if ARGS.train_sae:
     wandb.log_artifact(artifact)  # type: ignore
 
 if ARGS.compute_evals:
-    ae = torch.load(
-        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        f"{ARGS.sae_module_name.replace('/', '_')}.pt",
-        map_location=torch.device(DEVICE),
-    )
+    if not ARGS.train_sae:
+        ae = torch.load(
+            f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
+            f"{ARGS.sae_module_name.replace('/', '_')}.pt",
+            map_location=torch.device(DEVICE),
+        )
     with safe_open(
         f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
         "test_activations.safetensors",
