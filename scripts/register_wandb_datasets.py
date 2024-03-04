@@ -2,7 +2,8 @@
 
 Run with:
 ```bash
-poetry run python -m scripts.register_wandb_datasets
+poetry run python -m scripts.register_wandb_datasets \
+    --make_datasets --log_datasets
 ```
 """
 
@@ -23,9 +24,9 @@ parser.add_argument(
     "--make_datasets", action=argparse.BooleanOptionalAction, default=False
 )
 parser.add_argument("--seed", type=int, default=42)
-parser.add_argument("--train_samples", type=int, default=10_000)
-parser.add_argument("--val_samples", type=int, default=1_000)
-parser.add_argument("--test_samples", type=int, default=1_000)
+parser.add_argument("--train_samples", type=int, default=100_000)
+parser.add_argument("--val_samples", type=int, default=5_000)
+parser.add_argument("--test_samples", type=int, default=5_000)
 parser.add_argument(
     "--log_datasets", action=argparse.BooleanOptionalAction, default=False
 )
