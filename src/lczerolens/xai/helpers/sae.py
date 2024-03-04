@@ -9,10 +9,12 @@ from tensordict import TensorDict
 
 class AutoEncoder(nn.Module):
     """
-    A one-layer autoencoder.
+    A 3-layers autoencoder.
     """
 
-    def __init__(self, activation_dim, dict_size, pre_bias=False):
+    def __init__(
+        self, activation_dim, dict_size, pre_bias=False, less_than_1=False
+    ):
         super().__init__()
         self.activation_dim = activation_dim
         self.dict_size = dict_size
@@ -28,7 +30,7 @@ class AutoEncoder(nn.Module):
         )
         self.b_enc = nn.Parameter(torch.zeros(self.dict_size))
         self.relu = nn.ReLU()
-        self.W_dec = nn.Parameter(
+        self.D = nn.Parameter(
             torch.nn.init.kaiming_uniform_(
                 torch.empty(
                     self.dict_size,
@@ -36,7 +38,15 @@ class AutoEncoder(nn.Module):
                 )
             )
         )
-        self.normalize_decoder_()
+        self.normalize_dict_(less_than_1=less_than_1)
+        self.W_dec = nn.Parameter(
+            torch.nn.init.kaiming_uniform_(
+                torch.empty(
+                    self.activation_dim,
+                    self.activation_dim,
+                )
+            )
+        )
         self.b_dec = nn.Parameter(
             torch.zeros(
                 self.activation_dim,
@@ -44,14 +54,21 @@ class AutoEncoder(nn.Module):
         )
 
     @torch.no_grad()
-    def normalize_decoder_(self):
-        self.W_dec.data /= torch.norm(self.W_dec.data, dim=1, keepdim=True)
+    def normalize_dict_(self, less_than_1):
+        D_norm = self.D.norm(dim=1)
+        if less_than_1:
+            greater_than_1_mask = D_norm > 1
+            self.D[greater_than_1_mask] /= D_norm[
+                greater_than_1_mask
+            ].unsqueeze(1)
+        else:
+            self.D /= D_norm.unsqueeze(1)
 
     def encode(self, x):
         return x @ self.W_enc + self.b_enc
 
-    def decode(self, f):
-        return f @ self.W_dec + self.b_dec
+    def decode(self, x_f):
+        return x_f @ self.W_dec + self.b_dec
 
     def forward(self, x, output_features=False, ghost_mask=None):
         """
@@ -68,11 +85,12 @@ class AutoEncoder(nn.Module):
         out = TensorDict({}, batch_size=x.shape[0])
         if ghost_mask is not None:
             f_ghost = torch.exp(f_pre) * ghost_mask.to(f_pre)
-            x_ghost = self.decode(f_ghost)
+            x_ghost = self.decode(f_ghost @ self.D)
             out["x_ghost"] = x_ghost
         f = self.relu(f_pre)
         if output_features:
             out["features"] = f
-        x_hat = self.decode(f)
+        x_f = f @ self.D
+        x_hat = self.decode(x_f)
         out["x_hat"] = x_hat
         return out

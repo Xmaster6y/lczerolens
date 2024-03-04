@@ -19,15 +19,23 @@ metric:
   goal: maximize
   name: val/r2_score
 parameters:
+  model_name:
+    value: maia-1100.onnx
+  sae_module_name:
+    value: block5/conv2/relu
+#   from_checkpoint:
+#     value: null
+  freeze_dict:
+    value: false
   beta1:
     distribution: inv_log_uniform_values
     max: 1
-    min: 0.9
+    min: 0.95
     # value: 0.99
   beta2:
     distribution: inv_log_uniform_values
     max: 1
-    min: 0.99
+    min: 0.995
     # value: 0.999
   dict_size_scale:
     distribution: int_uniform
@@ -39,45 +47,34 @@ parameters:
     max: 8000
     min: 100
     # value: 4000
+  resample_steps:
+    distribution: int_uniform
+    max: 8000
+    min: 100
+    # value: 4000
   lr:
     distribution: log_uniform_values
     max: 1e-3
-    min: 1e-6
-  model_name:
-    value: maia-1100.onnx
+    min: 1e-5
   n_epochs:
     distribution: int_uniform
-    max: 30
-    min: 1
+    max: 60
+    min: 15
   h_patch_size:
-    # values: [1, 2, 4]
-    value: 4
+    values: [1, 2, 4]
+    # value: 4
   make_symetric_patch:
-    # values: [true, false]
-    value: true
+    values: [true, false]
+    # value: true
   w_patch_size:
-    # values: [1, 2, 4]
-    value: 4
-  sae_module_name:
-    value: block3/conv2/relu
+    values: [1, 2, 4]
+    # value: 4
   sparsity_penalty:
     distribution: log_uniform_values
     max: 1
     min: 5e-3
-  pre_bias:
+  less_than_1:
     values: [true, false]
-    # value: false
-  use_constraint_optim:
-    values: [true, false]
-    # value: true
-  use_constraint_loss:
-    values: [true, false]
-    # value: false
-  constraint_penalty:
-    distribution: log_uniform_values
-    max: 1
-    min: 1e-3
-    # value: 5e-3
   train_batch_size:
     value: 250
   warmup_steps:
@@ -103,7 +100,11 @@ import torch
 import wandb
 from safetensors import safe_open
 from safetensors.torch import save_file
-from sklearn.metrics import explained_variance_score, r2_score
+from sklearn.metrics import (
+    explained_variance_score,
+    mean_squared_error,
+    r2_score,
+)
 
 from lczerolens import BoardDataset, ModelWrapper
 from lczerolens.xai import ActivationLens, PatchingLens
@@ -128,6 +129,7 @@ parser.add_argument(
     "--train_sae", action=argparse.BooleanOptionalAction, default=True
 )
 parser.add_argument("--from_checkpoint", type=str, default=None)
+parser.add_argument("--freeze_dict", type=bool, default=False)
 parser.add_argument("--sae_module_name", type=str, default="block1/conv2/relu")
 parser.add_argument("--dict_size_scale", type=int, default=16)
 parser.add_argument("--h_patch_size", type=int, default=1)
@@ -137,21 +139,18 @@ parser.add_argument(
     type=bool,
     default=True,
 )
-parser.add_argument("--lr", type=float, default=1e-3)
+parser.add_argument("--lr", type=float, default=1e-4)
 parser.add_argument("--beta1", type=float, default=0.9)
 parser.add_argument("--beta2", type=float, default=0.999)
-parser.add_argument("--n_epochs", type=int, default=1)
+parser.add_argument("--n_epochs", type=int, default=10)
 parser.add_argument("--sparsity_penalty", type=float, default=1e-2)
-parser.add_argument("--pre_bias", type=bool, default=False)
-parser.add_argument("--use_constraint_optim", type=bool, default=False)
-parser.add_argument("--use_constraint_loss", type=bool, default=False)
-parser.add_argument("--constraint_penalty", type=float, default=0.1)
+parser.add_argument("--less_than_1", type=bool, default=True)
 parser.add_argument("--ghost_threshold", type=int, default=4000)
 parser.add_argument("--resample_steps", type=int, default=4000)
 parser.add_argument("--train_batch_size", type=int, default=250)
 parser.add_argument("--eval_batch_size", type=int, default=500)
-parser.add_argument("--warmup_steps", type=int, default=100)
-parser.add_argument("--cooldown_steps", type=int, default=100)
+parser.add_argument("--warmup_steps", type=int, default=200)
+parser.add_argument("--cooldown_steps", type=int, default=200)
 parser.add_argument("--log_steps", type=int, default=50)
 parser.add_argument("--val_steps", type=int, default=200)
 # Test
@@ -173,6 +172,8 @@ wandb.init(  # type: ignore
     project="lczerolens-saes",
     config={
         "model_name": ARGS.model_name,
+        "from_checkpoint": ARGS.from_checkpoint,
+        "freeze_dict": ARGS.freeze_dict,
         "sae_module_name": ARGS.sae_module_name,
         "dict_size_scale": ARGS.dict_size_scale,
         "h_patch_size": ARGS.h_patch_size,
@@ -183,10 +184,7 @@ wandb.init(  # type: ignore
         "beta2": ARGS.beta2,
         "n_epochs": ARGS.n_epochs,
         "sparsity_penalty": ARGS.sparsity_penalty,
-        "pre_bias": ARGS.pre_bias,
-        "use_constraint_optim": ARGS.use_constraint_optim,
-        "use_constraint_loss": ARGS.use_constraint_loss,
-        "constraint_penalty": ARGS.constraint_penalty,
+        "less_than_1": ARGS.less_than_1,
         "ghost_threshold": ARGS.ghost_threshold,
         "resample_steps": ARGS.resample_steps,
         "train_batch_size": ARGS.train_batch_size,
@@ -331,6 +329,7 @@ if ARGS.train_sae:
         ARGS.dict_size_scale * act_dim,
         val_dataloader=val_dataloader,
         sparsity_penalty=ARGS.sparsity_penalty,
+        less_than_1=ARGS.less_than_1,
         lr=ARGS.lr,
         beta1=ARGS.beta1,
         beta2=ARGS.beta2,
@@ -342,6 +341,7 @@ if ARGS.train_sae:
         resample_steps=ARGS.resample_steps,
         device=DEVICE,
         from_checkpoint=ARGS.from_checkpoint,
+        freeze_dict=ARGS.freeze_dict,
         wandb=wandb,
     )
     model_path = (
@@ -433,17 +433,37 @@ if ARGS.compute_evals:
         act_batched = invert_rearrange_activations(act_c_batched)
         return act_batched
 
-    patching_lens = PatchingLens(
-        {
-            ARGS.sae_module_name: sae_patch,
-        }
-    )
-    patched_batched_outs = patching_lens.analyse_dataset(
-        test_dataset,
-        model,
-        batch_size=ARGS.train_batch_size,
-        collate_fn=BoardDataset.collate_fn_tuple,
-    )
+    def null_patch(x, **kwargs):
+        return torch.zeros_like(x)
+
+    def rand_patch(x, **kwargs):
+        return torch.rand_like(x)
+
+    patch_lenses = {
+        "sae": PatchingLens(
+            {
+                ARGS.sae_module_name: sae_patch,
+            }
+        ),
+        "null": PatchingLens(
+            {
+                ARGS.sae_module_name: null_patch,
+            }
+        ),
+        "rand": PatchingLens(
+            {
+                ARGS.sae_module_name: rand_patch,
+            }
+        ),
+    }
+    patched_batched_outs = {}
+    for k, lens in patch_lenses.items():
+        patched_batched_outs[k] = lens.analyse_dataset(
+            test_dataset,
+            model,
+            batch_size=ARGS.train_batch_size,
+            collate_fn=BoardDataset.collate_fn_tuple,
+        )
     identity_patching_lens = PatchingLens({})
     batched_outs = identity_patching_lens.analyse_dataset(
         test_dataset,
@@ -451,28 +471,17 @@ if ARGS.compute_evals:
         batch_size=ARGS.train_batch_size,
         collate_fn=BoardDataset.collate_fn_tuple,
     )
-    if "value" in batched_outs.keys():
-        value_r2 = r2_score(
-            batched_outs["value"].cpu(),
-            patched_batched_outs["value"].cpu(),
-        )
-        wandb.log({"test/value_r2": value_r2})  # type: ignore
-    if "policy" in batched_outs.keys():
-        policy_r2 = r2_score(
-            batched_outs["policy"].cpu(),
-            patched_batched_outs["policy"].cpu(),
-        )
-        wandb.log({"test/policy_r2": policy_r2})  # type: ignore
-    if "wdl" in batched_outs.keys():
-        wdl_bc = torch.nn.functional.binary_cross_entropy(
-            batched_outs["wdl"].cpu(),
-            patched_batched_outs["wdl"].cpu(),
-        )
-        wandb.log({"test/wdl_bc": wdl_bc})  # type: ignore
-    if "mlh" in batched_outs.keys():
-        mlh_r2 = r2_score(
-            batched_outs["mlh"].cpu(), patched_batched_outs["mlh"].cpu()
-        )
-        wandb.log({"test/mlh_r2": mlh_r2})  # type: ignore
+    for out_k in batched_outs.keys():
+        for patch_name in patched_batched_outs.keys():
+            r2 = r2_score(
+                batched_outs[out_k].cpu(),
+                patched_batched_outs[patch_name][out_k].cpu(),
+            )
+            wandb.log({f"test/{out_k}_{patch_name}_r2": r2})  # type: ignore
+            mse = mean_squared_error(
+                batched_outs[out_k].cpu(),
+                patched_batched_outs[patch_name][out_k].cpu(),
+            )
+            wandb.log({f"test/{out_k}_{patch_name}_mse": mse})  # type: ignore
 
     print("[INFO] evaluation done")

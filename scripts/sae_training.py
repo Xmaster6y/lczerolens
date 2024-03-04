@@ -12,26 +12,6 @@ from lczerolens.xai.helpers.sae import AutoEncoder
 EPS = 1e-8
 
 
-class ConstrainedAdam(t.optim.Adam):
-    def __init__(self, params, constrained_params, **kwargs):
-        super().__init__(params, **kwargs)
-        self.constrained_params = list(constrained_params)
-
-    def step(self, closure=None):
-        with t.no_grad():
-            for p in self.constrained_params:
-                normed_p = p / p.norm(dim=1, keepdim=True)
-                # project away the parallel component of the gradient
-                p.grad -= (p.grad * normed_p).sum(
-                    dim=0, keepdim=True
-                ) * normed_p
-        super().step(closure=closure)
-        with t.no_grad():
-            for p in self.constrained_params:
-                # renormalize the constrained parameters
-                p /= p.norm(dim=1, keepdim=True)
-
-
 def entropy(p, eps=1e-8):
     p_sum = p.sum(dim=-1, keepdim=True)
     # epsilons for numerical stability
@@ -54,8 +34,6 @@ def sae_loss(
     ghost_threshold=None,
     explained_variance=False,
     r2=False,
-    use_constraint_loss=False,
-    constraint_penalty=0.1,
 ):
     """
     Compute the loss of an autoencoder on some activations
@@ -117,13 +95,6 @@ def sae_loss(
     out_losses = {"mse_loss": mse_loss, "sparsity_loss": sparsity_loss}
     classical_loss = mse_loss + sparsity_penalty * sparsity_loss
     out_losses["ghost_loss"] = ghost_loss
-    if use_constraint_loss:
-        # constraint less than 1
-        constraint_loss = (f.norm(p=2, dim=-1) - 1).clamp(min=0).mean()
-        out_losses["constraint_loss"] = constraint_loss
-        classical_loss += constraint_penalty * constraint_loss
-    else:
-        out_losses["constraint_loss"] = 0
     if ghost_loss is None:
         out_losses["total_loss"] = classical_loss
     else:
@@ -165,23 +136,18 @@ def resample_neurons(deads, activations, ae, optimizer):
 
     # resample decoder vectors for dead neurons
     indices = t.multinomial(losses, num_samples=deads.sum(), replacement=True)
-    ae.W_dec[deads] = out_acts[indices]
-    ae.W_dec /= ae.W_dec.norm(dim=1, keepdim=True)
+
+    ae.D[deads] = out_acts[indices]
+    ae.D /= ae.D.norm(dim=1, keepdim=True)
 
     # resample encoder vectors for dead neurons
-    ae.W_enc[:, deads] = ae.W_enc[:, ~deads].mean(dim=1, keepdim=True) * 0.2
-
-    # reset bias vectors for dead neurons
-    ae.b_enc[deads] = 0.0
+    ae.D[deads] = ae.D[~deads].mean(dim=0, keepdim=True) * 0.2
 
     # reset Adam parameters for dead neurons
     state_dict = optimizer.state_dict()["state"]
     # # encoder weight
     state_dict[1]["exp_avg"][deads] = 0.0
     state_dict[1]["exp_avg_sq"][deads] = 0.0
-    # # encoder bias
-    state_dict[2]["exp_avg"][deads] = 0.0
-    state_dict[2]["exp_avg_sq"][deads] = 0.0
 
 
 def trainSAE(
@@ -194,9 +160,9 @@ def trainSAE(
     beta1=0.9,
     beta2=0.999,
     n_epochs=1,
-    pre_bias=False,
     val_dataloader=None,
     entropy=False,
+    less_than_1=True,
     warmup_steps=1000,
     cooldown_steps=1000,
     resample_steps=None,
@@ -207,33 +173,30 @@ def trainSAE(
     log_steps=1000,
     device="cpu",
     from_checkpoint=None,
+    freeze_dict=False,
     wandb=None,
     do_print=True,
-    use_constraint_optim=False,
-    use_constraint_loss=False,
-    constraint_penalty=0.1,
 ):
     """
     Train and return a sparse autoencoder
     """
-    ae = AutoEncoder(activation_dim, dictionary_size, pre_bias=pre_bias).to(
-        device
-    )
+    ae = AutoEncoder(activation_dim, dictionary_size).to(device)
     if from_checkpoint is not None:
         loaded = t.load(from_checkpoint)
         if isinstance(loaded, t.nn.Module):
             ae.load_state_dict(loaded.state_dict())
         else:
             ae.load_state_dict(loaded)
+    if freeze_dict:
+        ae.D.requires_grad = False
 
     num_samples_since_activated = t.zeros(dictionary_size, dtype=int).to(
         device
     )  # how many samples since each neuron was last activated?
 
     # set up optimizer and scheduler
-    optimizer = ConstrainedAdam(
+    optimizer = t.optim.AdamW(
         ae.parameters(),
-        [ae.W_dec] if use_constraint_optim else [],
         lr=lr,
         betas=(beta1, beta2),
     )
@@ -242,7 +205,6 @@ def trainSAE(
     def lr_fn(step):
         # cooldown
         cooldown_ratio = min(1.0, (total_steps - step) / cooldown_steps)
-
         # warmup
         if resample_steps is not None:
             ini_step = step % resample_steps
@@ -267,8 +229,6 @@ def trainSAE(
                 acts,
                 ae,
                 sparsity_penalty,
-                use_constraint_loss=use_constraint_loss,
-                constraint_penalty=constraint_penalty,
                 use_entropy=entropy,
                 num_samples_since_activated=num_samples_since_activated,
                 ghost_threshold=ghost_threshold,
@@ -276,6 +236,7 @@ def trainSAE(
             loss["total_loss"].backward()
             optimizer.step()
             scheduler.step()
+            ae.normalize_dict_(less_than_1=less_than_1)
 
             # deal with resampling neurons
             if resample_steps is not None and step % resample_steps == 0:
@@ -294,8 +255,6 @@ def trainSAE(
                         ae,
                         sparsity_penalty,
                         entropy,
-                        use_constraint_loss=use_constraint_loss,
-                        constraint_penalty=constraint_penalty,
                         num_samples_since_activated=(
                             num_samples_since_activated
                         ),
@@ -323,7 +282,6 @@ def trainSAE(
                             "total_loss": 0,
                             "mse_loss": 0,
                             "sparsity_loss": 0,
-                            "constraint_loss": 0,
                             "explained_variance": 0,
                             "r2_score": 0,
                         }
@@ -333,8 +291,6 @@ def trainSAE(
                                 ae,
                                 sparsity_penalty,
                                 use_entropy=entropy,
-                                use_constraint_loss=use_constraint_loss,
-                                constraint_penalty=constraint_penalty,
                                 num_samples_since_activated=(
                                     num_samples_since_activated
                                 ),

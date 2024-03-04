@@ -60,5 +60,14 @@
             "console": "integratedTerminal",
             "justMyCode": false
         }
+        ,
+        {
+            "name": "Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "ignored.debug",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
     ]
 }
