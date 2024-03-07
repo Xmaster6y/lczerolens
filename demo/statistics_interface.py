@@ -14,7 +14,7 @@ current_probing_statistics = None
 dataset = GameDataset("assets/test_stockfish_10.jsonl")
 check_concept = HasThreatConcept("K", relative=True)
 unique_check_dataset = ConceptDataset.from_game_dataset(dataset)
-unique_check_dataset.concept = check_concept
+unique_check_dataset.set_concept(check_concept)
 
 
 def list_models():

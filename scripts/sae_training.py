@@ -12,26 +12,6 @@ from lczerolens.xai.helpers.sae import AutoEncoder
 EPS = 1e-8
 
 
-class ConstrainedAdam(t.optim.Adam):
-    def __init__(self, params, constrained_params, **kwargs):
-        super().__init__(params, **kwargs)
-        self.constrained_params = list(constrained_params)
-
-    def step(self, closure=None):
-        with t.no_grad():
-            for p in self.constrained_params:
-                normed_p = p / p.norm(dim=0, keepdim=True)
-                # project away the parallel component of the gradient
-                p.grad -= (p.grad * normed_p).sum(
-                    dim=0, keepdim=True
-                ) * normed_p
-        super().step(closure=closure)
-        with t.no_grad():
-            for p in self.constrained_params:
-                # renormalize the constrained parameters
-                p /= p.norm(dim=0, keepdim=True)
-
-
 def entropy(p, eps=1e-8):
     p_sum = p.sum(dim=-1, keepdim=True)
     # epsilons for numerical stability
@@ -156,23 +136,18 @@ def resample_neurons(deads, activations, ae, optimizer):
 
     # resample decoder vectors for dead neurons
     indices = t.multinomial(losses, num_samples=deads.sum(), replacement=True)
-    ae.decoder.weight[:, deads] = out_acts[indices].T
-    ae.decoder.weight /= ae.decoder.weight.norm(dim=0, keepdim=True)
+
+    ae.D[deads] = out_acts[indices]
+    ae.D /= ae.D.norm(dim=1, keepdim=True)
 
     # resample encoder vectors for dead neurons
-    ae.encoder.weight[deads] = ae.encoder.weight[~deads].mean(dim=0) * 0.2
-
-    # reset bias vectors for dead neurons
-    ae.encoder.bias[deads] = 0.0
+    ae.D[deads] = ae.D[~deads].mean(dim=0, keepdim=True) * 0.2
 
     # reset Adam parameters for dead neurons
     state_dict = optimizer.state_dict()["state"]
     # # encoder weight
     state_dict[1]["exp_avg"][deads] = 0.0
     state_dict[1]["exp_avg_sq"][deads] = 0.0
-    # # encoder bias
-    state_dict[2]["exp_avg"][deads] = 0.0
-    state_dict[2]["exp_avg_sq"][deads] = 0.0
 
 
 def trainSAE(
@@ -187,7 +162,9 @@ def trainSAE(
     n_epochs=1,
     val_dataloader=None,
     entropy=False,
+    less_than_1=True,
     warmup_steps=1000,
+    cooldown_steps=1000,
     resample_steps=None,
     ghost_threshold=None,
     save_steps=None,
@@ -196,6 +173,7 @@ def trainSAE(
     log_steps=1000,
     device="cpu",
     from_checkpoint=None,
+    freeze_dict=False,
     wandb=None,
     do_print=True,
 ):
@@ -209,29 +187,32 @@ def trainSAE(
             ae.load_state_dict(loaded.state_dict())
         else:
             ae.load_state_dict(loaded)
+    if freeze_dict:
+        ae.D.requires_grad = False
 
     num_samples_since_activated = t.zeros(dictionary_size, dtype=int).to(
         device
     )  # how many samples since each neuron was last activated?
 
     # set up optimizer and scheduler
-    optimizer = ConstrainedAdam(
+    optimizer = t.optim.AdamW(
         ae.parameters(),
-        ae.decoder.parameters(),
         lr=lr,
         betas=(beta1, beta2),
     )
-    if resample_steps is None:
+    total_steps = n_epochs * len(train_dataloader)
 
-        def warmup_fn(step):
-            return min(step / warmup_steps, 1.0)
+    def lr_fn(step):
+        # cooldown
+        cooldown_ratio = min(1.0, (total_steps - step) / cooldown_steps)
+        # warmup
+        if resample_steps is not None:
+            ini_step = step % resample_steps
+        else:
+            ini_step = step
+        return min(ini_step / warmup_steps, 1.0) * cooldown_ratio
 
-    else:
-
-        def warmup_fn(step):
-            return min((step % resample_steps) / warmup_steps, 1.0)
-
-    scheduler = t.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_fn)
+    scheduler = t.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_fn)
     step = 0
     for _ in range(n_epochs):
         for acts in train_dataloader:
@@ -255,6 +236,7 @@ def trainSAE(
             loss["total_loss"].backward()
             optimizer.step()
             scheduler.step()
+            ae.normalize_dict_(less_than_1=less_than_1)
 
             # deal with resampling neurons
             if resample_steps is not None and step % resample_steps == 0:
@@ -305,7 +287,7 @@ def trainSAE(
                         }
                         for val_acts in val_dataloader:
                             losses = sae_loss(
-                                val_acts,
+                                val_acts.to(device),
                                 ae,
                                 sparsity_penalty,
                                 use_entropy=entropy,
@@ -316,7 +298,7 @@ def trainSAE(
                                 explained_variance=True,
                                 r2=True,
                             )
-                            for k, v in val_losses.items():
+                            for k, _ in val_losses.items():
                                 val_losses[k] += losses[k]
 
                         for k, v in val_losses.items():

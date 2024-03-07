@@ -14,10 +14,80 @@ command:
   - -m
   - ${program}
   - ${args}
-program: ignored.simple_sae
+method: bayes
 metric:
-  goal: minimize
-  name: val_mse
+  goal: maximize
+  name: val/r2_score
+parameters:
+  model_name:
+    value: maia-1100.onnx
+  sae_module_name:
+    value: block5/conv2/relu
+#   from_checkpoint:
+#     value: null
+  freeze_dict:
+    value: false
+  beta1:
+    distribution: inv_log_uniform_values
+    max: 1
+    min: 0.95
+    # value: 0.99
+  beta2:
+    distribution: inv_log_uniform_values
+    max: 1
+    min: 0.995
+    # value: 0.999
+  dict_size_scale:
+    distribution: int_uniform
+    max: 126
+    min: 8
+    # value: 50
+  ghost_threshold:
+    distribution: int_uniform
+    max: 8000
+    min: 100
+    # value: 4000
+  resample_steps:
+    distribution: int_uniform
+    max: 8000
+    min: 100
+    # value: 4000
+  lr:
+    distribution: log_uniform_values
+    max: 1e-3
+    min: 1e-5
+  n_epochs:
+    distribution: int_uniform
+    max: 60
+    min: 15
+  h_patch_size:
+    values: [1, 2, 4]
+    # value: 4
+  make_symetric_patch:
+    values: [true, false]
+    # value: true
+  w_patch_size:
+    values: [1, 2, 4]
+    # value: 4
+  sparsity_penalty:
+    distribution: log_uniform_values
+    max: 1
+    min: 5e-3
+  less_than_1:
+    values: [true, false]
+  train_batch_size:
+    value: 250
+  warmup_steps:
+    distribution: int_uniform
+    max: 200
+    min: 10
+    # value: 50
+  cooldown_steps:
+    distribution: int_uniform
+    max: 400
+    min: 10
+    # value: 150
+program: scripts.simple_sae
 ```
 """
 
@@ -25,17 +95,21 @@ import argparse
 import os
 
 import einops
+import numpy as np
 import torch
 import wandb
 from safetensors import safe_open
 from safetensors.torch import save_file
-from sklearn.metrics import r2_score
+from sklearn.metrics import (
+    explained_variance_score,
+    mean_squared_error,
+    r2_score,
+)
 
 from lczerolens import BoardDataset, ModelWrapper
 from lczerolens.xai import ActivationLens, PatchingLens
 
 from .sae_training import trainSAE
-from .secret import WANDB_API_KEY
 
 #######################################
 # HYPERPARAMETERS
@@ -55,24 +129,29 @@ parser.add_argument(
     "--train_sae", action=argparse.BooleanOptionalAction, default=True
 )
 parser.add_argument("--from_checkpoint", type=str, default=None)
-parser.add_argument("--sae_module_name", type=str, default="block5/conv2/relu")
+parser.add_argument("--freeze_dict", type=bool, default=False)
+parser.add_argument("--sae_module_name", type=str, default="block1/conv2/relu")
 parser.add_argument("--dict_size_scale", type=int, default=16)
 parser.add_argument("--h_patch_size", type=int, default=1)
 parser.add_argument("--w_patch_size", type=int, default=1)
 parser.add_argument(
     "--make_symetric_patch",
-    action=argparse.BooleanOptionalAction,
+    type=bool,
     default=True,
 )
-parser.add_argument("--lr", type=float, default=1e-3)
+parser.add_argument("--lr", type=float, default=1e-4)
 parser.add_argument("--beta1", type=float, default=0.9)
 parser.add_argument("--beta2", type=float, default=0.999)
-parser.add_argument("--n_epochs", type=int, default=1)
+parser.add_argument("--n_epochs", type=int, default=10)
 parser.add_argument("--sparsity_penalty", type=float, default=1e-2)
-parser.add_argument("--train_batch_size", type=int, default=250)
+parser.add_argument("--less_than_1", type=bool, default=True)
 parser.add_argument("--ghost_threshold", type=int, default=4000)
+parser.add_argument("--resample_steps", type=int, default=4000)
+parser.add_argument("--train_batch_size", type=int, default=250)
+parser.add_argument("--eval_batch_size", type=int, default=500)
+parser.add_argument("--warmup_steps", type=int, default=200)
+parser.add_argument("--cooldown_steps", type=int, default=200)
 parser.add_argument("--log_steps", type=int, default=50)
-parser.add_argument("--warmup_steps", type=int, default=100)
 parser.add_argument("--val_steps", type=int, default=200)
 # Test
 parser.add_argument(
@@ -88,11 +167,13 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 run_name = f"{ARGS.model_name}_{ARGS.sae_module_name.replace('/', '_')}"
 os.makedirs(f"{ARGS.output_root}/ignored/saes", exist_ok=True)
-wandb.login(key=WANDB_API_KEY)  # type: ignore
+wandb.login()  # type: ignore
 wandb.init(  # type: ignore
     project="lczerolens-saes",
     config={
         "model_name": ARGS.model_name,
+        "from_checkpoint": ARGS.from_checkpoint,
+        "freeze_dict": ARGS.freeze_dict,
         "sae_module_name": ARGS.sae_module_name,
         "dict_size_scale": ARGS.dict_size_scale,
         "h_patch_size": ARGS.h_patch_size,
@@ -103,10 +184,14 @@ wandb.init(  # type: ignore
         "beta2": ARGS.beta2,
         "n_epochs": ARGS.n_epochs,
         "sparsity_penalty": ARGS.sparsity_penalty,
-        "train_batch_size": ARGS.train_batch_size,
+        "less_than_1": ARGS.less_than_1,
         "ghost_threshold": ARGS.ghost_threshold,
-        "log_steps": ARGS.log_steps,
+        "resample_steps": ARGS.resample_steps,
+        "train_batch_size": ARGS.train_batch_size,
+        "eval_batch_size": ARGS.eval_batch_size,
         "warmup_steps": ARGS.warmup_steps,
+        "cooldown_steps": ARGS.cooldown_steps,
+        "log_steps": ARGS.log_steps,
         "val_steps": ARGS.val_steps,
     },
 )
@@ -145,6 +230,65 @@ if ARGS.compte_activations:
             f"{dataset_type}_activations.safetensors",
         )
 
+
+def collate_fn(b):
+    (acts,) = zip(*b)
+    return torch.stack(acts)
+
+
+if ARGS.make_symetric_patch:
+
+    def rearrange_activations(activations):
+        p1 = activations[:, :, :4, :4]
+        p2 = activations[:, :, :4, 4:].flip(dims=(3,))
+        p3 = activations[:, :, 4:, :4].flip(dims=(2,))
+        p4 = activations[:, :, 4:, 4:].flip(dims=(2, 3))
+        patches = torch.cat([p1, p2, p3, p4], dim=1)
+        return einops.rearrange(patches, "b c h w -> (b h w) c")
+
+    def invert_rearrange_activations(activations):
+        patches = einops.rearrange(
+            activations, "(b h w) c -> b c h w", h=4, w=4
+        )
+        p1 = patches[:, :64]
+        p2 = patches[:, 64:128].flip(dims=(3,))
+        p3 = patches[:, 128:192].flip(dims=(2,))
+        p4 = patches[:, 192:].flip(dims=(2, 3))
+        return torch.cat(
+            [
+                torch.cat([p1, p2], dim=3),
+                torch.cat([p3, p4], dim=3),
+            ],
+            dim=2,
+        )
+
+else:
+
+    def rearrange_activations(activations):
+        split_batch = einops.rearrange(
+            activations,
+            "b c (h ph) (w pw) -> b c h ph w pw",
+            ph=ARGS.h_patch_size,
+            pw=ARGS.w_patch_size,
+        )
+        return einops.rearrange(
+            split_batch, "b c h ph w pw -> (b h w) (c ph pw)"
+        )
+
+    def invert_rearrange_activations(activations):
+        split_batch = einops.rearrange(
+            activations,
+            "(b h w) (c ph pw) -> b c h ph w pw",
+            h=8 // ARGS.h_patch_size,
+            w=8 // ARGS.w_patch_size,
+            ph=ARGS.h_patch_size,
+            pw=ARGS.w_patch_size,
+        )
+        return einops.rearrange(
+            split_batch, "b c h ph w pw -> b c (h ph) (w pw)"
+        )
+
+
 if ARGS.train_sae:
     with safe_open(
         f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
@@ -158,72 +302,9 @@ if ARGS.train_sae:
         framework="pt",
     ) as f:
         val_activations = f.get_tensor(ARGS.sae_module_name)
-    with safe_open(
-        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        "test_activations.safetensors",
-        framework="pt",
-    ) as f:
-        test_activations = f.get_tensor(ARGS.sae_module_name)
-
-    if ARGS.make_symetric_patch:
-
-        def rearrange_activations(activations):
-            p1 = activations[:, :, :4, :4]
-            p2 = activations[:, :, :4, 4:].flip(dims=(3,))
-            p3 = activations[:, :, 4:, :4].flip(dims=(2,))
-            p4 = activations[:, :, 4:, 4:].flip(dims=(2, 3))
-            patches = torch.cat([p1, p2, p3, p4], dim=1)
-            return einops.rearrange(patches, "b c h w -> (b h w) c")
-
-        def invert_rearrange_activations(activations):
-            patches = einops.rearrange(
-                activations, "(b h w) c -> b c h w", h=4, w=4
-            )
-            p1 = patches[:, :64]
-            p2 = patches[:, 64:128].flip(dims=(3,))
-            p3 = patches[:, 128:192].flip(dims=(2,))
-            p4 = patches[:, 192:].flip(dims=(2, 3))
-            return torch.cat(
-                [
-                    torch.cat([p1, p2], dim=3),
-                    torch.cat([p3, p4], dim=3),
-                ],
-                dim=2,
-            )
-
-    else:
-
-        def rearrange_activations(activations):
-            split_batch = einops.rearrange(
-                activations,
-                "b c (h ph) (w pw) -> b c h ph w pw",
-                ph=ARGS.h_patch_size,
-                pw=ARGS.w_patch_size,
-            )
-            return einops.rearrange(
-                split_batch, "b c h ph w pw -> (b h w) (c ph pw)"
-            )
-
-        def invert_rearrange_activations(activations):
-            split_batch = einops.rearrange(
-                activations,
-                "(b h w) (c ph pw) -> b c h ph w pw",
-                h=8 // ARGS.h_patch_size,
-                w=8 // ARGS.w_patch_size,
-                ph=ARGS.h_patch_size,
-                pw=ARGS.w_patch_size,
-            )
-            return einops.rearrange(
-                split_batch, "b c h ph w pw -> b c (h ph) (w pw)"
-            )
 
     train_activations = rearrange_activations(train_activations)
     val_activations = rearrange_activations(val_activations)
-    test_activations = rearrange_activations(test_activations)
-
-    def collate_fn(b):
-        (acts,) = zip(*b)
-        return torch.stack(acts)
 
     train_dataloader = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(
@@ -237,7 +318,7 @@ if ARGS.train_sae:
         torch.utils.data.TensorDataset(
             val_activations,
         ),
-        batch_size=ARGS.train_batch_size,
+        batch_size=ARGS.eval_batch_size,
         collate_fn=collate_fn,
     )
 
@@ -248,6 +329,7 @@ if ARGS.train_sae:
         ARGS.dict_size_scale * act_dim,
         val_dataloader=val_dataloader,
         sparsity_penalty=ARGS.sparsity_penalty,
+        less_than_1=ARGS.less_than_1,
         lr=ARGS.lr,
         beta1=ARGS.beta1,
         beta2=ARGS.beta2,
@@ -256,9 +338,10 @@ if ARGS.train_sae:
         warmup_steps=ARGS.warmup_steps,
         n_epochs=ARGS.n_epochs,
         ghost_threshold=ARGS.ghost_threshold,
-        resample_steps=None,
+        resample_steps=ARGS.resample_steps,
         device=DEVICE,
         from_checkpoint=ARGS.from_checkpoint,
+        freeze_dict=ARGS.freeze_dict,
         wandb=wandb,
     )
     model_path = (
@@ -282,11 +365,68 @@ if ARGS.train_sae:
     wandb.log_artifact(artifact)  # type: ignore
 
 if ARGS.compute_evals:
-    ae = torch.load(
+    if not ARGS.train_sae:
+        ae = torch.load(
+            f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
+            f"{ARGS.sae_module_name.replace('/', '_')}.pt",
+            map_location=torch.device(DEVICE),
+        )
+    with safe_open(
         f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        f"{ARGS.sae_module_name.replace('/', '_')}.pt"
+        "test_activations.safetensors",
+        framework="pt",
+    ) as f:
+        test_activations = f.get_tensor(ARGS.sae_module_name)
+    test_activations = rearrange_activations(test_activations)
+
+    test_dataloader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(
+            test_activations,
+        ),
+        batch_size=ARGS.eval_batch_size,
+        collate_fn=collate_fn,
     )
-    ae.to(DEVICE)
+    test_losses = {
+        "explained_variance": 0.0,
+        "r2_score": 0.0,
+    }
+    feature_act_count = torch.zeros(ae.dict_size)
+    activated_features = 0
+    with torch.no_grad():
+        for acts in test_dataloader:
+            out = ae(acts.to(DEVICE), output_features=True)
+            f = out["features"]
+            x_hat = out["x_hat"]
+            test_losses["explained_variance"] += explained_variance_score(
+                acts.cpu(), x_hat.cpu()
+            )
+            test_losses["r2_score"] += r2_score(acts.cpu(), x_hat.cpu())
+            feature_act_count += (f > 0).sum(dim=0).cpu()
+            activated_features += (f > 0).sum().cpu()
+        hist = np.histogram(
+            feature_act_count.numpy() / len(test_dataset),
+            density=True,
+            bins=20,
+        )
+        wandb.log(  # type: ignore
+            {
+                "test/feature_density": wandb.Histogram(  # type: ignore
+                    np_histogram=hist
+                )
+            }
+        )
+        wandb.log(  # type: ignore
+            {
+                "test/ativated_features": activated_features
+                / len(test_dataset),
+                "test/frac_activated_features": activated_features
+                / ae.dict_size
+                / len(test_dataset),
+            }
+        )
+        for k in test_losses.keys():
+            test_losses[k] /= len(test_dataloader)
+            wandb.log({f"test/{k}": test_losses[k]})  # type: ignore
 
     def sae_patch(x, **kwargs):
         x_c_batched = rearrange_activations(x)
@@ -294,17 +434,37 @@ if ARGS.compute_evals:
         act_batched = invert_rearrange_activations(act_c_batched)
         return act_batched
 
-    patching_lens = PatchingLens(
-        {
-            ARGS.sae_module_name: sae_patch,
-        }
-    )
-    patched_batched_outs = patching_lens.analyse_dataset(
-        test_dataset,
-        model,
-        batch_size=ARGS.train_batch_size,
-        collate_fn=BoardDataset.collate_fn_tuple,
-    )
+    def null_patch(x, **kwargs):
+        return torch.zeros_like(x)
+
+    def rand_patch(x, **kwargs):
+        return torch.rand_like(x)
+
+    patch_lenses = {
+        "sae": PatchingLens(
+            {
+                ARGS.sae_module_name: sae_patch,
+            }
+        ),
+        "null": PatchingLens(
+            {
+                ARGS.sae_module_name: null_patch,
+            }
+        ),
+        "rand": PatchingLens(
+            {
+                ARGS.sae_module_name: rand_patch,
+            }
+        ),
+    }
+    patched_batched_outs = {}
+    for k, lens in patch_lenses.items():
+        patched_batched_outs[k] = lens.analyse_dataset(
+            test_dataset,
+            model,
+            batch_size=ARGS.train_batch_size,
+            collate_fn=BoardDataset.collate_fn_tuple,
+        )
     identity_patching_lens = PatchingLens({})
     batched_outs = identity_patching_lens.analyse_dataset(
         test_dataset,
@@ -312,26 +472,17 @@ if ARGS.compute_evals:
         batch_size=ARGS.train_batch_size,
         collate_fn=BoardDataset.collate_fn_tuple,
     )
-    if "value" in batched_outs.keys():
-        value_r2 = r2_score(
-            batched_outs["value"].cpu(),
-            patched_batched_outs["value"].cpu(),
-        )
-        wandb.log({"test/value_r2": value_r2})  # type: ignore
-    if "policy" in batched_outs.keys():
-        policy_r2 = r2_score(
-            batched_outs["policy"].cpu(),
-            patched_batched_outs["policy"].cpu(),
-        )
-        wandb.log({"test/policy_r2": policy_r2})  # type: ignore
-    if "wdl" in batched_outs.keys():
-        wdl_bc = torch.nn.functional.binary_cross_entropy(
-            batched_outs["wdl"].cpu(),
-            patched_batched_outs["wdl"].cpu(),
-        )
-        wandb.log({"test/wdl_bc": wdl_bc})  # type: ignore
-    if "mlh" in batched_outs.keys():
-        mlh_r2 = r2_score(
-            batched_outs["mlh"].cpu(), patched_batched_outs["mlh"].cpu()
-        )
-        wandb.log({"test/mlh_r2": mlh_r2})  # type: ignore
+    for out_k in batched_outs.keys():
+        for patch_name in patched_batched_outs.keys():
+            r2 = r2_score(
+                batched_outs[out_k].cpu(),
+                patched_batched_outs[patch_name][out_k].cpu(),
+            )
+            wandb.log({f"test/{out_k}_{patch_name}_r2": r2})  # type: ignore
+            mse = mean_squared_error(
+                batched_outs[out_k].cpu(),
+                patched_batched_outs[patch_name][out_k].cpu(),
+            )
+            wandb.log({f"test/{out_k}_{patch_name}_mse": mse})  # type: ignore
+
+    print("[INFO] evaluation done")

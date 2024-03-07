@@ -9,10 +9,6 @@ import gradio as gr
 
 from demo import constants, utils, visualisation
 
-cache = None
-boards = None
-board_index = 0
-
 
 def list_models():
     """
@@ -38,23 +34,20 @@ def compute_cache(
     attention_layer,
     attention_head,
     square,
-    quantity,
-    func,
-    trick,
-    aggregate,
+    state_board_index,
+    state_boards,
+    state_cache,
 ):
-    global cache
-    global boards
     if model_name == "":
         gr.Warning("No model selected.")
-        return None, None, None
+        return None, None, None, state_boards, state_cache
 
     try:
         board = chess.Board(board_fen)
     except ValueError:
         board = chess.Board()
         gr.Warning("Invalid FEN, using starting position.")
-    boards = [board.copy()]
+    state_boards = [board.copy()]
     if action_seq:
         try:
             if action_seq.startswith("1."):
@@ -62,48 +55,56 @@ def compute_cache(
                     if action.endswith("."):
                         continue
                     board.push_san(action)
-                    boards.append(board.copy())
+                    state_boards.append(board.copy())
             else:
                 for action in action_seq.split():
                     board.push_uci(action)
-                    boards.append(board.copy())
+                    state_boards.append(board.copy())
         except ValueError:
             gr.Warning(f"Invalid action {action} stopping before it.")
     try:
         wrapper, lens = utils.get_wrapper_lens_from_state(
-            model_name, "attention"
+            model_name,
+            "activation",
+            lens_name="attention",
+            module_exp=r"encoder\d+/mha/QK/softmax",
         )
     except ValueError:
         gr.Warning("Could not load model.")
-        return None, None, None
-    cache = []
-    for board in boards:
-        attention_cache = copy.deepcopy(lens.compute_heatmap(board, wrapper))
-        cache.append(attention_cache)
-    return make_plot(
-        attention_layer,
-        attention_head,
-        square,
-        quantity,
-        func,
-        trick,
-        aggregate,
+        return None, None, None, state_boards, state_cache
+    state_cache = []
+    for board in state_boards:
+        attention_cache = copy.deepcopy(lens.analyse_board(board, wrapper))
+        state_cache.append(attention_cache)
+    return (
+        *make_plot(
+            attention_layer,
+            attention_head,
+            square,
+            state_board_index,
+            state_boards,
+            state_cache,
+        ),
+        state_boards,
+        state_cache,
     )
 
 
 def make_plot(
-    attention_layer, attention_head, square, quantity, func, trick, aggregate
+    attention_layer,
+    attention_head,
+    square,
+    state_board_index,
+    state_boards,
+    state_cache,
 ):
-    global cache
-    global boards
-    global board_index
 
-    if cache is None:
-        gr.Warning("Cache not computed!")
-        return None, None
+    if state_cache == []:
+        gr.Warning("No cache available.")
+        return None, None, None
 
-    board = boards[board_index]
-    num_attention_layers = len(cache[board_index])
+    board = state_boards[state_board_index]
+    num_attention_layers = len(state_cache[state_board_index])
     if attention_layer > num_attention_layers:
         gr.Warning(
             f"Attention layer {attention_layer} does not exist, "
@@ -111,16 +112,16 @@ def make_plot(
         )
         attention_layer = num_attention_layers
 
-    key = f"{attention_layer-1}-{quantity}-{func}"
+    key = f"encoder{attention_layer-1}/mha/QK/softmax"
     try:
-        attention_tensor = cache[board_index][key]
+        attention_tensor = state_cache[state_board_index][key]
     except KeyError:
         gr.Warning(f"Combination {key} does not exist.")
         return None, None, None
     if attention_head > attention_tensor.shape[1]:
         gr.Warning(
             f"Attention head {attention_head} does not exist, "
-            f"using head {attention_tensor.shape[1]} instead."
+            f"using head {attention_tensor.shape[1]+1} instead."
         )
         attention_head = attention_tensor.shape[1]
     try:
@@ -132,15 +133,7 @@ def make_plot(
     if board.turn == chess.BLACK:
         square_index = chess.square_mirror(square_index)
 
-    if trick == "revert":
-        square_index = 63 - square_index
-
-    if aggregate == "Row":
-        heatmap = attention_tensor[0, attention_head - 1, square_index, :]
-    elif aggregate == "Column":
-        heatmap = attention_tensor[0, attention_head - 1, :, square_index]
-    else:
-        heatmap = attention_tensor[0, attention_head - 1]
+    heatmap = attention_tensor[0, attention_head - 1, square_index]
     if board.turn == chess.BLACK:
         heatmap = heatmap.view(8, 8).flip(0).view(64)
     svg_board, fig = visualisation.render_heatmap(
@@ -155,18 +148,24 @@ def previous_board(
     attention_layer,
     attention_head,
     square,
-    from_to,
-    color_flip,
-    trick,
-    aggregate,
+    state_board_index,
+    state_boards,
+    state_cache,
 ):
-    global board_index
-    board_index -= 1
-    if board_index < 0:
+    state_board_index -= 1
+    if state_board_index < 0:
         gr.Warning("Already at first board.")
-        board_index = 0
-    return make_plot(
-        attention_layer, attention_head, square, from_to, color_flip
+        state_board_index = 0
+    return (
+        *make_plot(
+            attention_layer,
+            attention_head,
+            square,
+            state_board_index,
+            state_boards,
+            state_cache,
+        ),
+        state_board_index,
     )
 
 
@@ -174,18 +173,24 @@ def next_board(
     attention_layer,
     attention_head,
     square,
-    from_to,
-    color_flip,
-    trick,
-    aggregate,
+    state_board_index,
+    state_boards,
+    state_cache,
 ):
-    global board_index
-    board_index += 1
-    if board_index >= len(boards):
+    state_board_index += 1
+    if state_board_index >= len(state_boards):
         gr.Warning("Already at last board.")
-        board_index = len(boards) - 1
-    return make_plot(
-        attention_layer, attention_head, square, from_to, color_flip
+        state_board_index = len(state_boards) - 1
+    return (
+        *make_plot(
+            attention_layer,
+            attention_head,
+            square,
+            state_board_index,
+            state_boards,
+            state_cache,
+        ),
+        state_board_index,
     )
 
 
@@ -254,38 +259,6 @@ with gr.Blocks() as interface:
                         value="a1",
                         scale=1,
                     )
-                    quantity = gr.Dropdown(
-                        label="Quantity",
-                        choices=["QK", "Q", "K", "out", "QKV"],
-                        value="QK",
-                        scale=2,
-                    )
-                    aggregate = gr.Dropdown(
-                        label="Aggregate",
-                        choices=["Row", "Column", "None"],
-                        value="Row",
-                        scale=2,
-                    )
-                    func = gr.Dropdown(
-                        label="Function",
-                        choices=[
-                            "softmax",
-                            "transpose",
-                            "matmul",
-                            "scale",
-                        ],
-                        value="softmax",
-                        scale=2,
-                    )
-                    trick = gr.Dropdown(
-                        label="Trick",
-                        choices=[
-                            "none",
-                            "revert",
-                        ],
-                        value="none",
-                        scale=2,
-                    )
                 with gr.Row():
                     previous_board_button = gr.Button("Previous board")
                     next_board_button = gr.Button("Next board")
@@ -298,32 +271,34 @@ with gr.Blocks() as interface:
         with gr.Column():
             image = gr.Image(label="Board")
 
+    state_board_index = gr.State(0)
+    state_boards = gr.State([])
+    state_cache = gr.State([])
     base_inputs = [
         attention_layer,
         attention_head,
         square,
-        quantity,
-        func,
-        trick,
-        aggregate,
+        state_board_index,
+        state_boards,
+        state_cache,
     ]
     outputs = [image, current_board_fen, colorbar]
 
     compute_cache_button.click(
         compute_cache,
         inputs=[board_fen, action_seq, model_name] + base_inputs,
-        outputs=outputs,
+        outputs=outputs + [state_boards, state_cache],
     )
 
     previous_board_button.click(
-        previous_board, inputs=base_inputs, outputs=outputs
+        previous_board,
+        inputs=base_inputs,
+        outputs=outputs + [state_board_index],
     )
-    next_board_button.click(next_board, inputs=base_inputs, outputs=outputs)
+    next_board_button.click(
+        next_board, inputs=base_inputs, outputs=outputs + [state_board_index]
+    )
 
     attention_layer.change(make_plot, inputs=base_inputs, outputs=outputs)
     attention_head.change(make_plot, inputs=base_inputs, outputs=outputs)
     square.submit(make_plot, inputs=base_inputs, outputs=outputs)
-    quantity.change(make_plot, inputs=base_inputs, outputs=outputs)
-    func.change(make_plot, inputs=base_inputs, outputs=outputs)
-    trick.change(make_plot, inputs=base_inputs, outputs=outputs)
-    aggregate.change(make_plot, inputs=base_inputs, outputs=outputs)
