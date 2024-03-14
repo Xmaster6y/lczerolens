@@ -177,6 +177,7 @@ class ConceptDataset(BoardDataset):
         game_ids: Optional[List[str]] = None,
         concept: Optional[Concept] = None,
         labels: Optional[List[Any]] = None,
+        first_n: Optional[int] = None,
     ):
         if file_name is None:
             super().__init__(file_name, boards, game_ids)
@@ -193,6 +194,8 @@ class ConceptDataset(BoardDataset):
                     self.boards.append(board)
                     self.game_ids.append(obj["gameid"])
                     self.labels.append(obj["label"])
+                    if first_n is not None and len(self.boards) >= first_n:
+                        break
         self._concept = concept if concept is not None else NullConcept()
         if labels is not None:
             self.labels = labels

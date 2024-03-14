@@ -139,13 +139,13 @@ class MeasureHook(Hook):
     """
 
     def forward_factory(self, name: str):
-        if self.config.data is not None:
-            measure_data = self.config.data[name]
-        else:
-            measure_data = None
         if self.config.hook_mode is HookMode.INPUT:
 
             def hook(module, input, output):
+                if self.config.data is not None:
+                    measure_data = self.config.data[name]
+                else:
+                    measure_data = None
                 self.storage[name] = self.config.data_fn(
                     input.detach(), measure_data=measure_data
                 )
@@ -153,6 +153,10 @@ class MeasureHook(Hook):
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
+                if self.config.data is not None:
+                    measure_data = self.config.data[name]
+                else:
+                    measure_data = None
                 self.storage[name] = self.config.data_fn(
                     output.detach(), measure_data=measure_data
                 )
@@ -174,19 +178,18 @@ class ModifyHook(Hook):
     """
 
     def forward_factory(self, name: str):
-        if self.config.data is not None:
-            modify_data = self.config.data[name]
-        else:
-            modify_data = None
         if self.config.hook_mode is HookMode.INPUT:
-
-            def hook(module, input, output):
-                input = self.config.data_fn(input, modify_data=modify_data)
-                return input
+            raise NotImplementedError(
+                "Input hook not implemented for ModifyHook"
+            )
 
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
+                if self.config.data is not None:
+                    modify_data = self.config.data[name]
+                else:
+                    modify_data = None
                 output = self.config.data_fn(output, modify_data=modify_data)
                 return output
 
