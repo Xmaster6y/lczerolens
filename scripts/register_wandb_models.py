@@ -25,11 +25,9 @@ parser.add_argument(
 ARGS = parser.parse_args()
 
 if ARGS.log_models:
-    wandb.login()  # type: ignore
-    with wandb.init(  # type: ignore
-        project="lczerolens-saes", job_type="make-models"
-    ) as run:
+    wandb.login()
+    with wandb.init(project="lczerolens-saes", job_type="make-models") as run:
         for model_name, model_path in models.items():
-            artifact = wandb.Artifact(model_name, type="model")  # type: ignore
+            artifact = wandb.Artifact(model_name, type="model")
             artifact.add_file(f"./assets/{model_path}")
             run.log_artifact(artifact)

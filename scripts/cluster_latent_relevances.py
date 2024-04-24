@@ -51,7 +51,7 @@ viz_name = (
 #######################################
 
 
-def legal_init_rel(board_list, board_tensor):
+def legal_init_rel(board_list, out_tensor):
     legal_move_mask = torch.zeros((len(board_list), 1858))
     for idx, board in enumerate(board_list):
         legal_moves = [
@@ -59,7 +59,7 @@ def legal_init_rel(board_list, board_tensor):
             for move in board.legal_moves
         ]
         legal_move_mask[idx, legal_moves] = 1
-    return legal_move_mask * board_tensor
+    return legal_move_mask * out_tensor
 
 
 model = PolicyFlow.from_path(f"./assets/{model_name}")
@@ -84,9 +84,10 @@ if save_files:
         _, board_tensor, labels = batch
         label_tensor = torch.tensor(labels)
 
-        def init_rel_fn(board_tensor):
-            rel = torch.zeros_like(board_tensor)
-            rel[:, label_tensor] = board_tensor[:, label_tensor]
+        def init_rel_fn(out_tensor):
+            rel = torch.zeros_like(out_tensor)
+            for i in range(rel.shape[0]):
+                rel[i, label_tensor[i]] = out_tensor[i, label_tensor[i]]
             return rel
 
         board_tensor.requires_grad = True
@@ -203,9 +204,12 @@ for layer_name, relevances in all_relevances.items():
                 )
                 label_tensor = torch.tensor([label])
 
-                def init_rel_fn(board_tensor):
-                    rel = torch.zeros_like(board_tensor)
-                    rel[:, label_tensor] = board_tensor[:, label_tensor]
+                def init_rel_fn(out_tensor):
+                    rel = torch.zeros_like(out_tensor)
+                    for i in range(rel.shape[0]):
+                        rel[i, label_tensor[i]] = out_tensor[
+                            i, label_tensor[i]
+                        ]
                     return rel
 
                 move = move_utils.decode_move(

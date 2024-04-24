@@ -8,10 +8,7 @@ import gradio as gr
 from demo import constants
 
 
-def make_board_plot(
-    board_fen,
-    arrows,
-):
+def make_board_plot(board_fen, arrows, square):
     try:
         board = chess.Board(board_fen)
     except ValueError:
@@ -35,10 +32,12 @@ def make_board_plot(
         chess_arrows = []
         gr.Warning("Invalid arrows, using none.")
 
+    color_dict = {chess.parse_square(square): "#FF0000"} if square else {}
     svg_board = chess.svg.board(
         board,
         size=350,
         arrows=chess_arrows,
+        fill=color_dict,
     )
     with open(f"{constants.FIGURE_DIRECTORY}/board.svg", "w") as f:
         f.write(svg_board)
@@ -61,12 +60,20 @@ with gr.Blocks() as interface:
                 value="",
                 placeholder="e2e4 e7e5",
             )
+            square = gr.Textbox(
+                label="Square",
+                lines=1,
+                max_lines=1,
+                value="",
+                placeholder="e4",
+            )
         with gr.Column():
             image = gr.Image(label="Board", interactive=False)
 
     inputs = [
         board_fen,
         arrows,
+        square,
     ]
     board_fen.submit(make_board_plot, inputs=inputs, outputs=image)
     arrows.submit(make_board_plot, inputs=inputs, outputs=image)

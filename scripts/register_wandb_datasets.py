@@ -63,23 +63,23 @@ if ARGS.make_datasets:
     )
 
 if ARGS.log_datasets:
-    wandb.login()  # type: ignore
-    with wandb.init(  # type: ignore
+    wandb.login()
+    with wandb.init(
         project="lczerolens-saes", job_type="make-datasets"
     ) as run:
-        artifact = wandb.Artifact("tcec_train", type="dataset")  # type: ignore
+        artifact = wandb.Artifact("tcec_train", type="dataset")
         artifact.add_file(
             f"{ARGS.output_root}/assets/"
             "TCEC_game_collection_random_boards_train.jsonl"
         )
         run.log_artifact(artifact)
-        artifact = wandb.Artifact("tcec_val", type="dataset")  # type: ignore
+        artifact = wandb.Artifact("tcec_val", type="dataset")
         artifact.add_file(
             f"{ARGS.output_root}/assets/"
             "TCEC_game_collection_random_boards_val.jsonl"
         )
         run.log_artifact(artifact)
-        artifact = wandb.Artifact("tcec_test", type="dataset")  # type: ignore
+        artifact = wandb.Artifact("tcec_test", type="dataset")
         artifact.add_file(
             f"{ARGS.output_root}/assets/"
             "TCEC_game_collection_random_boards_test.jsonl"
