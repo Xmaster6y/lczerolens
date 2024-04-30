@@ -1,6 +1,10 @@
 """Preproces functions for chess games.
 """
 
+from typing import Any, Dict, List, Union
+
+import chess
+
 from .generator import Game
 
 
@@ -27,3 +31,49 @@ def dict_to_game(obj: dict) -> Game:
         moves=parsed_moves,
         book_exit=book_exit,
     )
+
+
+def game_to_boards(
+    game: Game,
+    n_history: int = 0,
+    skip_book_exit: bool = False,
+    skip_first_n: int = 0,
+    output_dict=True,
+) -> List[Union[Dict[str, Any], chess.Board]]:
+    working_board = chess.Board()
+    if skip_first_n > 0 or (skip_book_exit and (game.book_exit is not None)):
+        boards = []
+    else:
+        if output_dict:
+            boards = [
+                {
+                    "fen": working_board.fen(),
+                    "moves": [],
+                    "gameid": game.gameid,
+                }
+            ]
+        else:
+            boards = [working_board.copy(stack=n_history)]
+
+    for i, move in enumerate(
+        game.moves[:-1]
+    ):  # skip the last move as it can be over
+        working_board.push_san(move)
+        if (i < skip_first_n) or (
+            skip_book_exit
+            and (game.book_exit is not None)
+            and (i < game.book_exit)
+        ):
+            continue
+        if output_dict:
+            save_board = working_board.copy(stack=n_history)
+            boards.append(
+                {
+                    "fen": save_board.root().fen(),
+                    "moves": [move.uci() for move in save_board.move_stack],
+                    "gameid": game.gameid,
+                }
+            )
+        else:
+            boards.append(working_board.copy(stack=n_history))
+    return boards

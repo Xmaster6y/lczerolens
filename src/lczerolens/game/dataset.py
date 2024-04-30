@@ -10,7 +10,7 @@ IterableBoardDataset
     A class for representing an iterable dataset of boards.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import chess
 import jsonlines
@@ -21,7 +21,7 @@ from torch.utils.data import Dataset
 from lczerolens.encodings import board as board_encodings
 
 from .generator import Game
-from .preprocess import dict_to_game
+from .preprocess import dict_to_game, game_to_boards
 
 
 class GameDataset(Dataset):
@@ -139,80 +139,18 @@ class BoardDataset(Dataset):
         game_ids: List[str] = []
         print("[INFO] Converting games to boards")
         for game in tqdm.tqdm(game_dataset.games, bar_format="{l_bar}{bar}"):
-            new_boards, new_ids = cls.game_to_board_list(
-                game, n_history, skip_book_exit, skip_first_n
+            new_boards = game_to_boards(
+                game,
+                n_history,
+                skip_book_exit,
+                skip_first_n,
+                output_dict=False,
             )
+            new_ids = [game.gameid] * len(new_boards)
             boards.extend(new_boards)
             game_ids.extend(new_ids)
 
         return cls(boards=boards, game_ids=game_ids)
-
-    @staticmethod
-    def preprocess_game(
-        game: Game,
-        n_history: int = 0,
-        skip_book_exit: bool = False,
-        skip_first_n: int = 0,
-    ) -> List[Dict[str, Any]]:
-        working_board = chess.Board()
-        if skip_first_n > 0 or (
-            skip_book_exit and (game.book_exit is not None)
-        ):
-            boards = []
-        else:
-            boards = [
-                {
-                    "fen": working_board.fen(),
-                    "moves": [],
-                    "gameid": game.gameid,
-                }
-            ]
-        for i, move in enumerate(
-            game.moves[:-1]
-        ):  # skip the last move as it can be over
-            working_board.push_san(move)
-            if (i < skip_first_n) or (
-                skip_book_exit
-                and (game.book_exit is not None)
-                and (i < game.book_exit)
-            ):
-                continue
-            save_board = working_board.copy(stack=n_history)
-            boards.append(
-                {
-                    "fen": save_board.root().fen(),
-                    "moves": [move.uci() for move in save_board.move_stack],
-                    "gameid": game.gameid,
-                }
-            )
-        return boards
-
-    @staticmethod
-    def game_to_board_list(
-        game: Game,
-        n_history: int = 0,
-        skip_book_exit: bool = False,
-        skip_first_n: int = 0,
-    ) -> Tuple[List[chess.Board], List[str]]:
-        working_board = chess.Board()
-        if skip_first_n > 0 or (
-            skip_book_exit and (game.book_exit is not None)
-        ):
-            boards = []
-        else:
-            boards = [working_board.copy(stack=n_history)]
-        for i, move in enumerate(
-            game.moves[:-1]
-        ):  # skip the last move as it can be over
-            working_board.push_san(move)
-            if (i < skip_first_n) or (
-                skip_book_exit
-                and (game.book_exit is not None)
-                and (i < game.book_exit)
-            ):
-                continue
-            boards.append(working_board.copy(stack=n_history))
-        return boards, [game.gameid] * len(boards)
 
     @staticmethod
     def collate_fn_tuple(batch):
