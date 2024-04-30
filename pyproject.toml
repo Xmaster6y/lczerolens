@@ -46,6 +46,7 @@ pytest-cov = "*"
 lczero-bindings = {git = "https://github.com/LeelaChessZero/lc0.git"}
 onnxruntime = "^1.16.3"
 gdown = "^5.0.1"
+python-semantic-release = "^9.6.0"
 
 [tool.poetry.group.demo]
 optional = true
@@ -79,3 +80,10 @@ wandb = "^0.16.3"
 
 [build]
 target-dir = "build/dist"
+
+[tool.semantic_release]
+commit_message = "{version}"
+tag_format = "v{version}"
+
+[tool.semantic_release.branches.main]
+match = "main"
