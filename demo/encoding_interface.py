@@ -6,7 +6,7 @@ import chess
 import gradio as gr
 
 from demo import constants, visualisation
-from lczerolens import board_utils
+from lczerolens import board_encodings
 
 
 def make_encoding_plot(
@@ -27,7 +27,7 @@ def make_encoding_plot(
         except ValueError:
             gr.Warning("Invalid action sequence, using starting position.")
             board = chess.Board()
-    board_tensor = board_utils.board_to_input_tensor(board)
+    board_tensor = board_encodings.board_to_input_tensor(board)
     heatmap = board_tensor[plane_index]
     if color_flip and board.turn == chess.BLACK:
         heatmap = heatmap.flip(0)

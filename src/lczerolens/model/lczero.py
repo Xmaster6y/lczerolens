@@ -11,7 +11,7 @@ import subprocess
 import chess
 import torch
 
-from lczerolens import move_utils
+from lczerolens.encodings import move as move_encodings
 
 try:
     from lczero.backends import Backend, GameState
@@ -132,12 +132,14 @@ def moves_with_castling_swap(lczero_game: GameState, board: chess.Board):
                 lczero_legal_moves.remove(leela_uci_move)
                 lczero_legal_moves.append(uci_move)
                 lczero_policy_indices.remove(
-                    move_utils.encode_move(
+                    move_encodings.encode_move(
                         chess.Move.from_uci(leela_uci_move),
                         (board.turn, not board.turn),
                     )
                 )
                 lczero_policy_indices.append(
-                    move_utils.encode_move(move, (board.turn, not board.turn))
+                    move_encodings.encode_move(
+                        move, (board.turn, not board.turn)
+                    )
                 )
     return lczero_legal_moves, lczero_policy_indices

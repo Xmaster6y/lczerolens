@@ -9,8 +9,8 @@ import torch
 from lczero.backends import Backend, GameState, Weights
 
 from demo import constants, utils, visualisation
-from lczerolens import move_utils
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens import move_encodings
+from lczerolens.model import lczero as lczero_utils
 from lczerolens.xai import PolicyLens
 
 
@@ -91,7 +91,8 @@ def make_policy_plot(
     us_them = (board.turn, not board.turn)
     if only_legal:
         legal_moves = [
-            move_utils.encode_move(move, us_them) for move in board.legal_moves
+            move_encodings.encode_move(move, us_them)
+            for move in board.legal_moves
         ]
         filtered_policy = torch.zeros(1858)
         filtered_policy[legal_moves] = policy[legal_moves]
@@ -102,7 +103,7 @@ def make_policy_plot(
         topk_moves = torch.topk(policy, render_bestk)
     arrows = []
     for move_index in topk_moves.indices:
-        move = move_utils.decode_move(move_index, us_them)
+        move = move_encodings.decode_move(move_index, us_them)
         arrows.append((move.from_square, move.to_square))
     svg_board, fig = visualisation.render_heatmap(
         board, heatmap, arrows=arrows
@@ -118,7 +119,10 @@ def make_policy_plot(
     )
     fig_dist = visualisation.render_policy_distribution(
         raw_policy,
-        [move_utils.encode_move(move, us_them) for move in board.legal_moves],
+        [
+            move_encodings.encode_move(move, us_them)
+            for move in board.legal_moves
+        ],
     )
     return (
         f"{constants.FIGURE_DIRECTORY}/policy.svg",

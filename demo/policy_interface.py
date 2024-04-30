@@ -8,7 +8,7 @@ import gradio as gr
 import torch
 
 from demo import constants, utils, visualisation
-from lczerolens import move_utils
+from lczerolens import move_encodings
 from lczerolens.xai import PolicyLens
 
 current_board = None
@@ -73,7 +73,7 @@ def compute_policy(
 
     filtered_policy = torch.full((1858,), 0.0)
     legal_moves = [
-        move_utils.encode_move(move, (board.turn, not board.turn))
+        move_encodings.encode_move(move, (board.turn, not board.turn))
         for move in board.legal_moves
     ]
     filtered_policy[legal_moves] = policy[legal_moves]
@@ -116,7 +116,7 @@ def make_plot(
             heatmap = dropoff_agg.view(8, 8).flip(0).view(64)
     us_them = (current_board.turn, not current_board.turn)
     topk_moves = torch.topk(current_policy, 50)
-    move = move_utils.decode_move(
+    move = move_encodings.decode_move(
         topk_moves.indices[move_to_play - 1], us_them
     )
     arrows = [(move.from_square, move.to_square)]
@@ -128,7 +128,7 @@ def make_plot(
     fig_dist = visualisation.render_policy_distribution(
         current_raw_policy,
         [
-            move_utils.encode_move(move, us_them)
+            move_encodings.encode_move(move, us_them)
             for move in current_board.legal_moves
         ],
     )
@@ -171,7 +171,7 @@ def play_move(
     global current_board
     global current_policy
 
-    move = move_utils.decode_move(
+    move = move_encodings.decode_move(
         current_policy.topk(50).indices[move_to_play - 1],
         (current_board.turn, not current_board.turn),
     )

@@ -8,7 +8,7 @@ import subprocess
 
 from demo import constants, state
 from lczerolens import Lens, ModelWrapper
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens.model import lczero as lczero_utils
 
 
 def get_models_info(onnx=True, leela=True):

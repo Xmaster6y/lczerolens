@@ -11,7 +11,7 @@ from onnx2torch.utils.safe_shape_inference import safe_shape_inference
 from tensordict import TensorDict
 from torch import nn
 
-from lczerolens.utils import board as board_utils
+from lczerolens.encodings import board as board_encodings
 
 
 class ModelWrapper(nn.Module):
@@ -125,7 +125,7 @@ class ModelWrapper(nn.Module):
             raise ValueError("Invalid input type.")
 
         tensor_list = [
-            board_utils.board_to_input_tensor(board).unsqueeze(0)
+            board_encodings.board_to_input_tensor(board).unsqueeze(0)
             for board in board_list
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)

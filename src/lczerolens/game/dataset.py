@@ -18,7 +18,7 @@ import torch
 import tqdm
 from torch.utils.data import Dataset
 
-from lczerolens.utils import board as board_utils
+from lczerolens.encodings import board as board_encodings
 
 from .generate import Game
 
@@ -243,7 +243,7 @@ class BoardDataset(Dataset):
     @staticmethod
     def collate_fn_tensor(batch):
         tensor_list = [
-            board_utils.board_to_input_tensor(board).unsqueeze(0)
+            board_encodings.board_to_input_tensor(board).unsqueeze(0)
             for board in batch
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)

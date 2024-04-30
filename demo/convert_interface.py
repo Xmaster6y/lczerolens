@@ -8,7 +8,7 @@ import uuid
 import gradio as gr
 
 from demo import constants, utils
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens.model import lczero as lczero_utils
 
 
 def list_models():

@@ -11,8 +11,8 @@ import torch
 import tqdm
 from sklearn import metrics
 
+from lczerolens.encodings import board as board_encodings
 from lczerolens.game.dataset import BoardDataset
-from lczerolens.utils import board as board_utils
 
 
 class Concept(ABC):
@@ -278,7 +278,7 @@ class ConceptDataset(BoardDataset):
     def collate_fn_tensor(batch):
         indices, boards, labels = zip(*batch)
         tensor_list = [
-            board_utils.board_to_input_tensor(board) for board in boards
+            board_encodings.board_to_input_tensor(board) for board in boards
         ]
         batched_tensor = torch.stack(tensor_list, dim=0)
         return tuple(indices), batched_tensor, tuple(labels)

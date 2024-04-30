@@ -8,7 +8,7 @@ from lczero.backends import Backend, Weights
 
 from lczerolens import GameDataset, ModelWrapper
 from lczerolens._native_builder import NativeBuilder
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens.model import lczero as lczero_utils
 
 
 @pytest.fixture(scope="session")

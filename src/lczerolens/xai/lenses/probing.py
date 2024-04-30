@@ -7,7 +7,7 @@ import chess
 import torch
 from torch.utils.data import Dataset
 
-from lczerolens.game.wrapper import ModelWrapper
+from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.hook import HookConfig, MeasureHook
 from lczerolens.xai.lens import Lens
 from lczerolens.xai.probe import Probe

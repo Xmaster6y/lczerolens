@@ -4,8 +4,8 @@
 import chess
 import torch
 
-from lczerolens.game.wrapper import ModelWrapper, PolicyFlow
-from lczerolens.utils import move as move_utils
+from lczerolens.encodings import move as move_encodings
+from lczerolens.model.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.xai.concept import BinaryConcept, MulticlassConcept
 
 
@@ -28,7 +28,7 @@ class BestLegalMoveConcept(MulticlassConcept):
         policy = torch.softmax(policy.squeeze(0), dim=-1)
 
         legal_move_indices = [
-            move_utils.encode_move(move, (board.turn, not board.turn))
+            move_encodings.encode_move(move, (board.turn, not board.turn))
             for move in board.legal_moves
         ]
         sub_index = policy[legal_move_indices].argmax().item()
@@ -57,7 +57,7 @@ class PieceBestLegalMoveConcept(BinaryConcept):
 
         legal_moves = list(board.legal_moves)
         legal_move_indices = [
-            move_utils.encode_move(move, (board.turn, not board.turn))
+            move_encodings.encode_move(move, (board.turn, not board.turn))
             for move in legal_moves
         ]
         sub_index = policy[legal_move_indices].argmax().item()

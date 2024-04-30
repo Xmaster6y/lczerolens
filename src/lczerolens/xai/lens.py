@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Optional, Type
 import chess
 from torch.utils.data import Dataset
 
-from lczerolens.game.wrapper import ModelWrapper
+from lczerolens.model.wrapper import ModelWrapper
 
 
 class Lens(ABC):

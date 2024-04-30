@@ -13,7 +13,7 @@ from zennit.composites import Composite, LayerMapComposite
 from zennit.rules import Epsilon, Pass, ZPlus
 from zennit.types import Activation
 
-from lczerolens.game.wrapper import ModelWrapper
+from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.helpers import lrp as lrp_helpers
 from lczerolens.xai.lens import Lens
 

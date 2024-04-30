@@ -7,8 +7,11 @@ import chess
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from lczerolens.game.wrapper import ModelWrapper, PolicyFlow
-from lczerolens.utils.constants import INVERTED_FROM_INDEX, INVERTED_TO_INDEX
+from lczerolens.encodings.constants import (
+    INVERTED_FROM_INDEX,
+    INVERTED_TO_INDEX,
+)
+from lczerolens.model.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.xai.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

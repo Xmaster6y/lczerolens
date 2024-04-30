@@ -9,7 +9,7 @@ from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
 from torch.utils.data import Dataset
 
-from lczerolens.game.wrapper import ModelWrapper
+from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
 
 from .lrp import LrpLens

@@ -6,8 +6,8 @@ import pytest
 import torch
 from lczero.backends import GameState
 
-from lczerolens.game import MlhFlow, PolicyFlow, ValueFlow, WdlFlow
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens.model import MlhFlow, PolicyFlow, ValueFlow, WdlFlow
+from lczerolens.model import lczero as lczero_utils
 
 
 class TestWrapper:
