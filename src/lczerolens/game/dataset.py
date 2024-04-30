@@ -20,7 +20,8 @@ from torch.utils.data import Dataset
 
 from lczerolens.encodings import board as board_encodings
 
-from .generate import Game
+from .generator import Game
+from .preprocess import dict_to_game
 
 
 class GameDataset(Dataset):
@@ -45,29 +46,7 @@ class GameDataset(Dataset):
             self.games = []
             with jsonlines.open(file_name) as reader:
                 for obj in reader:
-                    *pre, post = obj["moves"].split("{ Book exit }")
-                    if pre:
-                        if len(pre) > 1:
-                            raise ValueError("More than one book exit")
-                        (pre,) = pre
-                        parsed_pre_moves = [
-                            m for m in pre.split() if not m.endswith(".")
-                        ]
-                        book_exit = len(parsed_pre_moves)
-                    else:
-                        parsed_pre_moves = []
-                        book_exit = None
-                    parsed_moves = parsed_pre_moves + [
-                        m for m in post.split() if not m.endswith(".")
-                    ]
-
-                    self.games.append(
-                        Game(
-                            gameid=obj["gameid"],
-                            moves=parsed_moves,
-                            book_exit=book_exit,
-                        )
-                    )
+                    self.games.append(dict_to_game(obj))
 
     def __len__(self):
         return len(self.games)
