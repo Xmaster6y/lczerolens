@@ -1,5 +1,4 @@
-"""Custom SE ResNet.
-"""
+"""Custom SE ResNet."""
 
 import torch
 from tensordict import TensorDict
@@ -52,9 +51,7 @@ class SeLayer(nn.Module):
         out1, out2 = out.split(self.n_hidden, dim=1)
         non_lin = self.sigmoid(out1)
         out1 = MulUniformFunction.apply(x, non_lin)
-        return self.sum_layer(
-            torch.stack([out1, out2.repeat(1, 1, 8, 8)], dim=-1)
-        )
+        return self.sum_layer(torch.stack([out1, out2.repeat(1, 1, 8, 8)], dim=-1))
 
 
 class SeBlock(nn.Module):
@@ -101,10 +98,7 @@ class PolicyHead(nn.Module):
         out = out.view(-1, 80 * 64)
         out = out.gather(
             1,
-            torch.tensor(constants.GATHER_INDICES)
-            .unsqueeze(0)
-            .repeat(out.shape[0], 1)
-            .to(out.device),
+            torch.tensor(constants.GATHER_INDICES).unsqueeze(0).repeat(out.shape[0], 1).to(out.device),
         )
         return out
 
@@ -186,9 +180,7 @@ class WdlHead(nn.Module):
 class SeNet(nn.Module):
     """ResNet model."""
 
-    def __init__(
-        self, n_blocks, n_hidden, n_hidden_red=32, heads=None
-    ) -> None:
+    def __init__(self, n_blocks, n_hidden, n_hidden_red=32, heads=None) -> None:
         super().__init__()
         self.n_blocks = n_blocks
         self.n_hidden = n_hidden

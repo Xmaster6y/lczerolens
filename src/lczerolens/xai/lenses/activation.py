@@ -1,5 +1,4 @@
-"""Activation lens for XAI.
-"""
+"""Activation lens for XAI."""
 
 from typing import Any, Callable, Dict, Optional
 
@@ -49,9 +48,7 @@ class ActivationLens(Lens):
         """Cache the activations for a given model and dataset."""
         if save_to is not None:
             raise NotImplementedError("Saving to file is not implemented.")
-        dataloader = DataLoader(
-            dataset, batch_size=batch_size, collate_fn=collate_fn
-        )
+        dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
         self.cache_hook.clear()
         self.cache_hook.register(wrapper.model)
         batched_activations: Dict[str, Any] = {}
@@ -62,8 +59,6 @@ class ActivationLens(Lens):
                 if key not in batched_activations:
                     batched_activations[key] = value
                 else:
-                    batched_activations[key] = torch.cat(
-                        (batched_activations[key], value), dim=0
-                    )
+                    batched_activations[key] = torch.cat((batched_activations[key], value), dim=0)
         self.cache_hook.clear()
         return batched_activations

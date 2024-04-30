@@ -1,5 +1,4 @@
-"""All concepts related to material.
-"""
+"""All concepts related to material."""
 
 from typing import Dict, Optional
 

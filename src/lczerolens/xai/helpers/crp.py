@@ -1,5 +1,4 @@
-"""Helpers to modify the default classes.
-"""
+"""Helpers to modify the default classes."""
 
 import warnings
 from collections.abc import Iterable
@@ -125,9 +124,7 @@ class ModifiedFeatureVisualization(FeatureVisualization):
             samples_batch = samples[b * batch_size : (b + 1) * batch_size]
             data_batch, targets_samples = batch
 
-            targets_samples = np.array(
-                targets_samples
-            )  # numpy operation needed
+            targets_samples = np.array(targets_samples)  # numpy operation needed
 
             # convert multi target to single target if user defined the method
             data_broadcast, targets, sample_indices = [], [], []
@@ -152,9 +149,7 @@ class ModifiedFeatureVisualization(FeatureVisualization):
                     samples_batch,
                 )
 
-            conditions = [
-                {self.attribution.MODEL_OUTPUT_NAME: [t]} for t in targets
-            ]
+            conditions = [{self.attribution.MODEL_OUTPUT_NAME: [t]} for t in targets]
             # dict_inputs is linked to FeatHooks
             dict_inputs["sample_indices"] = sample_indices
             dict_inputs["targets"] = targets
@@ -162,9 +157,7 @@ class ModifiedFeatureVisualization(FeatureVisualization):
             # composites are already registered before
             if on_device:
                 data_broadcast = data_broadcast.to(on_device)  # type: ignore
-            self.attribution(
-                data_broadcast, conditions, None, exclude_parallel=False
-            )
+            self.attribution(data_broadcast, conditions, None, exclude_parallel=False)
 
             if b % checkpoint == checkpoint - 1:
                 self._save_results((last_checkpoint, sample_indices[-1] + 1))
@@ -196,13 +189,9 @@ class ModifiedFeatureVisualization(FeatureVisualization):
         if not isinstance(concept_ids, Iterable):
             concept_ids = [concept_ids]
         if mode == "relevance":
-            d_c_sorted, _, rf_c_sorted = load_maximization(
-                self.RelMax.PATH, layer_name
-            )
+            d_c_sorted, _, rf_c_sorted = load_maximization(self.RelMax.PATH, layer_name)
         elif mode == "activation":
-            d_c_sorted, _, rf_c_sorted = load_maximization(
-                self.ActMax.PATH, layer_name
-            )
+            d_c_sorted, _, rf_c_sorted = load_maximization(self.ActMax.PATH, layer_name)
         else:
             raise ValueError("`mode` must be `relevance` or `activation`")
 
@@ -308,9 +297,7 @@ class ModifiedFeatureVisualization(FeatureVisualization):
         if composite:
             data_batch = torch.cat(data_batch_list, dim=0)
             data_p = self.preprocess_data(data_batch)
-            heatmaps = self._attribution_on_reference(
-                data_p, c_id, layer_name, composite, rf, n_indices, batch_size
-            )
+            heatmaps = self._attribution_on_reference(data_p, c_id, layer_name, composite, rf, n_indices, batch_size)
 
             if callable(plot_fn):
                 return plot_fn(data_batch.detach(), heatmaps.detach(), rf)

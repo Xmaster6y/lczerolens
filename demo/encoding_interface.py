@@ -31,9 +31,7 @@ def make_encoding_plot(
     heatmap = board_tensor[plane_index]
     if color_flip and board.turn == chess.BLACK:
         heatmap = heatmap.flip(0)
-    svg_board, fig = visualisation.render_heatmap(
-        board, heatmap.view(64), vmin=0.0, vmax=1.0
-    )
+    svg_board, fig = visualisation.render_heatmap(board, heatmap.view(64), vmin=0.0, vmax=1.0)
     with open(f"{constants.FIGURE_DIRECTORY}/encoding.svg", "w") as f:
         f.write(svg_board)
     return f"{constants.FIGURE_DIRECTORY}/encoding.svg", fig
@@ -52,10 +50,7 @@ with gr.Blocks() as interface:
                 label="Action sequence",
                 lines=1,
                 max_lines=1,
-                value=(
-                    "e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 "
-                    "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"
-                ),
+                value=("e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 " "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"),
             )
             with gr.Group():
                 with gr.Row():
@@ -67,9 +62,7 @@ with gr.Blocks() as interface:
                         value=0,
                         scale=3,
                     )
-                    color_flip = gr.Checkbox(
-                        label="Color flip", value=True, scale=1
-                    )
+                    color_flip = gr.Checkbox(label="Color flip", value=True, scale=1)
 
             colorbar = gr.Plot(label="Colorbar")
         with gr.Column():
@@ -82,18 +75,8 @@ with gr.Blocks() as interface:
         color_flip,
     ]
     policy_outputs = [image, colorbar]
-    board_fen.submit(
-        make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
-    action_seq.submit(
-        make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
-    plane_index.change(
-        make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
-    color_flip.change(
-        make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
-    interface.load(
-        make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
+    board_fen.submit(make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs)
+    action_seq.submit(make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs)
+    plane_index.change(make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs)
+    color_flip.change(make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs)
+    interface.load(make_encoding_plot, inputs=policy_inputs, outputs=policy_outputs)

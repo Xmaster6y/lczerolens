@@ -1,14 +1,25 @@
 """Preproces functions for chess games.
+
+Classes
+-------
+Game
+    A class for representing a game.
 """
 
-from typing import Any, Dict, List, Union
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union
 
 import chess
 
-from .generator import Game
+
+@dataclass
+class Game:
+    gameid: str
+    moves: List[str]
+    book_exit: Optional[int] = None
 
 
-def dict_to_game(obj: dict) -> Game:
+def dict_to_game(obj: Dict[str, str]) -> Game:
     if "moves" not in obj:
         ValueError("The dict should contain `moves`.")
     if "gameid" not in obj:
@@ -23,9 +34,7 @@ def dict_to_game(obj: dict) -> Game:
     else:
         parsed_pre_moves = []
         book_exit = None
-    parsed_moves = parsed_pre_moves + [
-        m for m in post.split() if not m.endswith(".")
-    ]
+    parsed_moves = parsed_pre_moves + [m for m in post.split() if not m.endswith(".")]
     return Game(
         gameid=obj["gameid"],
         moves=parsed_moves,
@@ -55,15 +64,9 @@ def game_to_boards(
         else:
             boards = [working_board.copy(stack=n_history)]
 
-    for i, move in enumerate(
-        game.moves[:-1]
-    ):  # skip the last move as it can be over
+    for i, move in enumerate(game.moves[:-1]):  # skip the last move as it can be over
         working_board.push_san(move)
-        if (i < skip_first_n) or (
-            skip_book_exit
-            and (game.book_exit is not None)
-            and (i < game.book_exit)
-        ):
+        if (i < skip_first_n) or (skip_book_exit and (game.book_exit is not None) and (i < game.book_exit)):
             continue
         if output_dict:
             save_board = working_board.copy(stack=n_history)

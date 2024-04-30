@@ -1,5 +1,4 @@
-"""Activation lens tests.
-"""
+"""Activation lens tests."""
 
 from lczerolens import Lens
 from lczerolens.xai import ActivationLens

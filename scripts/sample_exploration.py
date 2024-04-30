@@ -31,9 +31,7 @@ n_samples = 3
 #######################################
 
 
-concept_dataset = ConceptDataset(
-    "./assets/TCEC_game_collection_random_boards_bestlegal_knight_10.jsonl"
-)
+concept_dataset = ConceptDataset("./assets/TCEC_game_collection_random_boards_bestlegal_knight_10.jsonl")
 lens = LrpLens()
 
 all_relevances = {}
@@ -78,9 +76,7 @@ for i, (_, board, label) in enumerate(concept_dataset):
     )
     doc.packages.append(Package("xskak"))
     for elo, relevances in all_relevances.items():
-        move = move_utils.decode_move(
-            label, (board.turn, not board.turn), board
-        )
+        move = move_utils.decode_move(label, (board.turn, not board.turn), board)
         uci_move = move.uci()
         input_relevances = relevances[i]  # type: ignore
         if not board.turn:
@@ -88,12 +84,8 @@ for i, (_, board, label) in enumerate(concept_dataset):
         input_relevances = input_relevances.view(112, 64)
         heatmap_str_list = [
             create_heatmap_string(input_relevances.sum(dim=0), abs_max=True),
-            create_heatmap_string(
-                input_relevances[:12].sum(dim=0), abs_max=True
-            ),
-            create_heatmap_string(
-                input_relevances[104:].sum(dim=0), abs_max=True
-            ),
+            create_heatmap_string(input_relevances[:12].sum(dim=0), abs_max=True),
+            create_heatmap_string(input_relevances[104:].sum(dim=0), abs_max=True),
         ]
         heatmap_caption_list = [
             "Total relevance",
@@ -112,14 +104,11 @@ for i, (_, board, label) in enumerate(concept_dataset):
             heatmap_str_list,
             current_piece_pos=uci_move[:2],
             next_move=uci_move[2:4],
-            caption=f"Sample {i} - Model ELO {elo} "
-            f"- {h0/total:.0f}%|{hist/total:.0f}%|{meta/total:.0f}%",
+            caption=f"Sample {i} - Model ELO {elo} " f"- {h0/total:.0f}%|{hist/total:.0f}%|{meta/total:.0f}%",
             heatmap_caption_list=heatmap_caption_list,
         )
 
     doc.generate_pdf(
-        "scripts/results/exploration/"
-        f"{'best' if best_legal else 'full'}"
-        f"_{target}_{i}",
+        "scripts/results/exploration/" f"{'best' if best_legal else 'full'}" f"_{target}_{i}",
         clean_tex=True,
     )

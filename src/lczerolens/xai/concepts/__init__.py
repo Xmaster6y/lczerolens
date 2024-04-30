@@ -1,5 +1,4 @@
-"""Concepts module.
-"""
+"""Concepts module."""
 
 from .material import HasMaterialAdvantageConcept, HasPieceConcept
 from .move import BestLegalMoveConcept, PieceBestLegalMoveConcept

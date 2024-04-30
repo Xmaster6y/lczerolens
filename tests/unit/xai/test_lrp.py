@@ -1,5 +1,4 @@
-"""LRP lens tests.
-"""
+"""LRP lens tests."""
 
 import chess
 import torch

@@ -1,5 +1,4 @@
-"""All concepts related to move.
-"""
+"""All concepts related to move."""
 
 import chess
 import torch
@@ -28,8 +27,7 @@ class BestLegalMoveConcept(MulticlassConcept):
         policy = torch.softmax(policy.squeeze(0), dim=-1)
 
         legal_move_indices = [
-            move_encodings.encode_move(move, (board.turn, not board.turn))
-            for move in board.legal_moves
+            move_encodings.encode_move(move, (board.turn, not board.turn)) for move in board.legal_moves
         ]
         sub_index = policy[legal_move_indices].argmax().item()
         return legal_move_indices[sub_index]
@@ -56,10 +54,7 @@ class PieceBestLegalMoveConcept(BinaryConcept):
         policy = torch.softmax(policy.squeeze(0), dim=-1)
 
         legal_moves = list(board.legal_moves)
-        legal_move_indices = [
-            move_encodings.encode_move(move, (board.turn, not board.turn))
-            for move in legal_moves
-        ]
+        legal_move_indices = [move_encodings.encode_move(move, (board.turn, not board.turn)) for move in legal_moves]
         sub_index = policy[legal_move_indices].argmax().item()
         best_legal_move = legal_moves[sub_index]
         if board.piece_at(best_legal_move.from_square) == self.piece:

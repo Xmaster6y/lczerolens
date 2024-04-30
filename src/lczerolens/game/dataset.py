@@ -20,8 +20,7 @@ from torch.utils.data import Dataset
 
 from lczerolens.encodings import board as board_encodings
 
-from .generator import Game
-from .preprocess import dict_to_game, game_to_boards
+from .preprocess import Game, dict_to_game, game_to_boards
 
 
 class GameDataset(Dataset):
@@ -120,9 +119,7 @@ class BoardDataset(Dataset):
                 writer.write(
                     {
                         "fen": working_board.root().fen(),
-                        "moves": [
-                            move.uci() for move in working_board.move_stack
-                        ],
+                        "moves": [move.uci() for move in working_board.move_stack],
                         "gameid": gameid,
                     }
                 )
@@ -159,9 +156,6 @@ class BoardDataset(Dataset):
 
     @staticmethod
     def collate_fn_tensor(batch):
-        tensor_list = [
-            board_encodings.board_to_input_tensor(board).unsqueeze(0)
-            for board in batch
-        ]
+        tensor_list = [board_encodings.board_to_input_tensor(board).unsqueeze(0) for board in batch]
         batched_tensor = torch.cat(tensor_list, dim=0)
         return batched_tensor

@@ -1,5 +1,4 @@
-"""XAI module.
-"""
+"""XAI module."""
 
 from .concept import (
     AndBinaryConcept,

@@ -1,5 +1,4 @@
-"""Probing lens for XAI.
-"""
+"""Probing lens for XAI."""
 
 from typing import Any, Callable, Dict, Optional
 
@@ -23,9 +22,7 @@ class ProbingLens(Lens):
         self.probe_dict = probe_dict
         self.measure_hooks = {}
         for module_name, probe in self.probe_dict.items():
-            self.measure_hooks[module_name] = MeasureHook(
-                HookConfig(module_exp=module_name, data_fn=probe.predict)
-            )
+            self.measure_hooks[module_name] = MeasureHook(HookConfig(module_exp=module_name, data_fn=probe.predict))
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
         """
@@ -66,9 +63,7 @@ class ProbingLens(Lens):
         """
         if save_to is not None:
             raise NotImplementedError("Saving to file is not implemented.")
-        dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, collate_fn=collate_fn
-        )
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
         batched_measures: Dict[str, Any] = {}
         for measure_hook in self.measure_hooks.values():
             measure_hook.clear()
@@ -78,9 +73,7 @@ class ProbingLens(Lens):
             wrapper.predict(boards)
             for module_name, measure_hook in self.measure_hooks.items():
                 if module_name not in batched_measures:
-                    batched_measures[module_name] = measure_hook.storage[
-                        module_name
-                    ]
+                    batched_measures[module_name] = measure_hook.storage[module_name]
                 else:
                     batched_measures[module_name] = torch.cat(
                         (

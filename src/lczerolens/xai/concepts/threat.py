@@ -1,5 +1,4 @@
-"""All concepts related to threats.
-"""
+"""All concepts related to threats."""
 
 import chess
 

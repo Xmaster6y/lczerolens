@@ -1,5 +1,4 @@
-"""Module to implement generic probing.
-"""
+"""Module to implement generic probing."""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -54,9 +53,7 @@ class SignalCav(Probe):
         mean_label = labels.mean(dim=1, keepdim=True)
         scaled_activations = activations - mean_activation
         scaled_labels = labels - mean_label
-        cav = einops.einsum(
-            scaled_activations, scaled_labels, "b a, b d -> a d"
-        )
+        cav = einops.einsum(scaled_activations, scaled_labels, "b a, b d -> a d")
         self._h = cav / (cav.norm(dim=0, keepdim=True) + EPS)
 
     def predict(self, activations: torch.Tensor, **kwargs):

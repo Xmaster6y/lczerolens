@@ -1,5 +1,4 @@
-"""Patching lens for XAI.
-"""
+"""Patching lens for XAI."""
 
 from typing import Callable, Dict, Optional
 
@@ -22,9 +21,7 @@ class PatchingLens(Lens):
         self.patching_dict = patching_dict
         self.modify_hooks = {}
         for module_name, patch in self.patching_dict.items():
-            self.modify_hooks[module_name] = ModifyHook(
-                HookConfig(module_exp=module_name, data_fn=patch)
-            )
+            self.modify_hooks[module_name] = ModifyHook(HookConfig(module_exp=module_name, data_fn=patch))
 
     def is_compatible(self, wrapper: ModelWrapper) -> bool:
         """
@@ -63,9 +60,7 @@ class PatchingLens(Lens):
         """
         if save_to is not None:
             raise NotImplementedError("Saving to file is not implemented.")
-        dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, collate_fn=collate_fn
-        )
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
         batched_outs = None
         for modify_hook in self.modify_hooks.values():
             modify_hook.clear()

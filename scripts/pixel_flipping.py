@@ -43,14 +43,8 @@ dataloader = torch.utils.data.DataLoader(
 indices, board_tensor, labels = next(iter(dataloader))
 rule_names = ["default", "no_onnx"]
 
-morf_logit_dict = {
-    rule_name: {layer_name: [] for layer_name in layer_names}
-    for rule_name in rule_names
-}
-lerf_logit_dict = {
-    rule_name: {layer_name: [] for layer_name in layer_names}
-    for rule_name in rule_names
-}
+morf_logit_dict = {rule_name: {layer_name: [] for layer_name in layer_names} for rule_name in rule_names}
+lerf_logit_dict = {rule_name: {layer_name: [] for layer_name in layer_names} for rule_name in rule_names}
 
 
 def mask_fn(output, modify_data):
@@ -84,9 +78,7 @@ for logit_dict, morf in zip([morf_logit_dict, lerf_logit_dict], [True, False]):
                 def init_rel_fn(out_tensor):
                     rel = torch.zeros_like(out_tensor)
                     for i in range(rel.shape[0]):
-                        rel[i, label_tensor[i]] = out_tensor[
-                            i, label_tensor[i]
-                        ]
+                        rel[i, label_tensor[i]] = out_tensor[i, label_tensor[i]]
                     return rel
 
                 board_tensor.requires_grad = True
@@ -105,44 +97,27 @@ for logit_dict, morf in zip([morf_logit_dict, lerf_logit_dict], [True, False]):
                     )
                     latent_rel = attr.relevances[layer_name]
                     if morf:
-                        to_flip = latent_rel.view(
-                            board_tensor.shape[0], -1
-                        ).argmax(dim=1)
+                        to_flip = latent_rel.view(board_tensor.shape[0], -1).argmax(dim=1)
                     else:
-                        to_flip = latent_rel.view(
-                            board_tensor.shape[0], -1
-                        ).argmin(dim=1)
+                        to_flip = latent_rel.view(board_tensor.shape[0], -1).argmin(dim=1)
                     if hook.config.data[layer_name] is None:
-                        mask_flat = torch.ones_like(latent_rel).view(
-                            board_tensor.shape[0], -1
-                        )
+                        mask_flat = torch.ones_like(latent_rel).view(board_tensor.shape[0], -1)
                         for i in range(mask_flat.shape[0]):
                             mask_flat[i, to_flip[i]] = 0
-                        hook.config.data[layer_name] = mask_flat.view_as(
-                            latent_rel
-                        )
+                        hook.config.data[layer_name] = mask_flat.view_as(latent_rel)
                     else:
-                        old_mask_flat = hook.config.data[layer_name].view(
-                            board_tensor.shape[0], -1
-                        )
+                        old_mask_flat = hook.config.data[layer_name].view(board_tensor.shape[0], -1)
                         for i in range(old_mask_flat.shape[0]):
                             old_mask_flat[i, to_flip[i]] = 0
-                        hook.config.data[layer_name] = old_mask_flat.view_as(
-                            latent_rel
-                        )
+                        hook.config.data[layer_name] = old_mask_flat.view_as(latent_rel)
                     if debug:
                         print(f"[INFO] Most relevant pixels: {to_flip}")
                     logit_dict[rule_name][layer_name].append(
-                        attr.prediction.gather(
-                            1, label_tensor.view(-1, 1)
-                        ).detach()
+                        attr.prediction.gather(1, label_tensor.view(-1, 1)).detach()
                     )
             print(f"[INFO] Layer: {layer_name} done")
             if debug:
-                print(
-                    "[INFO] Logits: "
-                    f"{torch.cat(logit_dict[rule_name][layer_name], dim=1)}"
-                )
+                print("[INFO] Logits: " f"{torch.cat(logit_dict[rule_name][layer_name], dim=1)}")
             hook.remove()
             hook.clear()
         print(f"[INFO] Rule: {rule_name} done")

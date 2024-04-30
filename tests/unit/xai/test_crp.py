@@ -1,5 +1,4 @@
-"""CRP lens tests.
-"""
+"""CRP lens tests."""
 
 from lczerolens import Lens
 from lczerolens.xai import CrpLens

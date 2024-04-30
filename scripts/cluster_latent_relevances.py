@@ -35,9 +35,7 @@ model_name = "64x6-2018_0627_1913_08_161.onnx"
 dataset_name = "TCEC_game_collection_random_boards_bestlegal_knight.jsonl"
 only_config_rel = True
 best_legal = True
-run_name = (
-    f"bestres_tcec_bestlegal_knight_{'expbest' if best_legal else 'full'}"
-)
+run_name = f"bestres_tcec_bestlegal_knight_{'expbest' if best_legal else 'full'}"
 n_samples = 1000
 conv_sum_dims = ()
 cosine_sim = False
@@ -54,10 +52,7 @@ viz_name = (
 def legal_init_rel(board_list, out_tensor):
     legal_move_mask = torch.zeros((len(board_list), 1858))
     for idx, board in enumerate(board_list):
-        legal_moves = [
-            move_utils.encode_move(move, (board.turn, not board.turn))
-            for move in board.legal_moves
-        ]
+        legal_moves = [move_utils.encode_move(move, (board.turn, not board.turn)) for move in board.legal_moves]
         legal_move_mask[idx, legal_moves] = 1
     return legal_move_mask * out_tensor
 
@@ -140,9 +135,7 @@ os.makedirs(f"scripts/results/{run_name}/{viz_name}", exist_ok=True)
 for layer_name, relevances in all_relevances.items():
     relevances = relevances[:n_samples]
     if conv_sum_dims:
-        relevances = relevances.sum(dim=conv_sum_dims).view(
-            relevances.shape[0], -1
-        )
+        relevances = relevances.sum(dim=conv_sum_dims).view(relevances.shape[0], -1)
     else:
         relevances = relevances.view(relevances.shape[0], -1)
 
@@ -160,10 +153,7 @@ for layer_name, relevances in all_relevances.items():
     plt.title("Clustered Latent Relevances")
     plt.xlabel("Dimension 1")
     plt.ylabel("Dimension 2")
-    plt.savefig(
-        f"scripts/results/{run_name}/{viz_name}/"
-        f"{layer_name.replace('/','.')}_t-sne.png"
-    )
+    plt.savefig(f"scripts/results/{run_name}/{viz_name}/" f"{layer_name.replace('/','.')}_t-sne.png")
     plt.close()
 
     #######################################
@@ -177,10 +167,7 @@ for layer_name, relevances in all_relevances.items():
             cluster_center = kmeans.cluster_centers_[idx_cluster]
             if cosine_sim:
                 dot_prod = relevances @ cluster_center.T
-                similarities = dot_prod / (
-                    np.linalg.norm(relevances, axis=1)
-                    * np.linalg.norm(cluster_center)
-                )
+                similarities = dot_prod / (np.linalg.norm(relevances, axis=1) * np.linalg.norm(cluster_center))
                 nearest_neighbors = np.argsort(similarities)[-8:]
             else:
                 distances = np.linalg.norm(relevances - cluster_center, axis=1)
@@ -199,22 +186,16 @@ for layer_name, relevances in all_relevances.items():
             # compute heatmap for each nearest neighbor
             for idx_sample in nearest_neighbors:
                 _, board, label = concept_dataset[idx_sample]
-                _, board_tensor, _ = ConceptDataset.collate_fn_tensor(
-                    [concept_dataset[idx_sample]]
-                )
+                _, board_tensor, _ = ConceptDataset.collate_fn_tensor([concept_dataset[idx_sample]])
                 label_tensor = torch.tensor([label])
 
                 def init_rel_fn(out_tensor):
                     rel = torch.zeros_like(out_tensor)
                     for i in range(rel.shape[0]):
-                        rel[i, label_tensor[i]] = out_tensor[
-                            i, label_tensor[i]
-                        ]
+                        rel[i, label_tensor[i]] = out_tensor[i, label_tensor[i]]
                     return rel
 
-                move = move_utils.decode_move(
-                    label, (board.turn, not board.turn), board
-                )
+                move = move_utils.decode_move(label, (board.turn, not board.turn), board)
                 uci_move = move.uci()
 
                 if viz_latent:
@@ -245,22 +226,12 @@ for layer_name, relevances in all_relevances.items():
                     )
                     input_relevances = board_tensor.grad
                     if not board.turn:
-                        input_relevances = (
-                            input_relevances.view(112, 8, 8)
-                            .flip(1)
-                            .view(112, 64)
-                        )
+                        input_relevances = input_relevances.view(112, 8, 8).flip(1).view(112, 64)
                     input_relevances = input_relevances.view(112, 64)
                     heatmap_str_list = [
-                        create_heatmap_string(
-                            input_relevances.sum(dim=0), abs_max=True
-                        ),
-                        create_heatmap_string(
-                            input_relevances[:13].sum(dim=0), abs_max=True
-                        ),
-                        create_heatmap_string(
-                            input_relevances[104:].sum(dim=0), abs_max=True
-                        ),
+                        create_heatmap_string(input_relevances.sum(dim=0), abs_max=True),
+                        create_heatmap_string(input_relevances[:13].sum(dim=0), abs_max=True),
+                        create_heatmap_string(input_relevances[104:].sum(dim=0), abs_max=True),
                     ]
                     heatmap_caption_list = [
                         "Total relevance",
@@ -271,9 +242,7 @@ for layer_name, relevances in all_relevances.items():
                     hist = input_relevances[13:104].abs().sum()
                     meta = input_relevances[104:].abs().sum()
                     total = (h0 + hist + meta) / 100
-                    add_caption = (
-                        f"{h0/total:.0f}%|{hist/total:.0f}%|{meta/total:.0f}%"
-                    )
+                    add_caption = f"{h0/total:.0f}%|{hist/total:.0f}%|{meta/total:.0f}%"
 
                 doc = add_plot(
                     doc,
@@ -287,8 +256,6 @@ for layer_name, relevances in all_relevances.items():
 
             # Generate pdf
             doc.generate_pdf(
-                f"scripts/results/{run_name}"
-                f"/{viz_name}/{layer_name.replace('/','.')}"
-                f"_cluster_{idx_cluster}",
+                f"scripts/results/{run_name}" f"/{viz_name}/{layer_name.replace('/','.')}" f"_cluster_{idx_cluster}",
                 clean_tex=True,
             )

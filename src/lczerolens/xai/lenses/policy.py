@@ -1,5 +1,4 @@
-"""PolicyLens class for wrapping the LCZero models.
-"""
+"""PolicyLens class for wrapping the LCZero models."""
 
 from typing import Any, Callable, Dict, Optional
 
@@ -78,10 +77,6 @@ class PolicyLens(Lens):
             filtered_policy = policy
         for square_index in range(64):
             square = chess.SQUARE_NAMES[square_index]
-            pickup_agg[square_index] = filtered_policy[
-                INVERTED_FROM_INDEX[square]
-            ].sum()
-            dropoff_agg[square_index] = filtered_policy[
-                INVERTED_TO_INDEX[square]
-            ].sum()
+            pickup_agg[square_index] = filtered_policy[INVERTED_FROM_INDEX[square]].sum()
+            dropoff_agg[square_index] = filtered_policy[INVERTED_TO_INDEX[square]].sum()
         return pickup_agg, dropoff_agg

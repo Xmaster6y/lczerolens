@@ -1,5 +1,4 @@
-"""Generic hook classes.
-"""
+"""Generic hook classes."""
 
 import re
 from abc import ABC, abstractmethod
@@ -34,7 +33,7 @@ class HookMode(str, Enum):
 
 
 @dataclass
-class HookConfig(ABC):
+class HookConfig:
     """
     Configuration for hooks.
     """
@@ -43,7 +42,7 @@ class HookConfig(ABC):
     hook_mode: HookMode = HookMode.OUTPUT
     module_exp: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
-    data_fn: Optional[Callable] = None
+    data_fn: Optional[Callable[[torch.Tensor, Any], torch.Tensor]] = None
 
 
 class Hook(ABC):
@@ -72,13 +71,9 @@ class Hook(ABC):
             if not compiled_exp.match(name):
                 continue
             if self.config.hook_type is HookType.FORWARD:
-                self.removable_handles.append(
-                    module.register_forward_hook(self.forward_factory(name))
-                )
+                self.removable_handles.append(module.register_forward_hook(self.forward_factory(name)))
             elif self.config.hook_type is HookType.BACKWARD:
-                self.removable_handles.append(
-                    module.register_backward_hook(self.backward_factory(name))
-                )
+                self.removable_handles.append(module.register_backward_hook(self.backward_factory(name)))
             else:
                 raise ValueError(f"Unknown hook type: {self.config.hook_type}")
         return self.removable_handles
@@ -90,7 +85,6 @@ class Hook(ABC):
     def clear(self):
         """Clears the storage and removes the hook."""
         self.storage.clear()
-        self.removable_handles.clear()
 
     @abstractmethod
     def forward_factory(self, name: str):
@@ -105,6 +99,9 @@ class Hook(ABC):
         Creates a hook factory.
         """
         pass
+
+    def _get_data(self, name):
+        return self.config.data.get(name) if self.config.data is not None else None
 
 
 class CacheHook(Hook):
@@ -116,21 +113,19 @@ class CacheHook(Hook):
         if self.config.hook_mode is HookMode.INPUT:
 
             def hook(module, input, output):
-                self.storage[name] = input.detach().cpu()
+                self.storage[name] = input
 
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
-                self.storage[name] = output.detach().cpu()
+                self.storage[name] = output
 
         else:
-            raise ValueError(f"Unknown hook mode: {self.config.hook_mode}")
+            raise ValueError(f"Unknown cache mode: {self.config.hook_mode}")
         return hook
 
     def backward_factory(self, name: str):
-        raise NotImplementedError(
-            "Backward hook not implemented for CacheHook"
-        )
+        raise NotImplementedError("Backward hook not implemented for CacheHook")
 
 
 class MeasureHook(Hook):
@@ -142,34 +137,21 @@ class MeasureHook(Hook):
         if self.config.hook_mode is HookMode.INPUT:
 
             def hook(module, input, output):
-                if self.config.data is not None:
-                    measure_data = self.config.data[name]
-                else:
-                    measure_data = None
-                self.storage[name] = self.config.data_fn(
-                    input.detach(), measure_data=measure_data
-                )
+                measure_data = self._get_data(name)
+                self.storage[name] = self.config.data_fn(input, measure_data=measure_data, name=name)
 
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
-                if self.config.data is not None:
-                    measure_data = self.config.data[name]
-                else:
-                    measure_data = None
-                self.storage[name] = self.config.data_fn(
-                    output.detach(), measure_data=measure_data
-                )
+                measure_data = self._get_data(name)
+                self.storage[name] = self.config.data_fn(output, measure_data=measure_data, name=name)
 
         else:
-            raise ValueError(f"Unknown hook mode: {self.config.hook_mode}")
-
+            raise ValueError(f"Unknown measure mode: {self.config.hook_mode}")
         return hook
 
     def backward_factory(self, name: str):
-        raise NotImplementedError(
-            "Backward hook not implemented for MeasureHook"
-        )
+        raise NotImplementedError("Backward hook not implemented for MeasureHook")
 
 
 class ModifyHook(Hook):
@@ -179,26 +161,23 @@ class ModifyHook(Hook):
 
     def forward_factory(self, name: str):
         if self.config.hook_mode is HookMode.INPUT:
-            raise NotImplementedError(
-                "Input hook not implemented for ModifyHook"
-            )
+
+            def hook(module, input, output):
+                modify_data = self._get_data(name)
+                self.storage[name] = self.config.data_fn(input, modify_data=modify_data, name=name)
+                return input
 
         elif self.config.hook_mode is HookMode.OUTPUT:
 
             def hook(module, input, output):
-                if self.config.data is not None:
-                    modify_data = self.config.data[name]
-                else:
-                    modify_data = None
-                output = self.config.data_fn(output, modify_data=modify_data)
+                modify_data = self._get_data(name)
+                self.storage[name] = self.config.data_fn(output, modify_data=modify_data, name=name)
                 return output
 
         else:
-            raise ValueError(f"Unknown hook mode: {self.config.hook_mode}")
+            raise ValueError(f"Unknown modify mode: {self.config.hook_mode}")
 
         return hook
 
     def backward_factory(self, name: str):
-        raise NotImplementedError(
-            "Backward hook not implemented for ModifyHook"
-        )
+        raise NotImplementedError("Backward hook not implemented for ModifyHook")

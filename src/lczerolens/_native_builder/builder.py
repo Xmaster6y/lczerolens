@@ -1,5 +1,4 @@
-"""LCZero model builder.
-"""
+"""LCZero model builder."""
 
 import os
 import re
@@ -20,10 +19,7 @@ class BuilderError(Exception):
 class NativeBuilder:
     """Class for automatically building a model."""
 
-    _module_exp = re.compile(
-        r"\/?(?P<module_name>[a-z_\-]+)(?P<module_index>[0-9]*)"
-        r"(\/(?P<remaining>.*))?"
-    )
+    _module_exp = re.compile(r"\/?(?P<module_name>[a-z_\-]+)(?P<module_index>[0-9]*)" r"(\/(?P<remaining>.*))?")
 
     @staticmethod
     def _translate(name):
@@ -71,9 +67,7 @@ class NativeBuilder:
         elif model_path.endswith(".pt"):
             return cls.build_from_torch_path(model_path)
         else:
-            raise NotImplementedError(
-                f"Model path {model_path} is not supported."
-            )
+            raise NotImplementedError(f"Model path {model_path} is not supported.")
 
     @classmethod
     def build_from_onnx_path(cls, onnx_model_path: str):
@@ -81,9 +75,7 @@ class NativeBuilder:
         Builds a model from a given path.
         """
         if not os.path.exists(onnx_model_path):
-            raise FileExistsError(
-                f"Model path {onnx_model_path} does not exist."
-            )
+            raise FileExistsError(f"Model path {onnx_model_path} does not exist.")
         try:
             onnx_model = safe_shape_inference(onnx_model_path)
             onnx_graph = OnnxGraph(onnx_model.graph)
@@ -101,9 +93,7 @@ class NativeBuilder:
     def make_onnx_td_forward(onnx_model):
         old_forward = onnx_model.forward
         output_node = list(onnx_model.graph.nodes)[-1]
-        output_names = [
-            n.name.replace("output_", "") for n in output_node.all_input_nodes
-        ]
+        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
 
         def td_forward(x):
             old_out = old_forward(x)
@@ -120,9 +110,7 @@ class NativeBuilder:
         Builds a model from a given path.
         """
         if not os.path.exists(torch_model_path):
-            raise FileExistsError(
-                f"Model path {torch_model_path} does not exist."
-            )
+            raise FileExistsError(f"Model path {torch_model_path} does not exist.")
         try:
             torch_model = torch.load(torch_model_path)
         except Exception:
@@ -146,9 +134,7 @@ class NativeBuilder:
         for name, onnx_tensor in onnx_graph.initializers.items():
             parsed_name = name.replace("/w", "")
             try:
-                module_name, module_index, remaining = cls._parse_remaining(
-                    parsed_name
-                )
+                module_name, module_index, remaining = cls._parse_remaining(parsed_name)
             except BuilderError:
                 continue
 
@@ -166,20 +152,14 @@ class NativeBuilder:
                         submodule_index,
                         subremaining,
                     ) = cls._parse_remaining(remaining)
-                    state_dict_name = (
-                        f"block{module_index}.se_layer."
-                        f"linear{submodule_index}.{submodule_name}"
-                    )
+                    state_dict_name = f"block{module_index}.se_layer." f"linear{submodule_index}.{submodule_name}"
                 else:
                     (
                         submodule_name,
                         submodule_index,
                         subremaining,
                     ) = cls._parse_remaining(remaining)
-                    state_dict_name = (
-                        f"block{module_index}."
-                        f"{submodule_name}{submodule_index}.{subremaining}"
-                    )
+                    state_dict_name = f"block{module_index}." f"{submodule_name}{submodule_index}.{subremaining}"
             elif module_name in ["mlh", "wdl", "policy", "value"]:
                 if heads is None:
                     heads = [module_name]
@@ -190,10 +170,7 @@ class NativeBuilder:
                     submodule_index,
                     subremaining,
                 ) = cls._parse_remaining(remaining)
-                state_dict_name = (
-                    f"{module_name}."
-                    f"{submodule_name}{submodule_index}.{subremaining}"
-                )
+                state_dict_name = f"{module_name}." f"{submodule_name}{submodule_index}.{subremaining}"
             elif module_name == "const":
                 continue
             else:
@@ -209,27 +186,17 @@ class NativeBuilder:
                 if n_hidden is None:
                     n_hidden = tmp_n_hidden
                 elif n_hidden != tmp_n_hidden:
-                    raise BuilderError(
-                        "n_hidden mismatch: " f"{n_hidden} != {tmp_n_hidden}"
-                    )
+                    raise BuilderError("n_hidden mismatch: " f"{n_hidden} != {tmp_n_hidden}")
                 if n_hidden_red is None:
                     n_hidden_red = tmp_n_hidden_red
                 elif n_hidden_red != tmp_n_hidden_red:
-                    raise BuilderError(
-                        "n_hidden_red mismatch: "
-                        f"{n_hidden_red} != {tmp_n_hidden_red}"
-                    )
+                    raise BuilderError("n_hidden_red mismatch: " f"{n_hidden_red} != {tmp_n_hidden_red}")
             if state_dict_name == "value.linear2.bias":
                 if torch_tensor.shape[0] != 1:
                     convert_value_to_wdl = True
 
             state_dict[state_dict_name] = torch_tensor
-        if (
-            n_hidden is None
-            or n_hidden_red is None
-            or heads is None
-            or n_blocks == 0
-        ):
+        if n_hidden is None or n_hidden_red is None or heads is None or n_blocks == 0:
             raise BuilderError("Could not build SeNet from onnx graph.")
 
         if convert_value_to_wdl:
