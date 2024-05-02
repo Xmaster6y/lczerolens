@@ -25,13 +25,14 @@ def get_next_legal_boards(board: chess.Board):
 
 class Sampler(ABC):
     @abstractmethod
-    def get_next_move(self, board: chess.Board, **kwargs):
+    def get_next_move(self, board: chess.Board):
         pass
 
 
 @dataclass
 class WrapperSampler(Sampler):
     wrapper: ModelWrapper
+    use_argmax: bool = True
     alpha: float = 1.0
     beta: float = 1.0
     gamma: float = 1.0
@@ -56,17 +57,18 @@ class WrapperSampler(Sampler):
         utility += self.alpha * q_values
         utility += self.beta * self._get_m_values(all_stats, q_values, to_log)
         us = board.turn
-        utility += self.gamma * self._get_p_values(all_stats, legal_moves, us)
+        utility += self.gamma * self._get_p_values(all_stats, legal_moves, us, to_log)
+        to_log["utility"] = utility
         return utility, legal_moves, to_log
 
     def _get_q_values(self, all_stats, to_log):
         if "value" in all_stats.keys():
-            to_log["value"] = all_stats["value"][0]
+            to_log["value"] = all_stats["value"][0].item()
             return all_stats["value"][1:, 0]
         elif "wdl" in all_stats.keys():
-            to_log["wdl_w"] = all_stats["wdl"][0][0]
-            to_log["wdl_d"] = all_stats["wdl"][0][1]
-            to_log["wdl_l"] = all_stats["wdl"][0][2]
+            to_log["wdl_w"] = all_stats["wdl"][0][0].item()
+            to_log["wdl_d"] = all_stats["wdl"][0][1].item()
+            to_log["wdl_l"] = all_stats["wdl"][0][2].item()
             scores = torch.tensor([1, self.draw_score, -1])
             return all_stats["wdl"][1:] @ scores
         else:
@@ -74,7 +76,7 @@ class WrapperSampler(Sampler):
 
     def _get_m_values(self, all_stats, q_values, to_log):
         if "mlh" in all_stats.keys():
-            to_log["mlh"] = all_stats["mlh"][0]
+            to_log["mlh"] = all_stats["mlh"][0].item()
             delta_m_values = self.m_slope * (all_stats["mlh"][1:, 0] - all_stats["mlh"][0, 0])
             delta_m_values.clamp_(-self.m_max, self.m_max)
             scaled_q_values = torch.relu(q_values.abs() - self.q_threshold) / (1 - self.q_threshold)
@@ -88,17 +90,19 @@ class WrapperSampler(Sampler):
         all_stats,
         legal_moves,
         us,
+        to_log,
     ):
         if "policy" in all_stats.keys():
             indices = torch.tensor([move_encodings.encode_move(move, (us, not us)) for move in legal_moves])
-            return all_stats["policy"][0].gather(0, indices)
+            legal_policy = all_stats["policy"][0].gather(0, indices)
+            to_log["max_legal_policy"] = legal_policy.max().item()
+            return legal_policy
         else:
             return torch.zeros(all_stats.batch_size[0] - 1)
 
-    def get_next_move(self, board: chess.Board, **kwargs):
+    def get_next_move(self, board: chess.Board):
         utility, legal_moves, to_log = self.get_utility(board)
-        use_argmax = kwargs.get("use_argmax", True)
-        if use_argmax:
+        if self.use_argmax:
             idx = utility.argmax()
         else:
             m = Categorical(torch.softmax(utility))
