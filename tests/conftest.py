@@ -76,8 +76,7 @@ def winner_ensure_network():
 
 @pytest.fixture(scope="class")
 def winner_wrapper(winner_ensure_network):
-    wrapper = ModelWrapper.from_path("assets/384x30-2022_0108_1903_17_608.onnx")
-    yield wrapper
+    yield ModelWrapper.from_path("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
 @pytest.fixture(scope="class")
