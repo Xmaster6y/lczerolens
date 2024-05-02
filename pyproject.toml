@@ -4,7 +4,7 @@ target-version = "py39"
 
 [tool.poetry]
 name = "lczerolens"
-version = "0.2.0"
+version = "0.2.0-dev"
 description = "Interpretability for LeelaChessZero networks."
 readme = "README.md"
 license = "MIT"
