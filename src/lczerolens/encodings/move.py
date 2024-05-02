@@ -1,5 +1,4 @@
-"""Utils for the move module.
-"""
+"""Utils for the move module."""
 
 from typing import Tuple
 
@@ -26,9 +25,7 @@ def encode_move(
         to_square_row = to_square // 8
         to_square_col = to_square % 8
         to_square = 8 * (7 - to_square_row) + to_square_col
-    us_uci_move = (
-        chess.SQUARE_NAMES[from_square] + chess.SQUARE_NAMES[to_square]
-    )
+    us_uci_move = chess.SQUARE_NAMES[from_square] + chess.SQUARE_NAMES[to_square]
     if move.promotion is not None:
         if move.promotion == chess.BISHOP:
             us_uci_move += "b"
@@ -62,8 +59,6 @@ def decode_move(
 
     uci_move = chess.SQUARE_NAMES[from_square] + chess.SQUARE_NAMES[to_square]
     from_piece = board.piece_at(from_square)
-    if (
-        from_piece == chess.PAWN and to_square >= 56
-    ):  # Knight promotion is the default
+    if from_piece == chess.PAWN and to_square >= 56:  # Knight promotion is the default
         uci_move += "n"
     return chess.Move.from_uci(uci_move)

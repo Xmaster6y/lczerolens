@@ -125,9 +125,7 @@ parser.add_argument(
 parser.add_argument("--act_batch_size", type=int, default=100)
 parser.add_argument("--model_name", type=str, default="maia-1100.onnx")
 # SAE training
-parser.add_argument(
-    "--train_sae", action=argparse.BooleanOptionalAction, default=True
-)
+parser.add_argument("--train_sae", action=argparse.BooleanOptionalAction, default=True)
 parser.add_argument("--from_checkpoint", type=str, default=None)
 parser.add_argument("--freeze_dict", type=bool, default=False)
 parser.add_argument("--sae_module_name", type=str, default="block1/conv2/relu")
@@ -154,9 +152,7 @@ parser.add_argument("--cooldown_steps", type=int, default=200)
 parser.add_argument("--log_steps", type=int, default=50)
 parser.add_argument("--val_steps", type=int, default=200)
 # Test
-parser.add_argument(
-    "--compute_evals", action=argparse.BooleanOptionalAction, default=True
-)
+parser.add_argument("--compute_evals", action=argparse.BooleanOptionalAction, default=True)
 #######################################
 
 ARGS = parser.parse_args()
@@ -221,13 +217,10 @@ if ARGS.compte_activations:
             collate_fn=BoardDataset.collate_fn_tuple,
         )
 
-        os.makedirs(
-            f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}", exist_ok=True
-        )
+        os.makedirs(f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}", exist_ok=True)
         save_file(
             activations,
-            f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-            f"{dataset_type}_activations.safetensors",
+            f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/" f"{dataset_type}_activations.safetensors",
         )
 
 
@@ -247,9 +240,7 @@ if ARGS.make_symetric_patch:
         return einops.rearrange(patches, "b c h w -> (b h w) c")
 
     def invert_rearrange_activations(activations):
-        patches = einops.rearrange(
-            activations, "(b h w) c -> b c h w", h=4, w=4
-        )
+        patches = einops.rearrange(activations, "(b h w) c -> b c h w", h=4, w=4)
         p1 = patches[:, :64]
         p2 = patches[:, 64:128].flip(dims=(3,))
         p3 = patches[:, 128:192].flip(dims=(2,))
@@ -271,9 +262,7 @@ else:
             ph=ARGS.h_patch_size,
             pw=ARGS.w_patch_size,
         )
-        return einops.rearrange(
-            split_batch, "b c h ph w pw -> (b h w) (c ph pw)"
-        )
+        return einops.rearrange(split_batch, "b c h ph w pw -> (b h w) (c ph pw)")
 
     def invert_rearrange_activations(activations):
         split_batch = einops.rearrange(
@@ -284,21 +273,17 @@ else:
             ph=ARGS.h_patch_size,
             pw=ARGS.w_patch_size,
         )
-        return einops.rearrange(
-            split_batch, "b c h ph w pw -> b c (h ph) (w pw)"
-        )
+        return einops.rearrange(split_batch, "b c h ph w pw -> b c (h ph) (w pw)")
 
 
 if ARGS.train_sae:
     with safe_open(
-        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        "train_activations.safetensors",
+        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/" "train_activations.safetensors",
         framework="pt",
     ) as f:
         train_activations = f.get_tensor(ARGS.sae_module_name)
     with safe_open(
-        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        "val_activations.safetensors",
+        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/" "val_activations.safetensors",
         framework="pt",
     ) as f:
         val_activations = f.get_tensor(ARGS.sae_module_name)
@@ -344,10 +329,7 @@ if ARGS.train_sae:
         freeze_dict=ARGS.freeze_dict,
         wandb=wandb,
     )
-    model_path = (
-        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}"
-        f"/{ARGS.sae_module_name.replace('/', '_')}.pt"
-    )
+    model_path = f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}" f"/{ARGS.sae_module_name.replace('/', '_')}.pt"
 
     torch.save(
         ae,
@@ -367,13 +349,11 @@ if ARGS.train_sae:
 if ARGS.compute_evals:
     if not ARGS.train_sae:
         ae = torch.load(
-            f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-            f"{ARGS.sae_module_name.replace('/', '_')}.pt",
+            f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/" f"{ARGS.sae_module_name.replace('/', '_')}.pt",
             map_location=torch.device(DEVICE),
         )
     with safe_open(
-        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/"
-        "test_activations.safetensors",
+        f"{ARGS.output_root}/scripts/saes/{ARGS.model_name}/" "test_activations.safetensors",
         framework="pt",
     ) as f:
         test_activations = f.get_tensor(ARGS.sae_module_name)
@@ -397,9 +377,7 @@ if ARGS.compute_evals:
             out = ae(acts.to(DEVICE), output_features=True)
             f = out["features"]
             x_hat = out["x_hat"]
-            test_losses["explained_variance"] += explained_variance_score(
-                acts.cpu(), x_hat.cpu()
-            )
+            test_losses["explained_variance"] += explained_variance_score(acts.cpu(), x_hat.cpu())
             test_losses["r2_score"] += r2_score(acts.cpu(), x_hat.cpu())
             feature_act_count += (f > 0).sum(dim=0).cpu()
             activated_features += (f > 0).sum().cpu()
@@ -417,11 +395,8 @@ if ARGS.compute_evals:
         )
         wandb.log(  # type: ignore
             {
-                "test/ativated_features": activated_features
-                / len(test_dataset),
-                "test/frac_activated_features": activated_features
-                / ae.dict_size
-                / len(test_dataset),
+                "test/ativated_features": activated_features / len(test_dataset),
+                "test/frac_activated_features": activated_features / ae.dict_size / len(test_dataset),
             }
         )
         for k in test_losses.keys():

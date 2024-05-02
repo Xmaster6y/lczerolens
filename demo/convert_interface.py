@@ -8,7 +8,7 @@ import uuid
 import gradio as gr
 
 from demo import constants, utils
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens.model import lczero as lczero_utils
 
 
 def list_models():
@@ -147,9 +147,7 @@ with gr.Blocks() as interface:
             )
         with gr.Column(scale=1):
             with gr.Row():
-                model_name = gr.Textbox(
-                    label="Selected model", lines=1, interactive=False, scale=7
-                )
+                model_name = gr.Textbox(label="Selected model", lines=1, interactive=False, scale=7)
             conversion_status = gr.Textbox(
                 label="Conversion status",
                 lines=1,

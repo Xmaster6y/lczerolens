@@ -59,9 +59,7 @@ def make_policy_plot():
         )
         return None
     else:
-        return visualisation.render_policy_statistics(
-            current_policy_statistics
-        )
+        return visualisation.render_policy_statistics(current_policy_statistics)
 
 
 def compute_lrp_statistics(
@@ -89,9 +87,7 @@ def make_lrp_plot():
         )
         return None, None, None
     else:
-        return visualisation.render_relevance_proportion(
-            current_lrp_statistics
-        )
+        return visualisation.render_relevance_proportion(current_lrp_statistics)
 
 
 def compute_probing_statistics(
@@ -106,12 +102,8 @@ def compute_probing_statistics(
             "Please select a model.",
         )
         return None
-    wrapper, lens = utils.get_wrapper_lens_from_state(
-        model_name, "probing", concept=check_concept
-    )
-    current_probing_statistics = lens.compute_statistics(
-        unique_check_dataset, wrapper, 10
-    )
+    wrapper, lens = utils.get_wrapper_lens_from_state(model_name, "probing", concept=check_concept)
+    current_probing_statistics = lens.compute_statistics(unique_check_dataset, wrapper, 10)
     return make_probing_plot()
 
 
@@ -124,9 +116,7 @@ def make_probing_plot():
         )
         return None
     else:
-        return visualisation.render_probing_statistics(
-            current_probing_statistics
-        )
+        return visualisation.render_probing_statistics(current_probing_statistics)
 
 
 with gr.Blocks() as interface:
@@ -141,9 +131,7 @@ with gr.Blocks() as interface:
             )
         with gr.Column(scale=1):
             with gr.Row():
-                model_name = gr.Textbox(
-                    label="Selected model", lines=1, interactive=False, scale=7
-                )
+                model_name = gr.Textbox(label="Selected model", lines=1, interactive=False, scale=7)
     model_df.select(
         on_select_model_df,
         None,
@@ -153,9 +141,7 @@ with gr.Blocks() as interface:
     with gr.Row():
         with gr.Column():
             policy_plot = gr.Plot(label="Policy statistics")
-            policy_compute_button = gr.Button(
-                value="Compute policy statistics"
-            )
+            policy_compute_button = gr.Button(value="Compute policy statistics")
             policy_plot_button = gr.Button(value="Plot policy statistics")
 
             policy_compute_button.click(

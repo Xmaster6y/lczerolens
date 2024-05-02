@@ -5,8 +5,8 @@ Tests for the move utils.
 import chess
 from lczero.backends import GameState
 
-from lczerolens import move_utils
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens import move_encodings
+from lczerolens.model import lczero as lczero_utils
 
 
 class TestStability:
@@ -16,10 +16,8 @@ class TestStability:
         """
         us, them = chess.WHITE, chess.BLACK
         for move, board in zip(*random_move_board_list):
-            encoded_move = move_utils.encode_move(move, (us, them))
-            decoded_move = move_utils.decode_move(
-                encoded_move, (us, them), board
-            )
+            encoded_move = move_encodings.encode_move(move, (us, them))
+            decoded_move = move_encodings.decode_move(encoded_move, (us, them), board)
             assert move == decoded_move
             us, them = them, us
 
@@ -31,9 +29,7 @@ class TestBackend:
         """
         move_list, board_list = random_move_board_list
         for i, board in enumerate(board_list):
-            lczero_game = GameState(
-                moves=[move.uci() for move in move_list[:i]]
-            )
+            lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
             legal_moves = [move.uci() for move in board.legal_moves]
             (
                 lczero_legal_moves,
@@ -42,8 +38,7 @@ class TestBackend:
             assert len(legal_moves) == len(lczero_legal_moves)
             assert set(legal_moves) == set(lczero_legal_moves)
             policy_indices = [
-                move_utils.encode_move(move, (board.turn, not board.turn))
-                for move in board.legal_moves
+                move_encodings.encode_move(move, (board.turn, not board.turn)) for move in board.legal_moves
             ]
             assert len(lczero_policy_indices) == len(policy_indices)
             assert set(lczero_policy_indices) == set(policy_indices)
@@ -54,9 +49,7 @@ class TestBackend:
         """
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
-            lczero_game = GameState(
-                moves=[move.uci() for move in move_list[:i]]
-            )
+            lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
             legal_moves = [move.uci() for move in board.legal_moves]
             (
                 lczero_legal_moves,
@@ -65,8 +58,7 @@ class TestBackend:
             assert len(legal_moves) == len(lczero_legal_moves)
             assert set(legal_moves) == set(lczero_legal_moves)
             policy_indices = [
-                move_utils.encode_move(move, (board.turn, not board.turn))
-                for move in board.legal_moves
+                move_encodings.encode_move(move, (board.turn, not board.turn)) for move in board.legal_moves
             ]
             assert len(lczero_policy_indices) == len(policy_indices)
             assert set(lczero_policy_indices) == set(policy_indices)

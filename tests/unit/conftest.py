@@ -32,9 +32,7 @@ def repetition_move_board_list():
         move = chess.Move.from_uci(uci_move)
         move_list.append(move)
         board.push(move)
-        board_list.append(
-            board.copy(stack=True)
-        )  # Full stack is needed for repetition detection
+        board_list.append(board.copy(stack=True))  # Full stack is needed for repetition detection
     return move_list, board_list
 
 

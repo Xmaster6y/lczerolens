@@ -17,9 +17,7 @@ parser = argparse.ArgumentParser("register-wandb-models")
 models = {
     "maia-1100": "maia-1100.onnx",
 }
-parser.add_argument(
-    "--log_models", action=argparse.BooleanOptionalAction, default=False
-)
+parser.add_argument("--log_models", action=argparse.BooleanOptionalAction, default=False)
 #######################################
 
 ARGS = parser.parse_args()

@@ -1,5 +1,4 @@
-"""Compute CRP heatmap for a given model and input.
-"""
+"""Compute CRP heatmap for a given model and input."""
 
 from typing import Any, Callable, List, Optional
 
@@ -9,7 +8,7 @@ from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
 from torch.utils.data import Dataset
 
-from lczerolens.game.wrapper import ModelWrapper
+from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
 
 from .lrp import LrpLens
@@ -40,9 +39,7 @@ class CrpLens(Lens):
         composite = kwargs.get("composite", None)
 
         if mode == "latent_relevances":
-            return self._compute_latent_relevances(
-                [board], wrapper, layer_names=layer_names, composite=composite
-            )
+            return self._compute_latent_relevances([board], wrapper, layer_names=layer_names, composite=composite)
         elif mode == "max_ref":
             raise NotImplementedError
         else:
@@ -67,9 +64,7 @@ class CrpLens(Lens):
         composite: Optional[Any] = None,
     ) -> torch.Tensor:
         if layer_names is None:
-            layer_names = layer_names = get_layer_names(
-                wrapper, [torch.nn.Identity]
-            )
+            layer_names = layer_names = get_layer_names(wrapper, [torch.nn.Identity])
         if composite is None:
             composite = LrpLens.make_default_composite()
 

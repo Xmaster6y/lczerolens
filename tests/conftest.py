@@ -8,7 +8,7 @@ from lczero.backends import Backend, Weights
 
 from lczerolens import GameDataset, ModelWrapper
 from lczerolens._native_builder import NativeBuilder
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens.model import lczero as lczero_utils
 
 
 @pytest.fixture(scope="session")
@@ -19,9 +19,7 @@ def tiny_lczero_backend():
 
 @pytest.fixture(scope="session")
 def tiny_ensure_network():
-    lczero_utils.convert_to_onnx(
-        "assets/tinygyal-8.pb.gz", "assets/tinygyal-8.onnx"
-    )
+    lczero_utils.convert_to_onnx("assets/tinygyal-8.pb.gz", "assets/tinygyal-8.onnx")
     yield
 
 
@@ -45,9 +43,7 @@ def tiny_senet_ort(tiny_ensure_network):
 
 @pytest.fixture(scope="class")
 def maia_ensure_network():
-    lczero_utils.convert_to_onnx(
-        "assets/maia-1100.pb.gz", "assets/maia-1100.onnx"
-    )
+    lczero_utils.convert_to_onnx("assets/maia-1100.pb.gz", "assets/maia-1100.onnx")
     yield
 
 
@@ -80,26 +76,17 @@ def winner_ensure_network():
 
 @pytest.fixture(scope="class")
 def winner_wrapper(winner_ensure_network):
-    wrapper = ModelWrapper.from_path(
-        "assets/384x30-2022_0108_1903_17_608.onnx"
-    )
-    yield wrapper
+    yield ModelWrapper.from_path("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
 @pytest.fixture(scope="class")
 def winner_senet(winner_ensure_network):
-    senet = NativeBuilder.build_from_path(
-        "assets/384x30-2022_0108_1903_17_608.onnx"
-    )
-    yield senet
+    yield NativeBuilder.build_from_path("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
 @pytest.fixture(scope="class")
 def winner_senet_ort(winner_ensure_network):
-    senet_ort = ort.InferenceSession(
-        "assets/384x30-2022_0108_1903_17_608.onnx"
-    )
-    yield senet_ort
+    yield ort.InferenceSession("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
 @pytest.fixture(scope="session")

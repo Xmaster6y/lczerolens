@@ -1,5 +1,4 @@
-"""Class for wrapping the LCZero models.
-"""
+"""Class for wrapping the LCZero models."""
 
 import os
 from typing import Dict, Iterable, Type, Union
@@ -11,7 +10,7 @@ from onnx2torch.utils.safe_shape_inference import safe_shape_inference
 from tensordict import TensorDict
 from torch import nn
 
-from lczerolens.utils import board as board_utils
+from lczerolens.encodings import board as board_encodings
 
 
 class ModelWrapper(nn.Module):
@@ -48,9 +47,7 @@ class ModelWrapper(nn.Module):
         elif model_path.endswith(".pt"):
             return cls.from_torch_path(model_path)
         else:
-            raise NotImplementedError(
-                f"Model path {model_path} is not supported."
-            )
+            raise NotImplementedError(f"Model path {model_path} is not supported.")
 
     @classmethod
     def from_onnx_path(cls, onnx_model_path: str, check: bool = True):
@@ -58,16 +55,12 @@ class ModelWrapper(nn.Module):
         Builds a model from a given path.
         """
         if not os.path.exists(onnx_model_path):
-            raise FileExistsError(
-                f"Model path {onnx_model_path} does not exist."
-            )
+            raise FileExistsError(f"Model path {onnx_model_path} does not exist.")
         try:
             if check:
                 onnx_model = safe_shape_inference(onnx_model_path)
             onnx_torch_model = convert(onnx_model)
-            onnx_torch_model.forward = cls.make_onnx_td_forward(
-                onnx_torch_model
-            )
+            onnx_torch_model.forward = cls.make_onnx_td_forward(onnx_torch_model)
             return cls(model=onnx_torch_model)
         except Exception:
             raise ValueError(f"Could not load model at {onnx_model_path}.")
@@ -76,9 +69,7 @@ class ModelWrapper(nn.Module):
     def make_onnx_td_forward(onnx_model):
         old_forward = onnx_model.forward
         output_node = list(onnx_model.graph.nodes)[-1]
-        output_names = [
-            n.name.replace("output_", "") for n in output_node.all_input_nodes
-        ]
+        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
 
         def td_forward(x):
             old_out = old_forward(x)
@@ -95,9 +86,7 @@ class ModelWrapper(nn.Module):
         Builds a model from a given path.
         """
         if not os.path.exists(torch_model_path):
-            raise FileExistsError(
-                f"Model path {torch_model_path} does not exist."
-            )
+            raise FileExistsError(f"Model path {torch_model_path} does not exist.")
         try:
             torch_model = torch.load(torch_model_path)
         except Exception:
@@ -124,10 +113,7 @@ class ModelWrapper(nn.Module):
         else:
             raise ValueError("Invalid input type.")
 
-        tensor_list = [
-            board_utils.board_to_input_tensor(board).unsqueeze(0)
-            for board in board_list
-        ]
+        tensor_list = [board_encodings.board_to_input_tensor(board).unsqueeze(0) for board in board_list]
         batched_tensor = torch.cat(tensor_list, dim=0)
         if input_requires_grad:
             batched_tensor.requires_grad = True
@@ -151,9 +137,7 @@ class Flow(ModelWrapper):
         model: nn.Module,
     ):
         if not self.is_compatible(model):
-            raise ValueError(
-                f"The model does not have a {self._flow_type} head."
-            )
+            raise ValueError(f"The model does not have a {self._flow_type} head.")
         super().__init__(model=model)
 
     @classmethod
@@ -178,9 +162,7 @@ class Flow(ModelWrapper):
 
     @classmethod
     def is_compatible(cls, model: nn.Module):
-        return hasattr(model, cls._flow_type) or hasattr(
-            model, f"output/{cls._flow_type}"
-        )
+        return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
 
     def forward(self, x):
         """Forward pass."""

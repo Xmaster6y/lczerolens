@@ -48,9 +48,7 @@ def sae_loss(
     ghost_grads = False
     if ghost_threshold is not None:
         if num_samples_since_activated is None:
-            raise ValueError(
-                "num_samples_since_activated must be provided for ghost grads"
-            )
+            raise ValueError("num_samples_since_activated must be provided for ghost grads")
         ghost_mask = num_samples_since_activated > ghost_threshold
         if ghost_mask.sum() > 0:  # if there are dead neurons
             ghost_grads = True
@@ -79,13 +77,9 @@ def sae_loss(
         )
         ghost_loss = t.nn.MSELoss()(residual.detach(), x_ghost).sqrt()
 
-    if (
-        num_samples_since_activated is not None
-    ):  # update the number of samples since each neuron was last activated
+    if num_samples_since_activated is not None:  # update the number of samples since each neuron was last activated
         deads = (f == 0).all(dim=0)
-        num_samples_since_activated.copy_(
-            t.where(deads, num_samples_since_activated + 1, 0)
-        )
+        num_samples_since_activated.copy_(t.where(deads, num_samples_since_activated + 1, 0))
 
     if use_entropy:
         sparsity_loss = entropy(f)
@@ -98,17 +92,11 @@ def sae_loss(
     if ghost_loss is None:
         out_losses["total_loss"] = classical_loss
     else:
-        out_losses["total_loss"] = classical_loss + ghost_loss * (
-            mse_loss.detach() / (ghost_loss.detach() + EPS)
-        )
+        out_losses["total_loss"] = classical_loss + ghost_loss * (mse_loss.detach() / (ghost_loss.detach() + EPS))
     if explained_variance:
-        out_losses["explained_variance"] = explained_variance_score(
-            out_acts.detach().cpu(), x_hat.detach().cpu()
-        )
+        out_losses["explained_variance"] = explained_variance_score(out_acts.detach().cpu(), x_hat.detach().cpu())
     if r2:
-        out_losses["r2_score"] = r2_score(
-            out_acts.detach().cpu(), x_hat.detach().cpu()
-        )
+        out_losses["r2_score"] = r2_score(out_acts.detach().cpu(), x_hat.detach().cpu())
     return out_losses
 
 
@@ -255,20 +243,14 @@ def trainSAE(
                         ae,
                         sparsity_penalty,
                         entropy,
-                        num_samples_since_activated=(
-                            num_samples_since_activated
-                        ),
+                        num_samples_since_activated=(num_samples_since_activated),
                         ghost_threshold=ghost_threshold,
                     )
                     if wandb is not None:
-                        wandb.log({f"train/{k}": l for k, l in losses.items()})
+                        wandb.log({f"train/{k}": v for k, v in losses.items()})
                     if do_print:
                         print(f"[INFO] Train step {step}: {losses}")
-            if (
-                save_steps is not None
-                and save_dir is not None
-                and step % save_steps == 0
-            ):
+            if save_steps is not None and save_dir is not None and step % save_steps == 0:
                 if not os.path.exists(os.path.join(save_dir, "checkpoints")):
                     os.mkdir(os.path.join(save_dir, "checkpoints"))
                 t.save(
@@ -291,22 +273,18 @@ def trainSAE(
                                 ae,
                                 sparsity_penalty,
                                 use_entropy=entropy,
-                                num_samples_since_activated=(
-                                    num_samples_since_activated
-                                ),
+                                num_samples_since_activated=(num_samples_since_activated),
                                 ghost_threshold=ghost_threshold,
                                 explained_variance=True,
                                 r2=True,
                             )
-                            for k, _ in val_losses.items():
+                            for k in val_losses.keys():
                                 val_losses[k] += losses[k]
 
-                        for k, v in val_losses.items():
+                        for k in val_losses.keys():
                             val_losses[k] /= len(val_dataloader)
                         if wandb is not None:
-                            wandb.log(
-                                {f"val/{k}": l for k, l in val_losses.items()}
-                            )
+                            wandb.log({f"val/{k}": v for k, v in val_losses.items()})
                         if do_print:
                             print(f"[INFO] Val step {step}: {val_losses}")
 

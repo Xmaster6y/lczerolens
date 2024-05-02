@@ -9,8 +9,8 @@ import torch
 from lczero.backends import Backend, GameState, Weights
 
 from demo import constants, utils, visualisation
-from lczerolens import move_utils
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens import move_encodings
+from lczerolens.model import lczero as lczero_utils
 from lczerolens.xai import PolicyLens
 
 
@@ -74,9 +74,7 @@ def make_policy_plot(
         only_legal=only_legal,
         illegal_value=0,
     )
-    pickup_agg, dropoff_agg = PolicyLens.aggregate_policy(
-        policy, int(aggregate_topk)
-    )
+    pickup_agg, dropoff_agg = PolicyLens.aggregate_policy(policy, int(aggregate_topk))
 
     if view == "from":
         if board.turn == chess.WHITE:
@@ -90,9 +88,7 @@ def make_policy_plot(
             heatmap = dropoff_agg.view(8, 8).flip(0).view(64)
     us_them = (board.turn, not board.turn)
     if only_legal:
-        legal_moves = [
-            move_utils.encode_move(move, us_them) for move in board.legal_moves
-        ]
+        legal_moves = [move_encodings.encode_move(move, us_them) for move in board.legal_moves]
         filtered_policy = torch.zeros(1858)
         filtered_policy[legal_moves] = policy[legal_moves]
         if (filtered_policy < 0).any():
@@ -102,11 +98,9 @@ def make_policy_plot(
         topk_moves = torch.topk(policy, render_bestk)
     arrows = []
     for move_index in topk_moves.indices:
-        move = move_utils.decode_move(move_index, us_them)
+        move = move_encodings.decode_move(move_index, us_them)
         arrows.append((move.from_square, move.to_square))
-    svg_board, fig = visualisation.render_heatmap(
-        board, heatmap, arrows=arrows
-    )
+    svg_board, fig = visualisation.render_heatmap(board, heatmap, arrows=arrows)
     with open(f"{constants.FIGURE_DIRECTORY}/policy.svg", "w") as f:
         f.write(svg_board)
     raw_policy, _ = lczero_utils.prediction_from_backend(
@@ -118,7 +112,7 @@ def make_policy_plot(
     )
     fig_dist = visualisation.render_policy_distribution(
         raw_policy,
-        [move_utils.encode_move(move, us_them) for move in board.legal_moves],
+        [move_encodings.encode_move(move, us_them) for move in board.legal_moves],
     )
     return (
         f"{constants.FIGURE_DIRECTORY}/policy.svg",
@@ -140,9 +134,7 @@ with gr.Blocks() as interface:
             )
         with gr.Column(scale=1):
             with gr.Row():
-                model_name = gr.Textbox(
-                    label="Selected model", lines=1, interactive=False, scale=7
-                )
+                model_name = gr.Textbox(label="Selected model", lines=1, interactive=False, scale=7)
 
     model_df.select(
         on_select_model_df,
@@ -161,10 +153,7 @@ with gr.Blocks() as interface:
                 label="Action sequence",
                 lines=1,
                 max_lines=1,
-                value=(
-                    "e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 "
-                    "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"
-                ),
+                value=("e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 " "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"),
             )
             with gr.Group():
                 with gr.Row():
@@ -194,15 +183,11 @@ with gr.Blocks() as interface:
                         value=5,
                         scale=3,
                     )
-                    only_legal = gr.Checkbox(
-                        label="Only legal", value=True, scale=1
-                    )
+                    only_legal = gr.Checkbox(label="Only legal", value=True, scale=1)
 
             policy_button = gr.Button("Plot policy")
             colorbar = gr.Plot(label="Colorbar")
-            game_info = gr.Textbox(
-                label="Game info", lines=1, max_lines=1, value=""
-            )
+            game_info = gr.Textbox(label="Game info", lines=1, max_lines=1, value="")
         with gr.Column():
             image = gr.Image(label="Board")
             density_plot = gr.Plot(label="Density")
@@ -219,6 +204,4 @@ with gr.Blocks() as interface:
         only_legal,
     ]
     policy_outputs = [image, colorbar, game_info, density_plot]
-    policy_button.click(
-        make_policy_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
+    policy_button.click(make_policy_plot, inputs=policy_inputs, outputs=policy_outputs)

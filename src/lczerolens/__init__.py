@@ -1,10 +1,12 @@
-"""Main module for the lczerolens package.
-"""
+"""Main module for the lczerolens package."""
 
-__version__ = "0.1.3"
+__version__ = "0.2.0"
 
 
-from .game import BoardDataset, GameDataset, ModelWrapper
-from .utils import board as board_utils
-from .utils import move as move_utils
+from .encodings import board as board_encodings
+from .encodings import move as move_encodings
+from .game import BoardDataset, GameDataset
+from .model import ModelWrapper
 from .xai import Lens
+
+__all__ = ["BoardDataset", "GameDataset", "ModelWrapper", "Lens", "board_encodings", "move_encodings"]

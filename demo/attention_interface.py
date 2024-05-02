@@ -98,7 +98,6 @@ def make_plot(
     state_boards,
     state_cache,
 ):
-
     if state_cache == []:
         gr.Warning("No cache available.")
         return None, None, None
@@ -107,8 +106,7 @@ def make_plot(
     num_attention_layers = len(state_cache[state_board_index])
     if attention_layer > num_attention_layers:
         gr.Warning(
-            f"Attention layer {attention_layer} does not exist, "
-            f"using layer {num_attention_layers} instead."
+            f"Attention layer {attention_layer} does not exist, " f"using layer {num_attention_layers} instead."
         )
         attention_layer = num_attention_layers
 
@@ -120,8 +118,7 @@ def make_plot(
         return None, None, None
     if attention_head > attention_tensor.shape[1]:
         gr.Warning(
-            f"Attention head {attention_head} does not exist, "
-            f"using head {attention_tensor.shape[1]+1} instead."
+            f"Attention head {attention_head} does not exist, " f"using head {attention_tensor.shape[1]+1} instead."
         )
         attention_head = attention_tensor.shape[1]
     try:
@@ -136,9 +133,7 @@ def make_plot(
     heatmap = attention_tensor[0, attention_head - 1, square_index]
     if board.turn == chess.BLACK:
         heatmap = heatmap.view(8, 8).flip(0).view(64)
-    svg_board, fig = visualisation.render_heatmap(
-        board, heatmap, square=square
-    )
+    svg_board, fig = visualisation.render_heatmap(board, heatmap, square=square)
     with open(f"{constants.FIGURE_DIRECTORY}/attention.svg", "w") as f:
         f.write(svg_board)
     return f"{constants.FIGURE_DIRECTORY}/attention.svg", board.fen(), fig
@@ -206,9 +201,7 @@ with gr.Blocks() as interface:
             )
         with gr.Column(scale=1):
             with gr.Row():
-                model_name = gr.Textbox(
-                    label="Selected model", lines=1, interactive=False, scale=7
-                )
+                model_name = gr.Textbox(label="Selected model", lines=1, interactive=False, scale=7)
 
     model_df.select(
         on_select_model_df,
@@ -228,10 +221,7 @@ with gr.Blocks() as interface:
                 label="Action sequence",
                 lines=1,
                 max_lines=1,
-                value=(
-                    "e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 "
-                    "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"
-                ),
+                value=("e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 " "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"),
             )
             compute_cache_button = gr.Button("Compute cache")
 
@@ -295,9 +285,7 @@ with gr.Blocks() as interface:
         inputs=base_inputs,
         outputs=outputs + [state_board_index],
     )
-    next_board_button.click(
-        next_board, inputs=base_inputs, outputs=outputs + [state_board_index]
-    )
+    next_board_button.click(next_board, inputs=base_inputs, outputs=outputs + [state_board_index])
 
     attention_layer.change(make_plot, inputs=base_inputs, outputs=outputs)
     attention_head.change(make_plot, inputs=base_inputs, outputs=outputs)

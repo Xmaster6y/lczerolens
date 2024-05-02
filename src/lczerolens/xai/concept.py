@@ -1,5 +1,4 @@
-"""Class for concept-based XAI methods.
-"""
+"""Class for concept-based XAI methods."""
 
 import random
 from abc import ABC, abstractmethod
@@ -11,8 +10,8 @@ import torch
 import tqdm
 from sklearn import metrics
 
+from lczerolens.encodings import board as board_encodings
 from lczerolens.game.dataset import BoardDataset
-from lczerolens.utils import board as board_utils
 
 
 class Concept(ABC):
@@ -135,12 +134,8 @@ class MulticlassConcept(Concept):
         """
         return {
             "accuracy": metrics.accuracy_score(labels, predictions),
-            "precision": metrics.precision_score(
-                labels, predictions, average="weighted"
-            ),
-            "recall": metrics.recall_score(
-                labels, predictions, average="weighted"
-            ),
+            "precision": metrics.precision_score(labels, predictions, average="weighted"),
+            "recall": metrics.recall_score(labels, predictions, average="weighted"),
             "f1": metrics.f1_score(labels, predictions, average="weighted"),
         }
 
@@ -202,8 +197,7 @@ class ConceptDataset(BoardDataset):
         elif not hasattr(self, "labels"):
             print("[INFO] Computing labels")
             self.labels = [
-                self._concept.compute_label(board)
-                for board in tqdm.tqdm(self.boards, bar_format="{l_bar}{bar}")
+                self._concept.compute_label(board) for board in tqdm.tqdm(self.boards, bar_format="{l_bar}{bar}")
             ]
 
     def __getitem__(self, idx) -> Tuple[int, chess.Board, Any]:  # type: ignore
@@ -229,9 +223,7 @@ class ConceptDataset(BoardDataset):
                 writer.write(
                     {
                         "fen": working_board.root().fen(),
-                        "moves": [
-                            move.uci() for move in working_board.move_stack
-                        ],
+                        "moves": [move.uci() for move in working_board.move_stack],
                         "gameid": gameid,
                         "label": label,
                     }
@@ -246,21 +238,15 @@ class ConceptDataset(BoardDataset):
         print("[INFO] Computing labels")
         self.labels = [
             self._concept.compute_label(board)
-            for board in tqdm.tqdm(
-                self.boards, bar_format="{l_bar}{bar}", **pbar_kwargs
-            )
+            for board in tqdm.tqdm(self.boards, bar_format="{l_bar}{bar}", **pbar_kwargs)
         ]
 
     @classmethod
-    def from_board_dataset(
-        cls, board_dataset: BoardDataset, concept: Concept, **pbar_kwargs
-    ):
+    def from_board_dataset(cls, board_dataset: BoardDataset, concept: Concept, **pbar_kwargs):
         print("[INFO] Computing labels")
         labels = [
             concept.compute_label(board)
-            for board in tqdm.tqdm(
-                board_dataset.boards, bar_format="{l_bar}{bar}", **pbar_kwargs
-            )
+            for board in tqdm.tqdm(board_dataset.boards, bar_format="{l_bar}{bar}", **pbar_kwargs)
         ]
         return cls(
             boards=board_dataset.boards,
@@ -277,9 +263,7 @@ class ConceptDataset(BoardDataset):
     @staticmethod
     def collate_fn_tensor(batch):
         indices, boards, labels = zip(*batch)
-        tensor_list = [
-            board_utils.board_to_input_tensor(board) for board in boards
-        ]
+        tensor_list = [board_encodings.board_to_input_tensor(board) for board in boards]
         batched_tensor = torch.stack(tensor_list, dim=0)
         return tuple(indices), batched_tensor, tuple(labels)
 
@@ -287,9 +271,7 @@ class ConceptDataset(BoardDataset):
         tuple_boards, tuple_labels, tuple_game_ids = zip(
             *[
                 (board, label, game_id)
-                for board, label, game_id in zip(
-                    self.boards, self.labels, self.game_ids
-                )
+                for board, label, game_id in zip(self.boards, self.labels, self.game_ids)
                 if filter_fn(board, label, game_id)
             ]
         )

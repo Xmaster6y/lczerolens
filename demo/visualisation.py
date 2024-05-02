@@ -44,9 +44,7 @@ def render_heatmap(
     for square_index in range(64):
         color = COLOR_MAP(norm(heatmap[square_index]))
         color = (*color[:3], ALPHA)
-        color_dict[square_index] = matplotlib.colors.to_hex(
-            color, keep_alpha=True
-        )
+        color_dict[square_index] = matplotlib.colors.to_hex(color, keep_alpha=True)
     fig = plt.figure(figsize=(6, 0.6))
     ax = plt.gca()
     ax.axis("off")
@@ -88,15 +86,15 @@ def render_architecture(model, name: str = "model", directory: str = ""):
         value = torch.zeros(outcome_probs.shape[0], 1)
     else:
         policy, outcome_probs, value = out
-    torchviz.make_dot(
-        policy, params=dict(list(model.named_parameters()))
-    ).render(f"{directory}/{name}_policy", format="svg")
-    torchviz.make_dot(
-        outcome_probs, params=dict(list(model.named_parameters()))
-    ).render(f"{directory}/{name}_outcome_probs", format="svg")
-    torchviz.make_dot(
-        value, params=dict(list(model.named_parameters()))
-    ).render(f"{directory}/{name}_value", format="svg")
+    torchviz.make_dot(policy, params=dict(list(model.named_parameters()))).render(
+        f"{directory}/{name}_policy", format="svg"
+    )
+    torchviz.make_dot(outcome_probs, params=dict(list(model.named_parameters()))).render(
+        f"{directory}/{name}_outcome_probs", format="svg"
+    )
+    torchviz.make_dot(value, params=dict(list(model.named_parameters()))).render(
+        f"{directory}/{name}_value", format="svg"
+    )
 
 
 def render_policy_distribution(
@@ -107,9 +105,7 @@ def render_policy_distribution(
     """
     Render the policy distribution histogram.
     """
-    legal_mask = torch.Tensor(
-        [move in legal_moves for move in range(1858)]
-    ).bool()
+    legal_mask = torch.Tensor([move in legal_moves for move in range(1858)]).bool()
     fig = plt.figure(figsize=(6, 6))
     ax = plt.gca()
     _, bins = np.histogram(policy, bins=n_bins)
@@ -143,22 +139,10 @@ def render_policy_statistics(
     fig = plt.figure(figsize=(6, 6))
     ax = plt.gca()
     move_indices = list(statistics["mean_legal_logits"].keys())
-    legal_means_avg = [
-        np.mean(statistics["mean_legal_logits"][move_idx])
-        for move_idx in move_indices
-    ]
-    illegal_means_avg = [
-        np.mean(statistics["mean_illegal_logits"][move_idx])
-        for move_idx in move_indices
-    ]
-    legal_means_std = [
-        np.std(statistics["mean_legal_logits"][move_idx])
-        for move_idx in move_indices
-    ]
-    illegal_means_std = [
-        np.std(statistics["mean_illegal_logits"][move_idx])
-        for move_idx in move_indices
-    ]
+    legal_means_avg = [np.mean(statistics["mean_legal_logits"][move_idx]) for move_idx in move_indices]
+    illegal_means_avg = [np.mean(statistics["mean_illegal_logits"][move_idx]) for move_idx in move_indices]
+    legal_means_std = [np.std(statistics["mean_legal_logits"][move_idx]) for move_idx in move_indices]
+    illegal_means_std = [np.std(statistics["mean_illegal_logits"][move_idx]) for move_idx in move_indices]
     ax.errorbar(
         move_indices,
         legal_means_avg,
@@ -187,25 +171,11 @@ def render_relevance_proportion(statistics, scaled=True):
     move_indices = list(statistics["planes_relevance_proportion"].keys())
     for h in range(8):
         relevance_proportion_avg = [
-            np.mean(
-                [
-                    rel[13 * h : 13 * (h + 1)].sum()
-                    for rel in statistics["planes_relevance_proportion"][
-                        move_idx
-                    ]
-                ]
-            )
+            np.mean([rel[13 * h : 13 * (h + 1)].sum() for rel in statistics["planes_relevance_proportion"][move_idx]])
             for move_idx in move_indices
         ]
         relevance_proportion_std = [
-            np.std(
-                [
-                    rel[13 * h : 13 * (h + 1)].sum()
-                    for rel in statistics["planes_relevance_proportion"][
-                        move_idx
-                    ]
-                ]
-            )
+            np.std([rel[13 * h : 13 * (h + 1)].sum() for rel in statistics["planes_relevance_proportion"][move_idx]])
             for move_idx in move_indices
         ]
         ax.errorbar(
@@ -217,21 +187,11 @@ def render_relevance_proportion(statistics, scaled=True):
         )
 
     relevance_proportion_avg = [
-        np.mean(
-            [
-                rel[104:108].sum()
-                for rel in statistics["planes_relevance_proportion"][move_idx]
-            ]
-        )
+        np.mean([rel[104:108].sum() for rel in statistics["planes_relevance_proportion"][move_idx]])
         for move_idx in move_indices
     ]
     relevance_proportion_std = [
-        np.std(
-            [
-                rel[104:108].sum()
-                for rel in statistics["planes_relevance_proportion"][move_idx]
-            ]
-        )
+        np.std([rel[104:108].sum() for rel in statistics["planes_relevance_proportion"][move_idx]])
         for move_idx in move_indices
     ]
     ax.errorbar(
@@ -242,21 +202,11 @@ def render_relevance_proportion(statistics, scaled=True):
         c=COLOR_MAP(norm(8 / 9)),
     )
     relevance_proportion_avg = [
-        np.mean(
-            [
-                rel[108:].sum()
-                for rel in statistics["planes_relevance_proportion"][move_idx]
-            ]
-        )
+        np.mean([rel[108:].sum() for rel in statistics["planes_relevance_proportion"][move_idx]])
         for move_idx in move_indices
     ]
     relevance_proportion_std = [
-        np.std(
-            [
-                rel[108:].sum()
-                for rel in statistics["planes_relevance_proportion"][move_idx]
-            ]
-        )
+        np.std([rel[108:].sum() for rel in statistics["planes_relevance_proportion"][move_idx]])
         for move_idx in move_indices
     ]
     ax.errorbar(
@@ -280,12 +230,10 @@ def render_relevance_proportion(statistics, scaled=True):
     move_indices = list(statistics[stat_key].keys())
     for p in range(13):
         relevance_proportion_avg = [
-            np.mean([rel[p].item() for rel in statistics[stat_key][move_idx]])
-            for move_idx in move_indices
+            np.mean([rel[p].item() for rel in statistics[stat_key][move_idx]]) for move_idx in move_indices
         ]
         relevance_proportion_std = [
-            np.std([rel[p].item() for rel in statistics[stat_key][move_idx]])
-            for move_idx in move_indices
+            np.std([rel[p].item() for rel in statistics[stat_key][move_idx]]) for move_idx in move_indices
         ]
         ax.errorbar(
             move_indices,
@@ -306,16 +254,9 @@ def render_relevance_proportion(statistics, scaled=True):
         stat_key = f"configuration_relevance_proportion_threatened_piece{p}"
         n_attackers = list(statistics[stat_key].keys())
         relevance_proportion_avg = [
-            np.mean(
-                statistics[
-                    f"configuration_relevance_proportion_threatened_piece{p}"
-                ][n]
-            )
-            for n in n_attackers
+            np.mean(statistics[f"configuration_relevance_proportion_threatened_piece{p}"][n]) for n in n_attackers
         ]
-        relevance_proportion_std = [
-            np.std(statistics[stat_key][n]) for n in n_attackers
-        ]
+        relevance_proportion_std = [np.std(statistics[stat_key][n]) for n in n_attackers]
         ax.errorbar(
             n_attackers,
             relevance_proportion_avg,

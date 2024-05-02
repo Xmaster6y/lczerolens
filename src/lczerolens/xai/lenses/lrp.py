@@ -1,5 +1,4 @@
-"""Compute LRP heatmap for a given model and input.
-"""
+"""Compute LRP heatmap for a given model and input."""
 
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional
@@ -13,7 +12,7 @@ from zennit.composites import Composite, LayerMapComposite
 from zennit.rules import Epsilon, Pass, ZPlus
 from zennit.types import Activation
 
-from lczerolens.game.wrapper import ModelWrapper
+from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.helpers import lrp as lrp_helpers
 from lczerolens.xai.lens import Lens
 
@@ -92,9 +91,7 @@ class LrpLens(Lens):
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         linearise_softmax = kwargs.get("linearise_softmax", False)
         init_rel_fn = kwargs.get("init_rel_fn", None)
-        dataloader = DataLoader(
-            dataset, batch_size=batch_size, collate_fn=collate_fn
-        )
+        dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
         relevances = {}
         for batch in dataloader:
             inidices, boards = batch
@@ -125,9 +122,7 @@ class LrpLens(Lens):
         Compute LRP heatmap for a given model and input.
         """
 
-        with self.context(
-            wrapper, composite, replace_onnx2torch, linearise_softmax
-        ) as modified_model:
+        with self.context(wrapper, composite, replace_onnx2torch, linearise_softmax) as modified_model:
             output, input_tensor = modified_model.predict(
                 boards,
                 with_grad=True,
@@ -135,18 +130,10 @@ class LrpLens(Lens):
                 return_input=True,
             )
             if target is None:
-                output.backward(
-                    gradient=(
-                        output if init_rel_fn is None else init_rel_fn(output)
-                    )
-                )
+                output.backward(gradient=(output if init_rel_fn is None else init_rel_fn(output)))
             else:
                 output[target].backward(
-                    gradient=(
-                        output[target]
-                        if init_rel_fn is None
-                        else init_rel_fn(output[target])
-                    )
+                    gradient=(output[target] if init_rel_fn is None else init_rel_fn(output[target]))
                 )
         return input_tensor.grad
 
@@ -183,9 +170,7 @@ class LrpLens(Lens):
                     new_module_mapping[name] = torch.nn.Identity()
                     old_module_mapping[name] = module
             if replace_onnx2torch:
-                if isinstance(
-                    module, onnx2torch.node_converters.OnnxBinaryMathOperation
-                ):
+                if isinstance(module, onnx2torch.node_converters.OnnxBinaryMathOperation):
                     if module.math_op_function is torch.add:
                         new_module_mapping[name] = lrp_helpers.AddEpsilon()
                         old_module_mapping[name] = module
@@ -195,9 +180,7 @@ class LrpLens(Lens):
                 elif isinstance(module, onnx2torch.node_converters.OnnxMatMul):
                     new_module_mapping[name] = lrp_helpers.MatMulEpsilon()
                     old_module_mapping[name] = module
-                elif isinstance(
-                    module, onnx2torch.node_converters.OnnxFunction
-                ):
+                elif isinstance(module, onnx2torch.node_converters.OnnxFunction):
                     if module.function is torch.tanh:
                         new_module_mapping[name] = torch.nn.Tanh()
                         old_module_mapping[name] = module

@@ -20,16 +20,12 @@ from lczerolens import BoardDataset
 #######################################
 parser = argparse.ArgumentParser("register-wandb-datasets")
 parser.add_argument("--output_root", type=str, default=".")
-parser.add_argument(
-    "--make_datasets", action=argparse.BooleanOptionalAction, default=False
-)
+parser.add_argument("--make_datasets", action=argparse.BooleanOptionalAction, default=False)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--train_samples", type=int, default=100_000)
 parser.add_argument("--val_samples", type=int, default=5_000)
 parser.add_argument("--test_samples", type=int, default=5_000)
-parser.add_argument(
-    "--log_datasets", action=argparse.BooleanOptionalAction, default=False
-)
+parser.add_argument("--log_datasets", action=argparse.BooleanOptionalAction, default=False)
 #######################################
 
 ARGS = parser.parse_args()
@@ -47,41 +43,27 @@ if ARGS.make_datasets:
     test_indices = all_indices[val_slice:test_slice]
 
     dataset.save(
-        f"{ARGS.output_root}/assets/"
-        "TCEC_game_collection_random_boards_train.jsonl",
+        f"{ARGS.output_root}/assets/" "TCEC_game_collection_random_boards_train.jsonl",
         indices=train_indices,
     )
     dataset.save(
-        f"{ARGS.output_root}/assets/"
-        "TCEC_game_collection_random_boards_val.jsonl",
+        f"{ARGS.output_root}/assets/" "TCEC_game_collection_random_boards_val.jsonl",
         indices=val_indices,
     )
     dataset.save(
-        f"{ARGS.output_root}/assets/"
-        "TCEC_game_collection_random_boards_test.jsonl",
+        f"{ARGS.output_root}/assets/" "TCEC_game_collection_random_boards_test.jsonl",
         indices=test_indices,
     )
 
 if ARGS.log_datasets:
     wandb.login()
-    with wandb.init(
-        project="lczerolens-saes", job_type="make-datasets"
-    ) as run:
+    with wandb.init(project="lczerolens-saes", job_type="make-datasets") as run:
         artifact = wandb.Artifact("tcec_train", type="dataset")
-        artifact.add_file(
-            f"{ARGS.output_root}/assets/"
-            "TCEC_game_collection_random_boards_train.jsonl"
-        )
+        artifact.add_file(f"{ARGS.output_root}/assets/" "TCEC_game_collection_random_boards_train.jsonl")
         run.log_artifact(artifact)
         artifact = wandb.Artifact("tcec_val", type="dataset")
-        artifact.add_file(
-            f"{ARGS.output_root}/assets/"
-            "TCEC_game_collection_random_boards_val.jsonl"
-        )
+        artifact.add_file(f"{ARGS.output_root}/assets/" "TCEC_game_collection_random_boards_val.jsonl")
         run.log_artifact(artifact)
         artifact = wandb.Artifact("tcec_test", type="dataset")
-        artifact.add_file(
-            f"{ARGS.output_root}/assets/"
-            "TCEC_game_collection_random_boards_test.jsonl"
-        )
+        artifact.add_file(f"{ARGS.output_root}/assets/" "TCEC_game_collection_random_boards_test.jsonl")
         run.log_artifact(artifact)

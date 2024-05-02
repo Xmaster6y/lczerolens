@@ -1,5 +1,4 @@
-"""PolicyLens class for wrapping the LCZero models.
-"""
+"""PolicyLens class for wrapping the LCZero models."""
 
 from typing import Any, Callable, Dict, Optional
 
@@ -7,8 +6,11 @@ import chess
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from lczerolens.game.wrapper import ModelWrapper, PolicyFlow
-from lczerolens.utils.constants import INVERTED_FROM_INDEX, INVERTED_TO_INDEX
+from lczerolens.encodings.constants import (
+    INVERTED_FROM_INDEX,
+    INVERTED_TO_INDEX,
+)
+from lczerolens.model.wrapper import ModelWrapper, PolicyFlow
 from lczerolens.xai.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,10 +77,6 @@ class PolicyLens(Lens):
             filtered_policy = policy
         for square_index in range(64):
             square = chess.SQUARE_NAMES[square_index]
-            pickup_agg[square_index] = filtered_policy[
-                INVERTED_FROM_INDEX[square]
-            ].sum()
-            dropoff_agg[square_index] = filtered_policy[
-                INVERTED_TO_INDEX[square]
-            ].sum()
+            pickup_agg[square_index] = filtered_policy[INVERTED_FROM_INDEX[square]].sum()
+            dropoff_agg[square_index] = filtered_policy[INVERTED_TO_INDEX[square]].sum()
         return pickup_agg, dropoff_agg

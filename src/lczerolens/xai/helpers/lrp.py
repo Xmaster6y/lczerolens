@@ -84,14 +84,8 @@ class BilinearMatMulEpsilonFunction(Function):
 
         out_relevance = out_relevance / stabilize(2 * outputs, epsilon)
 
-        relevance_a = (
-            torch.matmul(out_relevance, input_b.permute(0, 1, -1, -2))
-            * input_a
-        )
-        relevance_b = (
-            torch.matmul(input_a.permute(0, 1, -1, -2), out_relevance)
-            * input_b
-        )
+        relevance_a = torch.matmul(out_relevance, input_b.permute(0, 1, -1, -2)) * input_a
+        relevance_b = torch.matmul(input_a.permute(0, 1, -1, -2), out_relevance) * input_b
 
         return relevance_a, relevance_b, None
 
@@ -134,8 +128,6 @@ class SoftmaxEpsilonFunction(Function):
     def backward(ctx, *grad_outputs):
         inputs, output = ctx.saved_tensors
 
-        relevance = (
-            grad_outputs[0] - (output * grad_outputs[0].sum(-1, keepdim=True))
-        ) * inputs
+        relevance = (grad_outputs[0] - (output * grad_outputs[0].sum(-1, keepdim=True))) * inputs
 
         return (relevance, None)

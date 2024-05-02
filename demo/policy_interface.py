@@ -8,7 +8,7 @@ import gradio as gr
 import torch
 
 from demo import constants, utils, visualisation
-from lczerolens import move_utils
+from lczerolens import move_encodings
 from lczerolens.xai import PolicyLens
 
 current_board = None
@@ -72,10 +72,7 @@ def compute_policy(
     policy = torch.softmax(output["policy"][0], dim=-1)
 
     filtered_policy = torch.full((1858,), 0.0)
-    legal_moves = [
-        move_utils.encode_move(move, (board.turn, not board.turn))
-        for move in board.legal_moves
-    ]
+    legal_moves = [move_encodings.encode_move(move, (board.turn, not board.turn)) for move in board.legal_moves]
     filtered_policy[legal_moves] = policy[legal_moves]
     policy = filtered_policy
 
@@ -100,9 +97,7 @@ def make_plot(
         gr.Warning("Please compute a policy first.")
         return (None, None, "", None)
 
-    pickup_agg, dropoff_agg = PolicyLens.aggregate_policy(
-        current_policy, int(aggregate_topk)
-    )
+    pickup_agg, dropoff_agg = PolicyLens.aggregate_policy(current_policy, int(aggregate_topk))
 
     if view == "from":
         if current_board.turn == chess.WHITE:
@@ -116,21 +111,14 @@ def make_plot(
             heatmap = dropoff_agg.view(8, 8).flip(0).view(64)
     us_them = (current_board.turn, not current_board.turn)
     topk_moves = torch.topk(current_policy, 50)
-    move = move_utils.decode_move(
-        topk_moves.indices[move_to_play - 1], us_them
-    )
+    move = move_encodings.decode_move(topk_moves.indices[move_to_play - 1], us_them)
     arrows = [(move.from_square, move.to_square)]
-    svg_board, fig = visualisation.render_heatmap(
-        current_board, heatmap, arrows=arrows
-    )
+    svg_board, fig = visualisation.render_heatmap(current_board, heatmap, arrows=arrows)
     with open(f"{constants.FIGURE_DIRECTORY}/policy.svg", "w") as f:
         f.write(svg_board)
     fig_dist = visualisation.render_policy_distribution(
         current_raw_policy,
-        [
-            move_utils.encode_move(move, us_them)
-            for move in current_board.legal_moves
-        ],
+        [move_encodings.encode_move(move, us_them) for move in current_board.legal_moves],
     )
     return (
         f"{constants.FIGURE_DIRECTORY}/policy.svg",
@@ -171,7 +159,7 @@ def play_move(
     global current_board
     global current_policy
 
-    move = move_utils.decode_move(
+    move = move_encodings.decode_move(
         current_policy.topk(50).indices[move_to_play - 1],
         (current_board.turn, not current_board.turn),
     )
@@ -205,9 +193,7 @@ with gr.Blocks() as interface:
             )
         with gr.Column(scale=1):
             with gr.Row():
-                model_name = gr.Textbox(
-                    label="Selected model", lines=1, interactive=False, scale=7
-                )
+                model_name = gr.Textbox(label="Selected model", lines=1, interactive=False, scale=7)
     model_df.select(
         on_select_model_df,
         None,
@@ -225,10 +211,7 @@ with gr.Blocks() as interface:
             action_seq = gr.Textbox(
                 label="Action sequence",
                 lines=1,
-                value=(
-                    "e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 "
-                    "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"
-                ),
+                value=("e2e3 b8c6 d2d4 e7e5 g1f3 d8e7 " "d4d5 e5e4 f3d4 c6e5 f2f4 e5g6"),
             )
             with gr.Group():
                 with gr.Row():
@@ -259,9 +242,7 @@ with gr.Blocks() as interface:
 
             policy_button = gr.Button("Compute policy")
             colorbar = gr.Plot(label="Colorbar")
-            game_info = gr.Textbox(
-                label="Game info", lines=1, max_lines=1, value=""
-            )
+            game_info = gr.Textbox(label="Game info", lines=1, max_lines=1, value="")
         with gr.Column():
             image = gr.Image(label="Board")
             density_plot = gr.Plot(label="Density")
@@ -275,24 +256,16 @@ with gr.Blocks() as interface:
         move_to_play,
     ]
     policy_outputs = [image, colorbar, game_info, density_plot]
-    policy_button.click(
-        make_policy_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
-    board_fen.submit(
-        make_policy_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
-    action_seq.submit(
-        make_policy_plot, inputs=policy_inputs, outputs=policy_outputs
-    )
+    policy_button.click(make_policy_plot, inputs=policy_inputs, outputs=policy_outputs)
+    board_fen.submit(make_policy_plot, inputs=policy_inputs, outputs=policy_outputs)
+    action_seq.submit(make_policy_plot, inputs=policy_inputs, outputs=policy_outputs)
 
     fast_inputs = [
         view,
         aggregate_topk,
         move_to_play,
     ]
-    aggregate_topk.change(
-        make_plot, inputs=fast_inputs, outputs=policy_outputs
-    )
+    aggregate_topk.change(make_plot, inputs=fast_inputs, outputs=policy_outputs)
     view.change(make_plot, inputs=fast_inputs, outputs=policy_outputs)
     move_to_play.change(make_plot, inputs=fast_inputs, outputs=policy_outputs)
 

@@ -58,8 +58,7 @@ for dataset_name in convert_to_boards:
     written_boards = 0
     print(f"[INFO] Converting games to boards: {dataset_name}")
     with jsonlines.open(
-        f"{ARGS.output_root}/assets/"
-        f"{dataset_name.replace('.jsonl', '_boards.jsonl')}",
+        f"{ARGS.output_root}/assets/" f"{dataset_name.replace('.jsonl', '_boards.jsonl')}",
         "w",
     ) as writer:
         for game in tqdm.tqdm(dataset.games):
@@ -80,8 +79,7 @@ if make_tcec_random:
     written_boards = 0
     random.seed(tcec_random_seed)
     with jsonlines.open(
-        f"{ARGS.output_root}/assets/"
-        f"{dataset_name.replace('.jsonl', '_random_boards.jsonl')}",
+        f"{ARGS.output_root}/assets/" f"{dataset_name.replace('.jsonl', '_random_boards.jsonl')}",
         "w",
     ) as writer:
         for game in tqdm.tqdm(dataset.games):
@@ -112,8 +110,7 @@ for dataset_name in sample_bestlegal:
 
     concept_dataset = ConceptDataset.from_board_dataset(dataset, concept)
     concept_dataset.save(
-        f"{ARGS.output_root}/assets/"
-        f"{dataset_name.replace('.jsonl', '_bestlegal.jsonl')}",
+        f"{ARGS.output_root}/assets/" f"{dataset_name.replace('.jsonl', '_bestlegal.jsonl')}",
         n_history=n_history,
     )
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
@@ -130,18 +127,13 @@ for dataset_name in sample_knights:
     concept_dataset = ConceptDataset(f"./assets/{dataset_name}")
 
     def filter_fn(board, label, gameid):
-        move = move_utils.decode_move(
-            label, (board.turn, not board.turn), board
-        )
+        move = move_utils.decode_move(label, (board.turn, not board.turn), board)
         from_piece = board.piece_at(move.from_square)
-        return (from_piece == chess.Piece.from_symbol("N")) or (
-            from_piece == chess.Piece.from_symbol("n")
-        )
+        return (from_piece == chess.Piece.from_symbol("N")) or (from_piece == chess.Piece.from_symbol("n"))
 
     concept_dataset.filter_(filter_fn)
     concept_dataset.save(
-        f"{ARGS.output_root}/assets/"
-        f"{dataset_name.replace('.jsonl', '_knight.jsonl')}",
+        f"{ARGS.output_root}/assets/" f"{dataset_name.replace('.jsonl', '_knight.jsonl')}",
         n_history=n_history,
     )
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
@@ -161,8 +153,7 @@ if make_tcec_knight_10:
 
     concept_dataset.filter_(filter_fn)
     concept_dataset.save(
-        f"{ARGS.output_root}/assets/"
-        f"{dataset_name.replace('.jsonl', '_10.jsonl')}",
+        f"{ARGS.output_root}/assets/" f"{dataset_name.replace('.jsonl', '_10.jsonl')}",
         n_history=n_history,
     )
     print(f"[INFO] Concept dataset written: {len(concept_dataset)}")
@@ -175,13 +166,9 @@ if make_tcec_board_full_bestlegal:
     model.to(DEVICE)
     concept = BestLegalMoveConcept(model)
 
-    concept_dataset = ConceptDataset.from_game_dataset(
-        dataset, n_history=n_history
-    )
+    concept_dataset = ConceptDataset.from_game_dataset(dataset, n_history=n_history)
     concept_dataset.set_concept(concept, mininterval=10)
-    new_dataset_name = dataset_name.replace(
-        ".jsonl", "_boards_bestlegal.jsonl"
-    )
+    new_dataset_name = dataset_name.replace(".jsonl", "_boards_bestlegal.jsonl")
     concept_dataset.save(
         f"{ARGS.output_root}/assets/{new_dataset_name}",
         n_history=n_history,

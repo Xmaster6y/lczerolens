@@ -12,9 +12,7 @@ class AutoEncoder(nn.Module):
     A 3-layers autoencoder.
     """
 
-    def __init__(
-        self, activation_dim, dict_size, pre_bias=False, less_than_1=False
-    ):
+    def __init__(self, activation_dim, dict_size, pre_bias=False, less_than_1=False):
         super().__init__()
         self.activation_dim = activation_dim
         self.dict_size = dict_size
@@ -58,9 +56,7 @@ class AutoEncoder(nn.Module):
         D_norm = self.D.norm(dim=1)
         if less_than_1:
             greater_than_1_mask = D_norm > 1
-            self.D[greater_than_1_mask] /= D_norm[
-                greater_than_1_mask
-            ].unsqueeze(1)
+            self.D[greater_than_1_mask] /= D_norm[greater_than_1_mask].unsqueeze(1)
         else:
             self.D /= D_norm.unsqueeze(1)
 

@@ -1,5 +1,4 @@
-"""Board utilities.
-"""
+"""Board utilities."""
 
 import re
 from copy import deepcopy
@@ -35,9 +34,7 @@ def get_plane_order(us_them: Tuple[bool, bool]):
     return plane_order
 
 
-def get_piece_index(
-    piece: str, us_them: Tuple[bool, bool], plane_order: Optional[str] = None
-):
+def get_piece_index(piece: str, us_them: Tuple[bool, bool], plane_order: Optional[str] = None):
     """Converts a piece to its index in the plane order.
 
     Parameters
@@ -81,9 +78,7 @@ def board_to_config_tensor(
         The 13x8x8 tensor.
     """
     if input_encoding != InputEncoding.INPUT_CLASSICAL_112_PLANE:
-        raise NotImplementedError(
-            f"Input encoding {input_encoding} not implemented."
-        )
+        raise NotImplementedError(f"Input encoding {input_encoding} not implemented.")
     if us_them is None:
         us = board.turn
         them = not us
@@ -101,18 +96,12 @@ def board_to_config_tensor(
     ordered_fen = "".join(rev_rows)
 
     config_tensor = torch.zeros((13, 8, 8), dtype=torch.float)
-    ordinal_board = torch.tensor(
-        tuple(map(piece_to_index, ordered_fen)), dtype=torch.float
-    )
+    ordinal_board = torch.tensor(tuple(map(piece_to_index, ordered_fen)), dtype=torch.float)
     ordinal_board = ordinal_board.reshape((8, 8)).unsqueeze(0)
-    piece_tensor = torch.tensor(
-        tuple(map(piece_to_index, plane_order)), dtype=torch.float
-    )
+    piece_tensor = torch.tensor(tuple(map(piece_to_index, plane_order)), dtype=torch.float)
     piece_tensor = piece_tensor.reshape((12, 1, 1))
     config_tensor[:12] = (ordinal_board == piece_tensor).float()
-    if board.is_repetition(
-        2
-    ):  # Might be wrong if the full history is not available
+    if board.is_repetition(2):  # Might be wrong if the full history is not available
         config_tensor[12] = torch.ones((8, 8), dtype=torch.float)
     return config_tensor if us == chess.WHITE else config_tensor.flip(1)
 
@@ -139,9 +128,7 @@ def board_to_input_tensor(
         The 112x8x8 tensor.
     """
     if input_encoding != InputEncoding.INPUT_CLASSICAL_112_PLANE:
-        raise NotImplementedError(
-            f"Input encoding {input_encoding} not implemented."
-        )
+        raise NotImplementedError(f"Input encoding {input_encoding} not implemented.")
     board = deepcopy(last_board)
     input_tensor = torch.zeros((112, 8, 8), dtype=torch.float)
     us = last_board.turn
@@ -164,8 +151,6 @@ def board_to_input_tensor(
         input_tensor[107] = torch.ones((8, 8), dtype=torch.float)
     if us == chess.BLACK:
         input_tensor[108] = torch.ones((8, 8), dtype=torch.float)
-    input_tensor[109] = (
-        torch.ones((8, 8), dtype=torch.float) * last_board.halfmove_clock
-    )
+    input_tensor[109] = torch.ones((8, 8), dtype=torch.float) * last_board.halfmove_clock
     input_tensor[111] = torch.ones((8, 8), dtype=torch.float)
     return input_tensor

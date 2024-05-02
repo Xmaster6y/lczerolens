@@ -8,7 +8,7 @@ import subprocess
 
 from demo import constants, state
 from lczerolens import Lens, ModelWrapper
-from lczerolens.utils import lczero as lczero_utils
+from lczerolens.model import lczero as lczero_utils
 
 
 def get_models_info(onnx=True, leela=True):
@@ -68,9 +68,7 @@ def save_model(tmp_file_path):
     popen.wait()
     if popen.returncode != 0:
         raise RuntimeError
-    file_desc = (
-        popen.stdout.read().decode("utf-8").split(tmp_file_path)[1].strip()
-    )
+    file_desc = popen.stdout.read().decode("utf-8").split(tmp_file_path)[1].strip()
     rename_match = re.search(r"was\s\"(?P<name>.+)\"", file_desc)
     type_match = re.search(r"\:\s(?P<type>[a-zA-Z]+)", file_desc)
     if rename_match is None or type_match is None:
@@ -99,33 +97,25 @@ def get_wrapper_from_state(model_name):
     if model_name in state.wrappers:
         return state.wrappers[model_name]
     else:
-        wrapper = ModelWrapper.from_path(
-            f"{constants.MODEL_DIRECTORY}/{model_name}"
-        )
+        wrapper = ModelWrapper.from_path(f"{constants.MODEL_DIRECTORY}/{model_name}")
         state.wrappers[model_name] = wrapper
         return wrapper
 
 
-def get_wrapper_lens_from_state(
-    model_name, lens_type, lens_name="lens", **kwargs
-):
+def get_wrapper_lens_from_state(model_name, lens_type, lens_name="lens", **kwargs):
     """
     Get the model wrapper and lens from the state.
     """
     if model_name in state.wrappers:
         wrapper = state.wrappers[model_name]
     else:
-        wrapper = ModelWrapper.from_path(
-            f"{constants.MODEL_DIRECTORY}/{model_name}"
-        )
+        wrapper = ModelWrapper.from_path(f"{constants.MODEL_DIRECTORY}/{model_name}")
         state.wrappers[model_name] = wrapper
     if lens_name in state.lenses[lens_type]:
         lens = state.lenses[lens_type][lens_name]
     else:
         lens = Lens.from_name(lens_type, **kwargs)
         if not lens.is_compatible(wrapper):
-            raise ValueError(
-                f"Lens of type {lens_type} not compatible with model."
-            )
+            raise ValueError(f"Lens of type {lens_type} not compatible with model.")
         state.lenses[lens_type][lens_name] = lens
     return wrapper, lens

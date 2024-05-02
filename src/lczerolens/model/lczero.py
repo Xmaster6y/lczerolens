@@ -11,15 +11,12 @@ import subprocess
 import chess
 import torch
 
-from lczerolens import move_utils
+from lczerolens.encodings import move as move_encodings
 
 try:
     from lczero.backends import Backend, GameState
 except ImportError as e:
-    raise ImportError(
-        "LCZero bindings are not installed."
-        "See https://github.com/LeelaChessZero/lc0.git."
-    ) from e
+    raise ImportError("LCZero bindings are not installed." "See https://github.com/LeelaChessZero/lc0.git.") from e
 
 
 def generic_command(args, verbose=False):
@@ -34,9 +31,7 @@ def generic_command(args, verbose=False):
     popen.wait()
     if popen.returncode != 0:
         if verbose:
-            stderr = (
-                f'\n[DEBUG] stderr:\n{popen.stderr.read().decode("utf-8")}'
-            )
+            stderr = f'\n[DEBUG] stderr:\n{popen.stderr.read().decode("utf-8")}'
         else:
             stderr = ""
         raise RuntimeError(f"Could not run `lc0 {' '.join(args)}`." + stderr)
@@ -70,9 +65,7 @@ def convert_to_leela(in_path, out_path, verbose=False):
     )
 
 
-def board_from_backend(
-    lczero_backend: Backend, lczero_game: GameState, planes: int = 112
-):
+def board_from_backend(lczero_backend: Backend, lczero_game: GameState, planes: int = 112):
     """
     Create a board from the lczero backend.
     """
@@ -104,13 +97,9 @@ def prediction_from_backend(
     else:
         indices = torch.tensor(range(1858))
     if softmax:
-        policy = torch.tensor(
-            lczero_output.p_softmax(*range(1858)), dtype=torch.float
-        )
+        policy = torch.tensor(lczero_output.p_softmax(*range(1858)), dtype=torch.float)
     else:
-        policy = torch.tensor(
-            lczero_output.p_raw(*range(1858)), dtype=torch.float
-        )
+        policy = torch.tensor(lczero_output.p_raw(*range(1858)), dtype=torch.float)
     value = torch.tensor(lczero_output.q())
     filtered_policy[indices] = policy[indices]
     return filtered_policy, value
@@ -132,12 +121,10 @@ def moves_with_castling_swap(lczero_game: GameState, board: chess.Board):
                 lczero_legal_moves.remove(leela_uci_move)
                 lczero_legal_moves.append(uci_move)
                 lczero_policy_indices.remove(
-                    move_utils.encode_move(
+                    move_encodings.encode_move(
                         chess.Move.from_uci(leela_uci_move),
                         (board.turn, not board.turn),
                     )
                 )
-                lczero_policy_indices.append(
-                    move_utils.encode_move(move, (board.turn, not board.turn))
-                )
+                lczero_policy_indices.append(move_encodings.encode_move(move, (board.turn, not board.turn)))
     return lczero_legal_moves, lczero_policy_indices

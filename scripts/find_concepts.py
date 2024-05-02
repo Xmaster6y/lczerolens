@@ -59,9 +59,7 @@ layer_map = {layer: cc for layer in layer_names}
 
 
 fv_path = f"scripts/im_viz/{model_name}-{dataset_name}"
-fv = crp_helpers.ModifiedFeatureVisualization(
-    attribution, unique_dataset, layer_map, preprocess_fn=None, path=fv_path
-)
+fv = crp_helpers.ModifiedFeatureVisualization(attribution, unique_dataset, layer_map, preprocess_fn=None, path=fv_path)
 
 
 def collate_fn_tensor(batch):
@@ -76,9 +74,7 @@ def collate_fn_tuple(batch):
 
 
 if save_files:
-    saved_files = fv.run(
-        composite, batch_size, 100, custom_collate_fn=collate_fn_tensor
-    )
+    saved_files = fv.run(composite, batch_size, 100, custom_collate_fn=collate_fn_tensor)
     print("[INFO] Files saved!")
 
 concepts = {
@@ -90,9 +86,7 @@ concepts = {
 for case, concept in concepts.items():
     unique_dataset.concept = concept
 
-    concept_fen_strings = set(
-        [b.fen() for _, b, label in unique_dataset if label == 1]
-    )
+    concept_fen_strings = set([b.fen() for _, b, label in unique_dataset if label == 1])
     print(f"[INFO] Concept '{case}' positives: {len(concept_fen_strings)}")
 
     for l_name in layer_names:
