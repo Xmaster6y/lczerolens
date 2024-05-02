@@ -247,7 +247,7 @@ def trainSAE(
                         ghost_threshold=ghost_threshold,
                     )
                     if wandb is not None:
-                        wandb.log({f"train/{k}": l for k, l in losses.items()})
+                        wandb.log({f"train/{k}": v for k, v in losses.items()})
                     if do_print:
                         print(f"[INFO] Train step {step}: {losses}")
             if save_steps is not None and save_dir is not None and step % save_steps == 0:
@@ -278,13 +278,13 @@ def trainSAE(
                                 explained_variance=True,
                                 r2=True,
                             )
-                            for k, _ in val_losses.items():
+                            for k in val_losses.keys():
                                 val_losses[k] += losses[k]
 
-                        for k, v in val_losses.items():
+                        for k in val_losses.keys():
                             val_losses[k] /= len(val_dataloader)
                         if wandb is not None:
-                            wandb.log({f"val/{k}": l for k, l in val_losses.items()})
+                            wandb.log({f"val/{k}": v for k, v in val_losses.items()})
                         if do_print:
                             print(f"[INFO] Val step {step}: {val_losses}")
 

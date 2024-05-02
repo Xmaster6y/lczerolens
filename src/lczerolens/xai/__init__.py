@@ -23,3 +23,23 @@ from .lenses import (
     PolicyLens,
     ProbingLens,
 )
+
+__all__ = [
+    "Lens",
+    "ConceptDataset",
+    "BinaryConcept",
+    "AndBinaryConcept",
+    "OrBinaryConcept",
+    "HasPieceConcept",
+    "HasThreatConcept",
+    "HasMateThreatConcept",
+    "HasMaterialAdvantageConcept",
+    "BestLegalMoveConcept",
+    "PieceBestLegalMoveConcept",
+    "ActivationLens",
+    "CrpLens",
+    "LrpLens",
+    "PatchingLens",
+    "PolicyLens",
+    "ProbingLens",
+]

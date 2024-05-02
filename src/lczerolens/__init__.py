@@ -8,3 +8,5 @@ from .encodings import move as move_encodings
 from .game import BoardDataset, GameDataset
 from .model import ModelWrapper
 from .xai import Lens
+
+__all__ = ["BoardDataset", "GameDataset", "ModelWrapper", "Lens", "board_encodings", "move_encodings"]

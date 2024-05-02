@@ -8,3 +8,12 @@ from .lrp import LrpLens
 from .patching import PatchingLens
 from .policy import PolicyLens
 from .probing import ProbingLens
+
+__all__ = [
+    "ActivationLens",
+    "CrpLens",
+    "LrpLens",
+    "PatchingLens",
+    "PolicyLens",
+    "ProbingLens",
+]
