@@ -88,8 +88,7 @@ def winner_senet(winner_ensure_network):
 
 @pytest.fixture(scope="class")
 def winner_senet_ort(winner_ensure_network):
-    senet_ort = ort.InferenceSession("assets/384x30-2022_0108_1903_17_608.onnx")
-    yield senet_ort
+    yield ort.InferenceSession("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
 @pytest.fixture(scope="session")
