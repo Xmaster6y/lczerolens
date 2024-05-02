@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Optional, Callable
 
 import chess
 import torch
@@ -102,7 +103,7 @@ class WrapperSampler(Sampler):
         else:
             m = Categorical(torch.softmax(utility))
             idx = m.sample()
-        return legal_moves[idx], to_log
+        return list(legal_moves)[idx], to_log
 
 
 @dataclass
@@ -112,8 +113,39 @@ class SelfPlay:
     white: Sampler
     black: Sampler
 
-    def play(self):
+    def play(
+        self,
+        board: Optional[chess.Board] = None,
+        max_moves: int = 100,
+        to_play: chess.Color = chess.WHITE,
+        report_fn: Optional[Callable[[dict, chess.Color], None]] = None,
+    ):
         """
         Plays a game.
         """
-        raise NotImplementedError
+        if board is None:
+            board = chess.Board()
+        game = []
+        if to_play == chess.BLACK:
+            move, _ = self.black.get_next_move(board)
+            board.push(move)
+            game.append(move)
+        for _ in range(max_moves):
+            if board.is_game_over() or len(game) >= max_moves:
+                break
+            move, to_log = self.white.get_next_move(board)
+            if report_fn is not None:
+                report_fn(to_log, board.turn)
+            board.push(move)
+            game.append(move)
+
+            if board.is_game_over() or len(game) >= max_moves:
+                break
+            move, to_log = self.black.get_next_move(board)
+            if report_fn is not None:
+                report_fn(to_log, board.turn)
+            board.push(move)
+            game.append(move)
+            if board.is_game_over() or len(game) >= max_moves:
+                break
+        return game, board

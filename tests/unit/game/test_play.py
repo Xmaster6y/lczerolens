@@ -2,7 +2,7 @@
 
 import chess
 
-from lczerolens.game import WrapperSampler
+from lczerolens.game import WrapperSampler, SelfPlay
 
 
 class TestWrapperSampler:
@@ -19,3 +19,20 @@ class TestWrapperSampler:
         sampler = WrapperSampler(wrapper=winner_wrapper)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
+
+
+class TestSelfPlay:
+    def test_play(self, tiny_wrapper, winner_wrapper):
+        """Test play method."""
+        board = chess.Board()
+        white = WrapperSampler(wrapper=tiny_wrapper)
+        black = WrapperSampler(wrapper=winner_wrapper)
+        self_play = SelfPlay(white=white, black=black)
+        logs = []
+
+        def report_fn(log, to_play):
+            logs.append((log, to_play))
+
+        game, board = self_play.play(board=board, max_moves=10, report_fn=report_fn)
+
+        assert len(game) == len(logs) == 10
