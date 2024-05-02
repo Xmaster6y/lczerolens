@@ -58,7 +58,7 @@ class WrapperSampler(Sampler):
         utility += self.beta * self._get_m_values(all_stats, q_values, to_log)
         us = board.turn
         utility += self.gamma * self._get_p_values(all_stats, legal_moves, us, to_log)
-        to_log["utility"] = utility
+        to_log["max_utility"] = utility.max().item()
         return utility, legal_moves, to_log
 
     def _get_q_values(self, all_stats, to_log):
@@ -108,6 +108,42 @@ class WrapperSampler(Sampler):
             m = Categorical(torch.softmax(utility))
             idx = m.sample()
         return list(legal_moves)[idx], to_log
+
+
+class PolicySampler(WrapperSampler):
+    @torch.no_grad
+    def get_utility(
+        self,
+        board: chess.Board,
+    ):
+        to_log = {}
+        legal_moves = board.legal_moves
+        all_stats = self.wrapper.predict([board])[0]
+        us = board.turn
+        utility = self._get_p_values(all_stats, legal_moves, us, to_log)
+        to_log["max_utility"] = utility.max().item()
+        if "value" in all_stats.keys():
+            to_log["value"] = all_stats["value"][0].item()
+        elif "wdl" in all_stats.keys():
+            to_log["wdl_w"] = all_stats["wdl"][0][0].item()
+            to_log["wdl_d"] = all_stats["wdl"][0][1].item()
+            to_log["wdl_l"] = all_stats["wdl"][0][2].item()
+        return utility, legal_moves, to_log
+
+    def _get_p_values(
+        self,
+        all_stats,
+        legal_moves,
+        us,
+        to_log,
+    ):
+        if "policy" in all_stats.keys():
+            indices = torch.tensor([move_encodings.encode_move(move, (us, not us)) for move in legal_moves])
+            legal_policy = all_stats["policy"][0].gather(0, indices)
+            to_log["max_legal_policy"] = legal_policy.max().item()
+            return legal_policy
+        else:
+            return torch.zeros(len(legal_moves))
 
 
 @dataclass

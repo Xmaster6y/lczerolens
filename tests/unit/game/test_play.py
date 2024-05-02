@@ -2,7 +2,7 @@
 
 import chess
 
-from lczerolens.game import WrapperSampler, SelfPlay
+from lczerolens.game import WrapperSampler, SelfPlay, PolicySampler
 
 
 class TestWrapperSampler:
@@ -17,6 +17,13 @@ class TestWrapperSampler:
         """Test get_utility method."""
         board = chess.Board()
         sampler = WrapperSampler(wrapper=winner_wrapper)
+        utility, _, _ = sampler.get_utility(board)
+        assert utility.shape[0] == 20
+
+    def test_policy_sampler_tiny(self, tiny_wrapper):
+        """Test policy_sampler method."""
+        board = chess.Board()
+        sampler = PolicySampler(wrapper=tiny_wrapper)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 
