@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 import chess
 import torch
@@ -105,7 +105,7 @@ class WrapperSampler(Sampler):
         if self.use_argmax:
             idx = utility.argmax()
         else:
-            m = Categorical(torch.softmax(utility))
+            m = Categorical(logits=utility)
             idx = m.sample()
         return list(legal_moves)[idx], to_log
 
@@ -189,3 +189,27 @@ class SelfPlay:
             if board.is_game_over() or len(game) >= max_moves:
                 break
         return game, board
+
+
+@dataclass
+class BatchedPolicySampler:
+    wrapper: ModelWrapper
+    use_argmax: bool = True
+
+    @torch.no_grad
+    def get_next_moves(
+        self,
+        boards: List[chess.Board],
+    ):
+        all_stats = self.wrapper.predict(boards)[0]
+        for board, policy in zip(boards, all_stats["policy"]):
+            us = board.turn
+            indices = torch.tensor([move_encodings.encode_move(move, (us, not us)) for move in board.legal_moves])
+            legal_policy = all_stats["policy"][0].gather(0, indices)
+            if self.use_argmax:
+                idx = legal_policy.argmax()
+            else:
+                m = Categorical(logits=legal_policy)
+                print(m.probs)
+                idx = m.sample()
+            yield list(board.legal_moves)[idx]

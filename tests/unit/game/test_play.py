@@ -2,7 +2,7 @@
 
 import chess
 
-from lczerolens.game import WrapperSampler, SelfPlay, PolicySampler
+from lczerolens.game import WrapperSampler, SelfPlay, PolicySampler, BatchedPolicySampler
 
 
 class TestWrapperSampler:
@@ -43,3 +43,22 @@ class TestSelfPlay:
         game, board = self_play.play(board=board, max_moves=10, report_fn=report_fn)
 
         assert len(game) == len(logs) == 10
+
+
+class TestBatchedPolicySampler:
+    def test_batched_policy_sampler_ag(self, tiny_wrapper):
+        """Test batched_policy_sampler method."""
+        boards = [chess.Board() for _ in range(10)]
+
+        sampler_ag = BatchedPolicySampler(wrapper=tiny_wrapper, use_argmax=True)
+        moves = sampler_ag.get_next_moves(boards)
+        assert len(list(moves)) == 10
+        assert all([move == moves[0] for move in moves])
+
+    def test_batched_policy_sampler_no_ag(self, tiny_wrapper):
+        """Test batched_policy_sampler method."""
+        boards = [chess.Board() for _ in range(10)]
+
+        sampler_no_ag = BatchedPolicySampler(wrapper=tiny_wrapper, use_argmax=False)
+        moves = sampler_no_ag.get_next_moves(boards)
+        assert len(list(moves)) == 10
