@@ -195,6 +195,7 @@ class SelfPlay:
 class BatchedPolicySampler:
     wrapper: ModelWrapper
     use_argmax: bool = True
+    use_suboptimal: bool = False
 
     @torch.no_grad
     def get_next_moves(
@@ -209,7 +210,9 @@ class BatchedPolicySampler:
             if self.use_argmax:
                 idx = legal_policy.argmax()
             else:
+                if self.use_suboptimal:
+                    idx = legal_policy.argmax()
+                    legal_policy[idx] = torch.tensor(-1e3)
                 m = Categorical(logits=legal_policy)
-                print(m.probs)
                 idx = m.sample()
             yield list(board.legal_moves)[idx]

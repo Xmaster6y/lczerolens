@@ -62,3 +62,11 @@ class TestBatchedPolicySampler:
         sampler_no_ag = BatchedPolicySampler(wrapper=tiny_wrapper, use_argmax=False)
         moves = sampler_no_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
+
+    def test_batched_policy_sampler_no_ag_sub(self, tiny_wrapper):
+        """Test batched_policy_sampler method."""
+        boards = [chess.Board() for _ in range(10)]
+
+        sampler_no_ag = BatchedPolicySampler(wrapper=tiny_wrapper, use_argmax=False, use_suboptimal=True)
+        moves = sampler_no_ag.get_next_moves(boards)
+        assert len(list(moves)) == 10
