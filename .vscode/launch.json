@@ -19,53 +19,10 @@
             "justMyCode": false
         },
         {
-            "name": "Script CRP concepts",
+            "name": "Script Plane Analysis",
             "type": "debugpy",
             "request": "launch",
-            "module": "scripts.find_concepts",
-            "console": "integratedTerminal",
-            "justMyCode": false
-        },
-        {
-            "name": "Script CRP clusters",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scripts.cluster_latent_relevances",
-            "console": "integratedTerminal",
-            "justMyCode": false
-        },
-        {
-            "name": "Script make datasets",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scripts.make_datasets",
-            "console": "integratedTerminal",
-            "justMyCode": false
-        }
-        ,
-        {
-            "name": "Script sample exploration",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scripts.sample_exploration",
-            "console": "integratedTerminal",
-            "justMyCode": false
-        }
-        ,
-        {
-            "name": "Script simple sae",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scripts.simple_sae",
-            "console": "integratedTerminal",
-            "justMyCode": false
-        }
-        ,
-        {
-            "name": "Debug",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "ignored.debug",
+            "module": "scripts.lrp.plane_analysis",
             "console": "integratedTerminal",
             "justMyCode": false
         }
