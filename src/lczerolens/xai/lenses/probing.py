@@ -1,10 +1,9 @@
 """Probing lens for XAI."""
 
-from typing import Any, Callable, Dict, Optional
+from typing import Dict, Iterator
 
 import chess
 import torch
-from torch.utils.data import Dataset
 
 from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.hook import HookConfig, MeasureHook
@@ -49,39 +48,35 @@ class ProbingLens(Lens):
             measure_hook.clear()
         return measures
 
-    def analyse_dataset(
+    def analyse_batched_boards(
         self,
-        dataset: Dataset,
+        iter_boards: Iterator,
         wrapper: ModelWrapper,
-        batch_size: int,
-        collate_fn: Optional[Callable] = None,
-        save_to: Optional[str] = None,
         **kwargs,
-    ) -> dict:
+    ) -> Iterator:
+        """Computes the statistics for a given board.
+
+        Parameters
+        ----------
+        iter_boards : Iterator
+            The iterator over the boards.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the statistics.
         """
-        Analyse a dataset with the probing lens.
-        """
-        if save_to is not None:
-            raise NotImplementedError("Saving to file is not implemented.")
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
-        batched_measures: Dict[str, Any] = {}
         for measure_hook in self.measure_hooks.values():
             measure_hook.clear()
             measure_hook.register(wrapper.model)
-        for batch in dataloader:
-            indices, boards = batch
+        for batch in iter_boards:
+            boards, *_ = batch
             wrapper.predict(boards)
+            merged_measures = {}
             for module_name, measure_hook in self.measure_hooks.items():
-                if module_name not in batched_measures:
-                    batched_measures[module_name] = measure_hook.storage[module_name]
-                else:
-                    batched_measures[module_name] = torch.cat(
-                        (
-                            batched_measures[module_name],
-                            measure_hook.storage[module_name],
-                        ),
-                        dim=0,
-                    )
+                merged_measures[module_name] = measure_hook.storage[module_name]
+            yield merged_measures
         for measure_hook in self.measure_hooks.values():
             measure_hook.clear()
-        return batched_measures

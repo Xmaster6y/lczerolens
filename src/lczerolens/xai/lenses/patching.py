@@ -1,10 +1,9 @@
 """Patching lens for XAI."""
 
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Iterator
 
 import chess
 import torch
-from torch.utils.data import Dataset
 
 from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.hook import HookConfig, ModifyHook
@@ -46,32 +45,32 @@ class PatchingLens(Lens):
             modify_hook.clear()
         return out
 
-    def analyse_dataset(
+    def analyse_batched_boards(
         self,
-        dataset: Dataset,
+        iter_boards: Iterator,
         wrapper: ModelWrapper,
-        batch_size: int,
-        collate_fn: Optional[Callable] = None,
-        save_to: Optional[str] = None,
         **kwargs,
-    ) -> dict:
+    ) -> Iterator:
+        """Patching-based XAI methods.
+
+        Parameters
+        ----------
+        iter_boards : Iterator
+            The iterator over the boards.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the patched outputs.
         """
-        Analyse a dataset with the probing lens.
-        """
-        if save_to is not None:
-            raise NotImplementedError("Saving to file is not implemented.")
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
-        batched_outs = None
         for modify_hook in self.modify_hooks.values():
             modify_hook.clear()
             modify_hook.register(wrapper.model)
-        for batch in dataloader:
-            _, boards = batch
+        for batch in iter_boards:
+            boards, *_ = batch
             (out,) = wrapper.predict(boards)
-            if batched_outs is None:
-                batched_outs = out
-            else:
-                batched_outs = torch.cat([batched_outs, out])
+            yield out
         for modify_hook in self.modify_hooks.values():
             modify_hook.clear()
-        return batched_outs  # type: ignore

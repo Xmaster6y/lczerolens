@@ -81,7 +81,7 @@ class LrpLens(Lens):
         wrapper: ModelWrapper,
         **kwargs,
     ) -> Iterator:
-        """Cache the activations for a given model and dataset.
+        """Cache the relevances for a given model and iterator.
 
         Parameters
         ----------

@@ -1,10 +1,10 @@
 """Activation lens for XAI."""
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Optional, Iterator
+import copy
 
 import chess
 import torch
-from torch.utils.data import DataLoader, Dataset
 
 from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.hook import CacheHook, HookConfig
@@ -34,31 +34,32 @@ class ActivationLens(Lens):
         self.cache_hook.clear()
         self.cache_hook.register(wrapper.model)
         wrapper.predict(board)
-        return self.cache_hook.storage.copy()
+        return copy.deepcopy(self.cache_hook.storage)
 
-    def analyse_dataset(
+    def analyse_batched_boards(
         self,
-        dataset: Dataset,
+        iter_boards: Iterator,
         wrapper: ModelWrapper,
-        batch_size: int,
-        collate_fn: Optional[Callable] = None,
-        save_to: Optional[str] = None,
         **kwargs,
-    ) -> Optional[Dict[str, Any]]:
-        """Cache the activations for a given model and dataset."""
-        if save_to is not None:
-            raise NotImplementedError("Saving to file is not implemented.")
-        dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
+    ) -> Iterator:
+        """Cache the activations for a given model.
+
+        Parameters
+        ----------
+        iter_boards : Iterator
+            The iterator over the boards.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the activations.
+        """
         self.cache_hook.clear()
         self.cache_hook.register(wrapper.model)
-        batched_activations: Dict[str, Any] = {}
-        for batch in dataloader:
-            _, boards = batch
+        for batch in iter_boards:
+            boards, *_ = batch
             wrapper.predict(boards)
-            for key, value in self.cache_hook.storage.items():
-                if key not in batched_activations:
-                    batched_activations[key] = value
-                else:
-                    batched_activations[key] = torch.cat((batched_activations[key], value), dim=0)
+            yield copy.deepcopy(self.cache_hook.storage)
         self.cache_hook.clear()
-        return batched_activations
