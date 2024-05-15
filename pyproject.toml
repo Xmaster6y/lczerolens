@@ -32,6 +32,8 @@ jsonlines = "^4.0.0"
 scikit-learn = "^1.4.0"
 zennit-crp = "^0.6.0"
 einops = "^0.7.0"
+datasets = "^2.19.1"
+loguru = "^0.7.2"
 
 [tool.poetry.extras]
 demo = ["gradio"]
