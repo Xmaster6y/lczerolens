@@ -11,12 +11,30 @@ from typing import Any, Dict, List, Optional, Union
 
 import chess
 
+from datasets import Features, Value, Sequence
+
 
 @dataclass
 class Game:
     gameid: str
     moves: List[str]
     book_exit: Optional[int] = None
+
+
+GAME_DATASET_FEATURES = Features(
+    {
+        "gameid": Value("string"),
+        "moves": Value("string"),
+    }
+)
+
+BOARD_DATASET_FEATURES = Features(
+    {
+        "gameid": Value("string"),
+        "moves": Sequence(Value("string")),
+        "fen": Value("string"),
+    }
+)
 
 
 def dict_to_game(obj: Dict[str, str]) -> Game:
@@ -80,3 +98,13 @@ def game_to_boards(
         else:
             boards.append(working_board.copy(stack=n_history))
     return boards
+
+
+def board_collate_fn(batch):
+    boards = []
+    for element in batch:
+        board = chess.Board(element["fen"])
+        for move in element["moves"]:
+            board.push_san(move)
+        boards.append(board)
+    return boards, batch

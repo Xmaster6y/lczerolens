@@ -5,8 +5,13 @@ __version__ = "0.2.0-dev"
 
 from .encodings import board as board_encodings
 from .encodings import move as move_encodings
-from .game import BoardDataset, GameDataset
-from .model import ModelWrapper
+from .model import ModelWrapper, Flow
 from .xai import Lens
 
-__all__ = ["BoardDataset", "GameDataset", "ModelWrapper", "Lens", "board_encodings", "move_encodings"]
+__all__ = [
+    "ModelWrapper",
+    "Flow",
+    "Lens",
+    "board_encodings",
+    "move_encodings",
+]

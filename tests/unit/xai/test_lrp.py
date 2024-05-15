@@ -20,4 +20,4 @@ class TestLens:
         lens = LrpLens()
         board = chess.Board(fen=None)
         out = lens.analyse_board(board, tiny_wrapper)
-        assert torch.allclose(out.abs()[:104].sum(0).view(64), torch.zeros(64))
+        assert torch.allclose(out.abs()[0, :104].sum(0).view(64), torch.zeros(64))

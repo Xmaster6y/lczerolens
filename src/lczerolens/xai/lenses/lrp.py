@@ -1,12 +1,11 @@
 """Compute LRP heatmap for a given model and input."""
 
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, List, Optional, Iterator
 
 import chess
 import onnx2torch
 import torch
-from torch.utils.data import DataLoader, Dataset
 from zennit.canonizers import SequentialMergeBatchNorm
 from zennit.composites import Composite, LayerMapComposite
 from zennit.rules import Epsilon, Pass, ZPlus
@@ -63,6 +62,7 @@ class LrpLens(Lens):
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         linearise_softmax = kwargs.get("linearise_softmax", False)
         init_rel_fn = kwargs.get("init_rel_fn", None)
+        return_output = kwargs.get("return_output", False)
         relevance = self._compute_lrp_relevance(
             [board],
             wrapper,
@@ -71,30 +71,38 @@ class LrpLens(Lens):
             replace_onnx2torch=replace_onnx2torch,
             linearise_softmax=linearise_softmax,
             init_rel_fn=init_rel_fn,
+            return_output=return_output,
         )
-        return relevance[0]
+        return relevance
 
-    def analyse_dataset(
+    def analyse_batched_boards(
         self,
-        dataset: Dataset,
+        iter_boards: Iterator,
         wrapper: ModelWrapper,
-        batch_size: int,
-        collate_fn: Optional[Callable] = None,
-        save_to: Optional[str] = None,
         **kwargs,
-    ) -> Optional[Dict[int, torch.Tensor]]:
-        """Cache the activations for a given model and dataset."""
-        if save_to is not None:
-            raise NotImplementedError("Saving to file is not implemented.")
+    ) -> Iterator:
+        """Cache the relevances for a given model and iterator.
+
+        Parameters
+        ----------
+        iter_boards : Iterator
+            The iterator over the boards.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the relevances.
+        """
         composite = kwargs.get("composite", None)
         target = kwargs.get("target", "policy")
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         linearise_softmax = kwargs.get("linearise_softmax", False)
         init_rel_fn = kwargs.get("init_rel_fn", None)
-        dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
-        relevances = {}
-        for batch in dataloader:
-            inidices, boards = batch
+        return_output = kwargs.get("return_output", False)
+        for batch in iter_boards:
+            boards, *infos = batch
             batched_relevances = self._compute_lrp_relevance(
                 boards,
                 wrapper,
@@ -103,10 +111,10 @@ class LrpLens(Lens):
                 replace_onnx2torch=replace_onnx2torch,
                 linearise_softmax=linearise_softmax,
                 init_rel_fn=init_rel_fn,
+                return_output=return_output,
+                infos=infos,
             )
-            for idx, relevance in zip(inidices, batched_relevances):
-                relevances[idx] = relevance
-        return relevances
+            yield batched_relevances, boards, *infos
 
     def _compute_lrp_relevance(
         self,
@@ -116,7 +124,9 @@ class LrpLens(Lens):
         target: Optional[str] = None,
         replace_onnx2torch: bool = True,
         linearise_softmax: bool = False,
-        init_rel_fn: Optional[Callable] = None,
+        init_rel_fn: Optional[Callable[[torch.Tensor, List[Any]], torch.Tensor]] = None,
+        return_output: bool = False,
+        infos: Optional[List[Any]] = None,
     ):
         """
         Compute LRP heatmap for a given model and input.
@@ -129,13 +139,11 @@ class LrpLens(Lens):
                 input_requires_grad=True,
                 return_input=True,
             )
-            if target is None:
-                output.backward(gradient=(output if init_rel_fn is None else init_rel_fn(output)))
-            else:
-                output[target].backward(
-                    gradient=(output[target] if init_rel_fn is None else init_rel_fn(output[target]))
-                )
-        return input_tensor.grad
+            if target is not None:
+                output = output[target]
+
+            output.backward(gradient=(output if init_rel_fn is None else init_rel_fn(output, infos)))
+        return (input_tensor.grad, output) if return_output else input_tensor.grad
 
     @staticmethod
     def make_default_composite():

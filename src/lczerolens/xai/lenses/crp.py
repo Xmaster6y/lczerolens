@@ -1,12 +1,11 @@
 """Compute CRP heatmap for a given model and input."""
 
-from typing import Any, Callable, List, Optional
+from typing import Any, List, Optional, Iterator
 
 import chess
 import torch
 from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
-from torch.utils.data import Dataset
 
 from lczerolens.model.wrapper import ModelWrapper
 from lczerolens.xai.lens import Lens
@@ -45,15 +44,26 @@ class CrpLens(Lens):
         else:
             raise ValueError(f"Invalid mode {mode}")
 
-    def analyse_dataset(
+    def analyse_batched_boards(
         self,
-        dataset: Dataset,
+        iter_boards: Iterator,
         wrapper: ModelWrapper,
-        batch_size: int,
-        collate_fn: Optional[Callable] = None,
-        save_to: Optional[str] = None,
         **kwargs,
-    ) -> dict:
+    ) -> Iterator:
+        """Computes the statistics for a given board.
+
+        Parameters
+        ----------
+        iter_boards : Iterator
+            The iterator over the boards.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the attributions.
+        """
         raise NotImplementedError
 
     def _compute_latent_relevances(

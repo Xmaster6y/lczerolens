@@ -1,10 +1,9 @@
 """PolicyLens class for wrapping the LCZero models."""
 
-from typing import Any, Callable, Dict, Optional
+from typing import Iterator
 
 import chess
 import torch
-from torch.utils.data import DataLoader, Dataset
 
 from lczerolens.encodings.constants import (
     INVERTED_FROM_INDEX,
@@ -37,30 +36,31 @@ class PolicyLens(Lens):
         (policy,) = policy_flow.predict(board)
         return policy
 
-    def analyse_dataset(
+    def analyse_batched_boards(
         self,
-        dataset: Dataset,
+        iter_boards: Iterator,
         wrapper: ModelWrapper,
-        batch_size: int,
-        collate_fn: Optional[Callable] = None,
-        save_to: Optional[str] = None,
         **kwargs,
-    ) -> Optional[Dict[int, Any]]:
-        """Computes the statistics for a given board."""
-        loader = DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            collate_fn=collate_fn,
-        )
+    ) -> Iterator:
+        """Computes the statistics for a given board.
+
+        Parameters
+        ----------
+        iter_boards : Iterator
+            The iterator over the boards.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the statistics.
+        """
         policy_flow = PolicyFlow(wrapper.model)
-        policies = {}
-        for batch in loader:
-            indices, boards = batch
+        for batch in iter_boards:
+            boards, *_ = batch
             (batched_policies,) = policy_flow.predict(boards)
-            for idx in indices:
-                policies[idx] = batched_policies[idx]
-        return policies
+            yield batched_policies
 
     @staticmethod
     def aggregate_policy(
