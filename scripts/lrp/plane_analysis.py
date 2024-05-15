@@ -94,41 +94,42 @@ def main(args):
                 else:
                     piece_relevance[letter] = rel[i].sum().item() / num
 
-            if piece_relevance["q"] / max_config_rel > 0.9 and args.target == "value":
-                if board.turn:
-                    heatmap = rel.sum(dim=0).view(64)
-                else:
-                    heatmap = rel.sum(dim=0).flip(0).view(64)
-                if args.target == "policy":
-                    move = move_encoding.decode_move(label, (board.turn, not board.turn), board)
-                else:
-                    move = None
-                visualisation.render_heatmap(
-                    board,
-                    heatmap,
-                    arrows=[(move.from_square, move.to_square)] if move is not None else None,
-                    normalise="abs",
-                    save_to=f"./scripts/results/{args.target}_heatmap_{n_plotted}.png",
-                )
-                raise SystemExit
+            if args.find_interesting:
+                if piece_relevance["q"] / max_config_rel > 0.9 and args.target == "value":
+                    if board.turn:
+                        heatmap = rel.sum(dim=0).view(64)
+                    else:
+                        heatmap = rel.sum(dim=0).flip(0).view(64)
+                    if args.target == "policy":
+                        move = move_encoding.decode_move(label, (board.turn, not board.turn), board)
+                    else:
+                        move = None
+                    visualisation.render_heatmap(
+                        board,
+                        heatmap,
+                        arrows=[(move.from_square, move.to_square)] if move is not None else None,
+                        normalise="abs",
+                        save_to=f"./scripts/results/{args.target}_heatmap_{n_plotted}.png",
+                    )
+                    raise SystemExit
 
-            if any([piece_relevance[k] / max_config_rel > 0.9 for k in "pnbrqk"]) and args.target == "policy":
-                if board.turn:
-                    heatmap = rel.sum(dim=0).view(64)
-                else:
-                    heatmap = rel.sum(dim=0).flip(0).view(64)
-                if args.target == "policy":
-                    move = move_encoding.decode_move(label, (board.turn, not board.turn), board)
-                else:
-                    move = None
-                visualisation.render_heatmap(
-                    board,
-                    heatmap,
-                    arrows=[(move.from_square, move.to_square)] if move is not None else None,
-                    normalise="abs",
-                    save_to=f"./scripts/results/{args.target}_heatmap_{n_plotted}.png",
-                )
-                raise SystemExit
+                if any(piece_relevance[k] / max_config_rel > 0.9 for k in "pnbrqk") and args.target == "policy":
+                    if board.turn:
+                        heatmap = rel.sum(dim=0).view(64)
+                    else:
+                        heatmap = rel.sum(dim=0).flip(0).view(64)
+                    if args.target == "policy":
+                        move = move_encoding.decode_move(label, (board.turn, not board.turn), board)
+                    else:
+                        move = None
+                    visualisation.render_heatmap(
+                        board,
+                        heatmap,
+                        arrows=[(move.from_square, move.to_square)] if move is not None else None,
+                        normalise="abs",
+                        save_to=f"./scripts/results/{args.target}_heatmap_{n_plotted}.png",
+                    )
+                    raise SystemExit
 
             all_stats["absolute_piece_relevance"].append(piece_relevance)
             all_stats["relative_piece_relevance"].append({k: v / max_config_rel for k, v in piece_relevance.items()})
@@ -207,6 +208,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser("plane-importance")
     parser.add_argument("--model_name", type=str, default="64x6-2018_0627_1913_08_161.onnx")
     parser.add_argument("--target", type=str, default="value")
+    parser.add_argument("--find_interesting", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--batch_size", type=int, default=100)
     parser.add_argument("--plot_first_n", type=int, default=5)
     return parser.parse_args()

@@ -81,7 +81,20 @@ class LrpLens(Lens):
         wrapper: ModelWrapper,
         **kwargs,
     ) -> Iterator:
-        """Cache the activations for a given model and dataset."""
+        """Cache the activations for a given model and dataset.
+
+        Parameters
+        ----------
+        iter_boards : Iterator
+            The iterator over the boards.
+        wrapper : ModelWrapper
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the relevances.
+        """
         composite = kwargs.get("composite", None)
         target = kwargs.get("target", "policy")
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
@@ -130,9 +143,7 @@ class LrpLens(Lens):
                 output = output[target]
 
             output.backward(gradient=(output if init_rel_fn is None else init_rel_fn(output, infos)))
-        if return_output:
-            return input_tensor.grad, output
-        return input_tensor.grad
+        return (input_tensor.grad, output) if return_output else input_tensor.grad
 
     @staticmethod
     def make_default_composite():
