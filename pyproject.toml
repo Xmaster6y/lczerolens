@@ -33,7 +33,6 @@ scikit-learn = "^1.4.0"
 zennit-crp = "^0.6.0"
 einops = "^0.7.0"
 datasets = "^2.19.1"
-loguru = "^0.7.2"
 
 [tool.poetry.extras]
 demo = ["gradio"]
@@ -78,6 +77,7 @@ safetensors = "^0.4.2"
 pylatex = "^1.4.2"
 matplotlib = "^3.8.2"
 wandb = "^0.16.3"
+loguru = "^0.7.2"
 
 [build]
 target-dir = "build/dist"

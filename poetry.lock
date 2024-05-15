@@ -5044,4 +5044,4 @@ demo = ["gradio"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "494f1627b2fcbc750e29b4f77d92c6afde52315bef95e6da05c8dc53c99baff1"
+content-hash = "7a3999116275845027cecad84996f367a84bdb0732b5df536e73fe9c0380fe3c"
