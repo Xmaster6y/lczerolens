@@ -195,3 +195,21 @@ class MlhFlow(Flow):
     """Class for isolating the MLH flow."""
 
     _flow_type = "mlh"
+
+
+@Flow.register("force_value")
+class ForceValueFlow(Flow):
+    """Class for forcing and isolating the value flow."""
+
+    _flow_type = "force_value"
+
+    @classmethod
+    def is_compatible(cls, model: nn.Module):
+        return ValueFlow.is_compatible(model) or WdlFlow.is_compatible(model)
+
+    def forward(self, x):
+        """Forward pass."""
+        out = self.model(x)
+        if "value" in out.keys():
+            return out["value"]
+        return out["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=out.device)

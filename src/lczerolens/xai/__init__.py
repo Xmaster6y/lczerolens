@@ -3,8 +3,8 @@
 from .concept import (
     AndBinaryConcept,
     BinaryConcept,
-    ConceptDataset,
     OrBinaryConcept,
+    MulticlassConcept,
 )
 from .concepts import (
     BestLegalMoveConcept,
@@ -26,10 +26,10 @@ from .lenses import (
 
 __all__ = [
     "Lens",
-    "ConceptDataset",
     "BinaryConcept",
     "AndBinaryConcept",
     "OrBinaryConcept",
+    "MulticlassConcept",
     "HasPieceConcept",
     "HasThreatConcept",
     "HasMateThreatConcept",
