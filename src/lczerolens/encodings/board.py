@@ -13,6 +13,7 @@ class InputEncoding(int, Enum):
     """Input encoding for the board tensor."""
 
     INPUT_CLASSICAL_112_PLANE = 0
+    INPUT_CLASSICAL_112_PLANE_REPEATED = 1
 
 
 def get_plane_order(us_them: Tuple[bool, bool]):
@@ -77,7 +78,7 @@ def board_to_config_tensor(
     torch.Tensor
         The 13x8x8 tensor.
     """
-    if input_encoding != InputEncoding.INPUT_CLASSICAL_112_PLANE:
+    if not isinstance(input_encoding, InputEncoding):
         raise NotImplementedError(f"Input encoding {input_encoding} not implemented.")
     if us_them is None:
         us = board.turn
@@ -127,20 +128,24 @@ def board_to_input_tensor(
     torch.Tensor
         The 112x8x8 tensor.
     """
-    if input_encoding != InputEncoding.INPUT_CLASSICAL_112_PLANE:
+    if not isinstance(input_encoding, InputEncoding):
         raise NotImplementedError(f"Input encoding {input_encoding} not implemented.")
     board = deepcopy(last_board)
     input_tensor = torch.zeros((112, 8, 8), dtype=torch.float)
     us = last_board.turn
     them = not us
     if with_history:
-        for i in range(8):
+        if input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE:
+            for i in range(8):
+                config_tensor = board_to_config_tensor(board, (us, them))
+                input_tensor[i * 13 : (i + 1) * 13] = config_tensor
+                try:
+                    board.pop()
+                except IndexError:
+                    break
+        else:
             config_tensor = board_to_config_tensor(board, (us, them))
-            input_tensor[i * 13 : (i + 1) * 13] = config_tensor
-            try:
-                board.pop()
-            except IndexError:
-                break
+            input_tensor[:104] = config_tensor.repeat(8, 1, 1)
     if last_board.has_queenside_castling_rights(us):
         input_tensor[104] = torch.ones((8, 8), dtype=torch.float)
     if last_board.has_kingside_castling_rights(us):
