@@ -104,6 +104,7 @@ class ModelWrapper(nn.Module):
         with_grad: bool = False,
         input_requires_grad: bool = False,
         return_input: bool = False,
+        input_encoding: board_encodings.InputEncoding = board_encodings.InputEncoding.INPUT_CLASSICAL_112_PLANE,
     ):
         """Predicts the move."""
         if isinstance(to_pred, chess.Board):
@@ -113,7 +114,10 @@ class ModelWrapper(nn.Module):
         else:
             raise ValueError("Invalid input type.")
 
-        tensor_list = [board_encodings.board_to_input_tensor(board).unsqueeze(0) for board in board_list]
+        tensor_list = [
+            board_encodings.board_to_input_tensor(board, input_encoding=input_encoding).unsqueeze(0)
+            for board in board_list
+        ]
         batched_tensor = torch.cat(tensor_list, dim=0)
         if input_requires_grad:
             batched_tensor.requires_grad = True
