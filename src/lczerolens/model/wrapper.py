@@ -10,7 +10,7 @@ from onnx2torch.utils.safe_shape_inference import safe_shape_inference
 from tensordict import TensorDict
 from torch import nn
 
-from lczerolens.encodings import board as board_encodings
+from lczerolens.encodings import InputEncoding, board_to_input_tensor
 
 
 class ModelWrapper(nn.Module):
@@ -104,7 +104,7 @@ class ModelWrapper(nn.Module):
         with_grad: bool = False,
         input_requires_grad: bool = False,
         return_input: bool = False,
-        input_encoding: board_encodings.InputEncoding = board_encodings.InputEncoding.INPUT_CLASSICAL_112_PLANE,
+        input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
     ):
         """Predicts the move."""
         if isinstance(to_pred, chess.Board):
@@ -115,8 +115,7 @@ class ModelWrapper(nn.Module):
             raise ValueError("Invalid input type.")
 
         tensor_list = [
-            board_encodings.board_to_input_tensor(board, input_encoding=input_encoding).unsqueeze(0)
-            for board in board_list
+            board_to_input_tensor(board, input_encoding=input_encoding).unsqueeze(0) for board in board_list
         ]
         batched_tensor = torch.cat(tensor_list, dim=0)
         if input_requires_grad:
