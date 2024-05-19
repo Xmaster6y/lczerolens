@@ -6,7 +6,6 @@ from typing import Any
 import einops
 import torch
 
-from .helpers.sae import AutoEncoder
 
 EPS = 1e-6
 
@@ -65,30 +64,3 @@ class SignalCav(Probe):
 
         dot_prod = einops.einsum(activations, self._h, "b a, a d -> b d")
         return dot_prod / (activations.norm(dim=1, keepdim=True) + EPS)
-
-
-class Sae(Probe):
-    """Sparse Autoencoder."""
-
-    def __init__(self, activation_dim, dict_size):
-        super().__init__()
-        self.activation_dim = activation_dim
-        self.dict_size = dict_size
-        self.model = AutoEncoder(activation_dim, dict_size)
-
-    def train(
-        self,
-        activations: torch.Tensor,
-        labels: torch.Tensor,
-        **kwargs,
-    ):
-        raise NotImplementedError("Training not implemented")
-
-    def predict(self, activations: torch.Tensor, **kwargs):
-        if not self._trained:
-            raise ValueError("Probe not trained")
-
-        if len(activations.shape) != 2:
-            raise ValueError("Activations must a batch of tensors")
-
-        return self.model.encode(activations)
