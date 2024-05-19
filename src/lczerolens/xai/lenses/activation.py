@@ -38,7 +38,7 @@ class ActivationLens(Lens):
         output = wrapper.predict(board, **wrapper_kwargs)
         if return_output:
             return copy.deepcopy(self.cache_hook.storage), output
-        return copy.deepcopy(self.cache_hook.storage)
+        return (copy.deepcopy(self.cache_hook.storage),)
 
     def analyse_batched_boards(
         self,
@@ -70,5 +70,5 @@ class ActivationLens(Lens):
             if return_output:
                 yield copy.deepcopy(self.cache_hook.storage), output
             else:
-                yield copy.deepcopy(self.cache_hook.storage)
+                yield (copy.deepcopy(self.cache_hook.storage),)
         self.cache_hook.clear()
