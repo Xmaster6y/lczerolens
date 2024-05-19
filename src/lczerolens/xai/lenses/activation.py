@@ -32,9 +32,10 @@ class ActivationLens(Lens):
     ) -> Any:
         """Cache the activations for a given model and input."""
         return_output = kwargs.get("return_output", False)
+        wrapper_kwargs = kwargs.get("wrapper_kwargs", {})
         self.cache_hook.clear()
         self.cache_hook.register(wrapper.model)
-        output = wrapper.predict(board)
+        output = wrapper.predict(board, **wrapper_kwargs)
         if return_output:
             return copy.deepcopy(self.cache_hook.storage), output
         return copy.deepcopy(self.cache_hook.storage)
@@ -60,11 +61,12 @@ class ActivationLens(Lens):
             The iterator over the activations.
         """
         return_output = kwargs.get("return_output", False)
+        wrapper_kwargs = kwargs.get("wrapper_kwargs", {})
         self.cache_hook.clear()
         self.cache_hook.register(wrapper.model)
         for batch in iter_boards:
             boards, *_ = batch
-            output = wrapper.predict(boards)
+            output = wrapper.predict(boards, **wrapper_kwargs)
             if return_output:
                 yield copy.deepcopy(self.cache_hook.storage), output
             else:
