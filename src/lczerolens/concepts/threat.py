@@ -2,7 +2,7 @@
 
 import chess
 
-from lczerolens.xai.concept import BinaryConcept
+from lczerolens.concept import BinaryConcept
 
 
 class HasThreatConcept(BinaryConcept):

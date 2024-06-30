@@ -1,7 +1,7 @@
 """Class for wrapping the LCZero models."""
 
 import os
-from typing import Dict, Iterable, Type, Union
+from typing import Dict, Type, Any, Tuple, Union
 
 import chess
 import torch
@@ -9,25 +9,45 @@ from onnx2torch import convert
 from onnx2torch.utils.safe_shape_inference import safe_shape_inference
 from tensordict import TensorDict
 from torch import nn
+from nnsight import NNsight
 
 from lczerolens.encodings import InputEncoding, board_to_input_tensor
 
 
-class ModelWrapper(nn.Module):
+class LczeroModel(NNsight):
     """Class for wrapping the LCZero models."""
 
-    def __init__(
+    def trace(
         self,
-        model: nn.Module,
+        *inputs: Any,
+        **kwargs: Dict[str, Any],
     ):
-        """Initializes the wrapper."""
-        super().__init__()
-        self.model = model
-        self.model.eval()
+        kwargs["scan"] = False
+        kwargs["validate"] = False
+        return super().trace(*inputs, **kwargs)
 
-    def forward(self, x):
-        """Forward pass."""
-        return self.model(x)
+    def _execute(self, *prepared_inputs: torch.Tensor, **kwargs) -> Any:
+        kwargs.pop("input_encoding", None)
+        kwargs.pop("input_requires_grad", None)
+        return super()._execute(*prepared_inputs, **kwargs)
+
+    def _prepare_inputs(self, *inputs: Union[chess.Board, torch.Tensor], **kwargs) -> Tuple[Tuple[Any], int]:
+        input_encoding = kwargs.pop("input_encoding", InputEncoding.INPUT_CLASSICAL_112_PLANE)
+        input_requires_grad = kwargs.pop("input_requires_grad", False)
+
+        if len(inputs) == 1 and isinstance(inputs[0], torch.Tensor):
+            return inputs, len(inputs[0])
+        for board in inputs:
+            if not isinstance(board, chess.Board):
+                raise ValueError(f"Got invalid input type {type(board)}.")
+
+        tensor_list = [board_to_input_tensor(board, input_encoding=input_encoding).unsqueeze(0) for board in inputs]
+        batched_tensor = torch.cat(tensor_list, dim=0)
+        if input_requires_grad:
+            batched_tensor.requires_grad = True
+        batched_tensor = batched_tensor.to(self.device)
+
+        return (batched_tensor,), len(inputs)
 
     @property
     def device(self):
@@ -61,7 +81,7 @@ class ModelWrapper(nn.Module):
                 onnx_model = safe_shape_inference(onnx_model_path)
             onnx_torch_model = convert(onnx_model)
             onnx_torch_model.forward = cls.make_onnx_td_forward(onnx_torch_model)
-            return cls(model=onnx_torch_model)
+            return cls(onnx_torch_model)
         except Exception:
             raise ValueError(f"Could not load model at {onnx_model_path}.")
 
@@ -91,45 +111,15 @@ class ModelWrapper(nn.Module):
             torch_model = torch.load(torch_model_path)
         except Exception:
             raise ValueError(f"Could not load model at {torch_model_path}.")
-        if isinstance(torch_model, ModelWrapper):
+        if isinstance(torch_model, LczeroModel):
             return torch_model
         elif isinstance(torch_model, nn.Module):
-            return cls(model=torch_model)
+            return cls(torch_model)
         else:
             raise ValueError(f"Could not load model at {torch_model_path}.")
 
-    def predict(
-        self,
-        to_pred: Union[chess.Board, Iterable[chess.Board]],
-        with_grad: bool = False,
-        input_requires_grad: bool = False,
-        return_input: bool = False,
-        input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
-    ):
-        """Predicts the move."""
-        if isinstance(to_pred, chess.Board):
-            board_list = [to_pred]
-        elif isinstance(to_pred, Iterable):
-            board_list = to_pred  # type: ignore
-        else:
-            raise ValueError("Invalid input type.")
 
-        tensor_list = [
-            board_to_input_tensor(board, input_encoding=input_encoding).unsqueeze(0) for board in board_list
-        ]
-        batched_tensor = torch.cat(tensor_list, dim=0)
-        if input_requires_grad:
-            batched_tensor.requires_grad = True
-        batched_tensor = batched_tensor.to(self.device)
-        with torch.set_grad_enabled(with_grad):
-            out = self.forward(batched_tensor)
-
-        if return_input:
-            return out, batched_tensor
-        return (out,)
-
-
-class Flow(ModelWrapper):
+class Flow(LczeroModel):
     """Class for isolating a flow."""
 
     _flow_type: str

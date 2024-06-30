@@ -1,6 +1,6 @@
 """Class for concept-based XAI methods."""
 
-from abc import ABC, abstractmethod, abstractproperty, abstractstaticmethod
+from abc import ABC, abstractmethod
 from typing import Any
 
 import torch
@@ -24,7 +24,8 @@ class Concept(ABC):
         """
         pass
 
-    @abstractstaticmethod
+    @staticmethod
+    @abstractmethod
     def compute_metrics(
         predictions,
         labels,
@@ -34,7 +35,8 @@ class Concept(ABC):
         """
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def features(self) -> Features:
         """
         Return the features for the concept.

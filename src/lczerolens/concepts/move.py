@@ -4,8 +4,8 @@ import chess
 import torch
 
 from lczerolens.encodings import move as move_encodings
-from lczerolens.model.wrapper import ModelWrapper, PolicyFlow
-from lczerolens.xai.concept import BinaryConcept, MulticlassConcept
+from lczerolens.model import LczeroModel, PolicyFlow
+from lczerolens.concept import BinaryConcept, MulticlassConcept
 
 
 class BestLegalMoveConcept(MulticlassConcept):
@@ -13,10 +13,10 @@ class BestLegalMoveConcept(MulticlassConcept):
 
     def __init__(
         self,
-        wrapper: ModelWrapper,
+        model: LczeroModel,
     ):
         """Initialize the class."""
-        self.policy_flow = PolicyFlow(wrapper.model)
+        self.policy_flow = PolicyFlow(model.model)
 
     def compute_label(
         self,
@@ -38,11 +38,11 @@ class PieceBestLegalMoveConcept(BinaryConcept):
 
     def __init__(
         self,
-        wrapper: ModelWrapper,
+        model: LczeroModel,
         piece: str,
     ):
         """Initialize the class."""
-        self.policy_flow = PolicyFlow(wrapper.model)
+        self.policy_flow = PolicyFlow(model.model)
         self.piece = chess.Piece.from_symbol(piece)
 
     def compute_label(

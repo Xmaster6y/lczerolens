@@ -11,9 +11,9 @@ from zennit.composites import Composite, LayerMapComposite
 from zennit.rules import Epsilon, Pass, ZPlus
 from zennit.types import Activation
 
-from lczerolens.model.wrapper import ModelWrapper
-from lczerolens.xai.helpers import lrp as lrp_helpers
-from lczerolens.xai.lens import Lens
+from lczerolens.model import LczeroModel
+from . import helpers
+from lczerolens.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -22,25 +22,25 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class LrpLens(Lens):
     """Class for wrapping the LCZero models."""
 
-    def is_compatible(self, wrapper: ModelWrapper) -> bool:
+    def is_compatible(self, model: LczeroModel) -> bool:
         """Returns whether the lens is compatible with the model.
 
         Parameters
         ----------
-        wrapper : ModelWrapper
-            The model wrapper.
+        model : LczeroModel
+            The model model.
 
         Returns
         -------
         bool
             Whether the lens is compatible with the model.
         """
-        return isinstance(wrapper.model, torch.nn.Module)
+        return isinstance(model.model, torch.nn.Module)
 
     def analyse_board(
         self,
         board: chess.Board,
-        wrapper: ModelWrapper,
+        model: LczeroModel,
         **kwargs,
     ) -> torch.Tensor:
         """Runs basic LRP on the model.
@@ -49,8 +49,8 @@ class LrpLens(Lens):
         ----------
         board : chess.Board
             The board to compute the heatmap for.
-        wrapper : ModelWrapper
-            The model wrapper.
+        model : LczeroModel
+            The model model.
 
         Returns
         -------
@@ -65,7 +65,7 @@ class LrpLens(Lens):
         return_output = kwargs.get("return_output", False)
         relevance = self._compute_lrp_relevance(
             [board],
-            wrapper,
+            model,
             composite=composite,
             target=target,
             replace_onnx2torch=replace_onnx2torch,
@@ -78,7 +78,7 @@ class LrpLens(Lens):
     def analyse_batched_boards(
         self,
         iter_boards: Iterator,
-        wrapper: ModelWrapper,
+        model: LczeroModel,
         **kwargs,
     ) -> Iterator:
         """Cache the relevances for a given model and iterator.
@@ -87,8 +87,8 @@ class LrpLens(Lens):
         ----------
         iter_boards : Iterator
             The iterator over the boards.
-        wrapper : ModelWrapper
-            The model wrapper.
+        model : LczeroModel
+            The model model.
 
         Returns
         -------
@@ -105,7 +105,7 @@ class LrpLens(Lens):
             boards, *infos = batch
             batched_relevances = self._compute_lrp_relevance(
                 boards,
-                wrapper,
+                model,
                 composite=composite,
                 target=target,
                 replace_onnx2torch=replace_onnx2torch,
@@ -119,7 +119,7 @@ class LrpLens(Lens):
     def _compute_lrp_relevance(
         self,
         boards: List[chess.Board],
-        wrapper: ModelWrapper,
+        model: LczeroModel,
         composite: Optional[Any] = None,
         target: Optional[str] = None,
         replace_onnx2torch: bool = True,
@@ -132,7 +132,7 @@ class LrpLens(Lens):
         Compute LRP heatmap for a given model and input.
         """
 
-        with self.context(wrapper, composite, replace_onnx2torch, linearise_softmax) as modified_model:
+        with self.context(model, composite, replace_onnx2torch, linearise_softmax) as modified_model:
             output, input_tensor = modified_model.predict(
                 boards,
                 with_grad=True,
@@ -160,7 +160,7 @@ class LrpLens(Lens):
     @staticmethod
     @contextmanager
     def context(
-        wrapper: ModelWrapper,
+        model: LczeroModel,
         composite: Optional[Composite] = None,
         replace_onnx2torch: bool = True,
         linearise_softmax: bool = False,
@@ -172,7 +172,7 @@ class LrpLens(Lens):
         new_module_mapping = {}
         old_module_mapping = {}
 
-        for name, module in wrapper.model.named_modules():
+        for name, module in model.model.named_modules():
             if linearise_softmax:
                 if isinstance(module, torch.nn.Softmax):
                     new_module_mapping[name] = torch.nn.Identity()
@@ -180,13 +180,13 @@ class LrpLens(Lens):
             if replace_onnx2torch:
                 if isinstance(module, onnx2torch.node_converters.OnnxBinaryMathOperation):
                     if module.math_op_function is torch.add:
-                        new_module_mapping[name] = lrp_helpers.AddEpsilon()
+                        new_module_mapping[name] = helpers.AddEpsilon()
                         old_module_mapping[name] = module
                     elif module.math_op_function is torch.mul:
-                        new_module_mapping[name] = lrp_helpers.MulUniform()
+                        new_module_mapping[name] = helpers.MulUniform()
                         old_module_mapping[name] = module
                 elif isinstance(module, onnx2torch.node_converters.OnnxMatMul):
-                    new_module_mapping[name] = lrp_helpers.MatMulEpsilon()
+                    new_module_mapping[name] = helpers.MatMulEpsilon()
                     old_module_mapping[name] = module
                 elif isinstance(module, onnx2torch.node_converters.OnnxFunction):
                     if module.function is torch.tanh:
@@ -199,10 +199,10 @@ class LrpLens(Lens):
                     new_module_mapping[name] = torch.nn.AdaptiveAvgPool2d(1)
                     old_module_mapping[name] = module
         for name, module in new_module_mapping.items():
-            setattr(wrapper.model, name, module)
+            setattr(model.model, name, module)
 
-        with composite.context(wrapper) as modified_model:
+        with composite.context(model) as modified_model:
             yield modified_model
 
         for name, module in old_module_mapping.items():
-            setattr(wrapper.model, name, module)
+            setattr(model.model, name, module)

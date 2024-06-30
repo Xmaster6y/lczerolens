@@ -9,7 +9,7 @@ import torch
 from torch.distributions import Categorical
 
 from lczerolens.encodings import move as move_encodings
-from lczerolens.model.wrapper import ModelWrapper
+from lczerolens.model import LczeroModel
 
 
 def get_next_legal_boards(board: chess.Board):
@@ -30,8 +30,8 @@ class Sampler(ABC):
 
 
 @dataclass
-class WrapperSampler(Sampler):
-    wrapper: ModelWrapper
+class ModelSampler(Sampler):
+    model: LczeroModel
     use_argmax: bool = True
     alpha: float = 1.0
     beta: float = 1.0
@@ -51,7 +51,7 @@ class WrapperSampler(Sampler):
     ):
         to_log = {}
         legal_moves, next_legal_boards = get_next_legal_boards(board)
-        all_stats = self.wrapper.predict([board, *next_legal_boards])[0]
+        all_stats = self.model.predict([board, *next_legal_boards])[0]
         utility = 0
         q_values = self._get_q_values(all_stats, to_log)
         utility += self.alpha * q_values
@@ -110,7 +110,7 @@ class WrapperSampler(Sampler):
         return list(legal_moves)[idx], to_log
 
 
-class PolicySampler(WrapperSampler):
+class PolicySampler(ModelSampler):
     @torch.no_grad
     def get_utility(
         self,
@@ -118,7 +118,7 @@ class PolicySampler(WrapperSampler):
     ):
         to_log = {}
         legal_moves = board.legal_moves
-        all_stats = self.wrapper.predict([board])[0]
+        all_stats = self.model.predict([board])[0]
         us = board.turn
         utility = self._get_p_values(all_stats, legal_moves, us, to_log)
         to_log["max_utility"] = utility.max().item()
@@ -193,7 +193,7 @@ class SelfPlay:
 
 @dataclass
 class BatchedPolicySampler:
-    wrapper: ModelWrapper
+    model: LczeroModel
     use_argmax: bool = True
     use_suboptimal: bool = False
 
@@ -202,11 +202,11 @@ class BatchedPolicySampler:
         self,
         boards: List[chess.Board],
     ):
-        all_stats = self.wrapper.predict(boards)[0]
+        all_stats = self.model.predict(boards)[0]
         for board, policy in zip(boards, all_stats["policy"]):
             us = board.turn
             indices = torch.tensor([move_encodings.encode_move(move, (us, not us)) for move in board.legal_moves])
-            legal_policy = all_stats["policy"][0].gather(0, indices)
+            legal_policy = policy.gather(0, indices)
             if self.use_argmax:
                 idx = legal_policy.argmax()
             else:

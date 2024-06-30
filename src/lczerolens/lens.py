@@ -1,11 +1,12 @@
 """Generic lens class."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type, Iterator
+from typing import Any, Dict, Type, Iterator, Generator, Union
 
+import torch
 import chess
 
-from lczerolens.model.wrapper import ModelWrapper
+from lczerolens.model import LczeroModel
 
 
 class Lens(ABC):
@@ -36,32 +37,44 @@ class Lens(ABC):
         return cls.all_lenses[name]
 
     @abstractmethod
-    def is_compatible(self, wrapper: ModelWrapper) -> bool:
+    def is_compatible(self, model: LczeroModel) -> bool:
         """
         Returns whether the lens is compatible with the model.
         """
         pass
 
     @abstractmethod
-    def analyse_board(
+    def analyse(
         self,
-        board: chess.Board,
-        wrapper: ModelWrapper,
+        *inputs: Union[chess.Board, torch.Tensor],
+        model: LczeroModel,
         **kwargs,
     ) -> Any:
         """
-        Computes the statistics for a given board.
+        Computes the statistics for a given inputs.
         """
         pass
 
-    @abstractmethod
-    def analyse_batched_boards(
+    def analyse_batched(
         self,
-        iter_boards: Iterator,
-        wrapper: ModelWrapper,
+        iter_inputs: Iterator,
+        model: LczeroModel,
         **kwargs,
-    ) -> Optional[Dict[Any, Any]]:
+    ) -> Generator:
+        """Cache the activations for a given model.
+
+        Parameters
+        ----------
+        iter_inputs : Iterator
+            The iterator over the boards.
+        model : LczeroModel
+            The model wrapper.
+
+        Returns
+        -------
+        Iterator
+            The iterator over the activations.
         """
-        Computes the statistics for batched boards.
-        """
-        pass
+
+        for inputs in iter_inputs:
+            yield self.analyse(*inputs, model=model, **kwargs)
