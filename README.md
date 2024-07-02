@@ -10,7 +10,7 @@
 <a href="https://lczerolens.readthedocs.io"><img src="https://img.shields.io/badge/-Read%20the%20Docs%20Here-blue?style=for-the-badge&logo=Read-the-Docs&logoColor=white"></img></a>
 
 
-Leela Chess Zero (lc0) Lens: a set of utilities to make the analysis of Leela Chess Zero networks easy.
+Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make the analysis of Leela Chess Zero networks easy.
 
 ## Getting Started
 
@@ -22,32 +22,30 @@ pip install lczerolens
 
 ### Load a Model
 
-Build a model from leela file (convert then load):
+Load a leela network from file (already converted to `onnx`):
 
 ```python
-from lczerolens import AutoBuilder
+from lczerolens import LczeroModel
 
-model = AutoBuilder.from_path(
+model = LczeroModel.from_path(
     "leela-network.onnx"
 )
 ```
 
+To convert original weights see the section [Convert Official Weights](#convert-official-weights).
+
 ### Predict a Move
 
-Use a wrapper and the utils to predict a policy vector and obtain an UCI move:
+The defined model natively integrates with `python-cess`. Use the utils to predict a policy vector and obtain an UCI move:
 
 ```python
 import chess
-import torch
 
-from lczerolens import move_utils, ModelWrapper
-
-# Wrap the model
-wrapper = ModelWrapper(model)
-board = chess.Board()
+from lczerolens.encodings import move as move_utils
 
 # Get the model predictions
-out = wrapper.predict(board)
+board = chess.Board()
+out = model(board)
 policy = out["policy"]
 
 # Use the prediction
@@ -58,7 +56,28 @@ board.push(move)
 print(uci_move, board)
 ```
 
+As most network are trained only on legal moves the argmax should only be computed on them:
+
+```
+legal_indices = move_utils.get_legal_indices(board)
+legal_policy = policy[0].gather(0, legal_indices)
+best_move_index = legal_indices[legal_policy.argmax()]
+move = move_utils.decode_move(best_move_index)
+```
+
+As this becomes cumbersome you should turn to the `Sampler` class, which now reads:
+
+
+```python
+from lczerolens.play import PolicySampler
+
+sampler = PolicySampler(model, use_argmax=True)
+move = sampler.get_next_move(board)
+```
+
 ### Compute a Heatmap
+
+:red_circle: Not up to date.
 
 Use a lens to compute a heatmap
 
@@ -82,7 +101,7 @@ svg_board, fig = visualisation_utils.render_heatmap(
 )
 ```
 
-### Convert a Network
+### Convert Official Weights
 
 To convert a network you'll need to have installed the `lc0` extra:
 
@@ -90,16 +109,23 @@ To convert a network you'll need to have installed the `lc0` extra:
 pip install lczerolens[lc0]
 ```
 
-```python
-from lczerolens import lczero as lczero_utils
+You can convert networks to `onnx` using the official `lc0` binaries or
+by using the `backends` module:
 
-lczero_utils.convert_to_onnx(
+```python
+from lczerolens.encodings import backends
+
+backends.convert_to_onnx(
     "leela-network.pb.gz",
     "leela-network.onnx"
 )
 ```
 
+Only the latest networks are supported, in order to build older weights you should build the associated binaries.
+
 ## Demo
+
+:red_circle: Not up to date.
 
 Additionally, you can run the gradio demo locally (also deployed on HF). First you'll need gradio, which is packaged in the `demo` extra:
 

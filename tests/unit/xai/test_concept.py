@@ -4,9 +4,8 @@ Test cases for the concept module.
 
 import chess
 
-from lczerolens.xai import (
-    AndBinaryConcept,
-    BinaryConcept,
+from lczerolens.concept import BinaryConcept, AndBinaryConcept
+from lczerolens.concepts import (
     HasPieceConcept,
     HasThreatConcept,
 )
