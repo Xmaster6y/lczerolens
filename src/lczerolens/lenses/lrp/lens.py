@@ -87,7 +87,7 @@ class LrpLens(Lens):
         return_output: bool = False,
         infos: Optional[List[Any]] = None,
     ):
-        with self.context(model, composite, replace_onnx2torch, linearise_softmax) as modified_model:
+        with self._context(model, composite, replace_onnx2torch, linearise_softmax) as modified_model:
             with modified_model.trace(*boards):
                 modified_model.input[0][0].requires_grad = True
                 output = modified_model.output.save()
@@ -111,7 +111,7 @@ class LrpLens(Lens):
 
     @staticmethod
     @contextmanager
-    def context(
+    def _context(
         model: LczeroModel,
         composite: Optional[Composite] = None,
         replace_onnx2torch: bool = True,
@@ -124,7 +124,8 @@ class LrpLens(Lens):
         new_module_mapping = {}
         old_module_mapping = {}
 
-        for name, module in model.named_modules():
+        for name, envoy in model.named_modules():
+            module = envoy._module
             if linearise_softmax:
                 if isinstance(module, torch.nn.Softmax):
                     new_module_mapping[name] = torch.nn.Identity()
