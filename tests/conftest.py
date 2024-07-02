@@ -6,9 +6,8 @@ import onnxruntime as ort
 import pytest
 from lczero.backends import Backend, Weights
 
-from lczerolens import ModelWrapper
-from lczerolens._native_builder import NativeBuilder
-from lczerolens.model import lczero as lczero_utils
+from lczerolens import LczeroModel
+from lczerolens.encodings import backends as lczero_utils
 
 
 @pytest.fixture(scope="session")
@@ -24,15 +23,8 @@ def tiny_ensure_network():
 
 
 @pytest.fixture(scope="session")
-def tiny_wrapper(tiny_ensure_network):
-    wrapper = ModelWrapper.from_path("assets/tinygyal-8.onnx")
-    yield wrapper
-
-
-@pytest.fixture(scope="session")
-def tiny_senet(tiny_ensure_network):
-    senet = NativeBuilder.build_from_path("assets/tinygyal-8.onnx")
-    yield senet
+def tiny_model(tiny_ensure_network):
+    yield LczeroModel.from_path("assets/tinygyal-8.onnx")
 
 
 @pytest.fixture(scope="session")
@@ -48,15 +40,8 @@ def maia_ensure_network():
 
 
 @pytest.fixture(scope="class")
-def maia_wrapper(maia_ensure_network):
-    wrapper = ModelWrapper.from_path("assets/maia-1100.onnx")
-    yield wrapper
-
-
-@pytest.fixture(scope="class")
-def maia_senet(maia_ensure_network):
-    senet = NativeBuilder.build_from_path("assets/maia-1100.onnx")
-    yield senet
+def maia_model(maia_ensure_network):
+    yield LczeroModel.from_path("assets/maia-1100.onnx")
 
 
 @pytest.fixture(scope="class")
@@ -75,13 +60,8 @@ def winner_ensure_network():
 
 
 @pytest.fixture(scope="class")
-def winner_wrapper(winner_ensure_network):
-    yield ModelWrapper.from_path("assets/384x30-2022_0108_1903_17_608.onnx")
-
-
-@pytest.fixture(scope="class")
-def winner_senet(winner_ensure_network):
-    yield NativeBuilder.build_from_path("assets/384x30-2022_0108_1903_17_608.onnx")
+def winner_model(winner_ensure_network):
+    yield LczeroModel.from_path("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
 @pytest.fixture(scope="class")

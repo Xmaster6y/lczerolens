@@ -13,11 +13,10 @@ from datasets import Dataset
 from torch.utils.data import DataLoader
 import torch
 
-from lczerolens import Lens
 from lczerolens.encodings import move as move_encoding
-from lczerolens.xai import MulticlassConcept
+from lczerolens.concept import MulticlassConcept
 from lczerolens.model import ForceValueFlow, PolicyFlow
-from lczerolens.xai import concept
+from lczerolens import concept, LensFactory
 from scripts import visualisation
 
 
@@ -38,7 +37,7 @@ def main(args):
         init_rel_fn = None
     else:
         raise ValueError(f"Target '{args.target}' not supported.")
-    lens = Lens.from_name("lrp")
+    lens = LensFactory.from_name("lrp")
     if not lens.is_compatible(wrapper):
         raise ValueError(f"Lens of type 'lrp' not compatible with model '{args.model_name}'.")
 
