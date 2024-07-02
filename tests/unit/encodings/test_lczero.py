@@ -5,7 +5,7 @@ LCZero utils tests.
 import torch
 from lczero.backends import GameState
 
-from lczerolens.model import lczero as lczero_utils
+from lczerolens.encodings import backends as lczero_utils
 
 
 class TestExecution:

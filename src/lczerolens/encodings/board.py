@@ -3,7 +3,7 @@
 import re
 from copy import deepcopy
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Optional
 
 import chess
 import torch
@@ -14,14 +14,15 @@ class InputEncoding(int, Enum):
 
     INPUT_CLASSICAL_112_PLANE = 0
     INPUT_CLASSICAL_112_PLANE_REPEATED = 1
+    INPUT_CLASSICAL_112_PLANE_NO_HISTORY = 2
 
 
-def get_plane_order(us_them: Tuple[bool, bool]):
-    """Get the plane order for the given us_them tuple.
+def get_plane_order(us: bool):
+    """Get the plane order for the given us view.
 
     Parameters
     ----------
-    us_them : Tuple[bool, bool]
+    us : bool
         The us_them tuple.
 
     Returns
@@ -29,20 +30,19 @@ def get_plane_order(us_them: Tuple[bool, bool]):
     str
         The plane order.
     """
-    us, them = us_them
     plane_orders = {chess.WHITE: "PNBRQK", chess.BLACK: "pnbrqk"}
-    plane_order = plane_orders[us] + plane_orders[them]
+    plane_order = plane_orders[us] + plane_orders[not us]
     return plane_order
 
 
-def get_piece_index(piece: str, us_them: Tuple[bool, bool], plane_order: Optional[str] = None):
+def get_piece_index(piece: str, us: bool, plane_order: Optional[str] = None):
     """Converts a piece to its index in the plane order.
 
     Parameters
     ----------
     piece : str
         The piece to convert.
-    us_them : Tuple[bool, bool]
+    us : bool
         The us_them tuple.
     plane_order : Optional[str]
         The plane order.
@@ -53,13 +53,13 @@ def get_piece_index(piece: str, us_them: Tuple[bool, bool], plane_order: Optiona
         The index of the piece in the plane order.
     """
     if plane_order is None:
-        plane_order = get_plane_order(us_them)
+        plane_order = get_plane_order(us)
     return f"{plane_order}0".index(piece)
 
 
 def board_to_config_tensor(
     board: chess.Board,
-    us_them: Optional[Tuple[bool, bool]] = None,
+    us: Optional[bool] = None,
     input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
 ):
     """Converts a chess.Board to a tensor based on the pieces configuration.
@@ -68,7 +68,7 @@ def board_to_config_tensor(
     ----------
     board : chess.Board
         The board to convert.
-    us_them : Optional[Tuple[bool, bool]]
+    us : Optional[bool]
         The us_them tuple.
     input_encoding : InputEncoding
         The input encoding method.
@@ -80,12 +80,9 @@ def board_to_config_tensor(
     """
     if not isinstance(input_encoding, InputEncoding):
         raise NotImplementedError(f"Input encoding {input_encoding} not implemented.")
-    if us_them is None:
+    if us is None:
         us = board.turn
-        them = not us
-    else:
-        us, them = us_them
-    plane_order = get_plane_order((us, them))
+    plane_order = get_plane_order(us)
 
     def piece_to_index(piece: str):
         return f"{plane_order}0".index(piece)
@@ -135,17 +132,25 @@ def board_to_input_tensor(
     us = last_board.turn
     them = not us
     if with_history:
-        if input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE:
+        if (
+            input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE
+            or input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED
+        ):
             for i in range(8):
-                config_tensor = board_to_config_tensor(board, (us, them))
+                config_tensor = board_to_config_tensor(board, us)
                 input_tensor[i * 13 : (i + 1) * 13] = config_tensor
                 try:
                     board.pop()
                 except IndexError:
+                    if input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED:
+                        input_tensor[(i + 1) * 13 : 104] = config_tensor.repeat(7 - i, 1, 1)
                     break
-        else:
-            config_tensor = board_to_config_tensor(board, (us, them))
+
+        elif input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_NO_HISTORY:
+            config_tensor = board_to_config_tensor(board, us)
             input_tensor[:104] = config_tensor.repeat(8, 1, 1)
+        else:
+            raise ValueError(f"Got unexpected input encoding {input_encoding}")
     if last_board.has_queenside_castling_rights(us):
         input_tensor[104] = torch.ones((8, 8), dtype=torch.float)
     if last_board.has_kingside_castling_rights(us):

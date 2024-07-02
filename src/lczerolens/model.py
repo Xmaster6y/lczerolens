@@ -49,6 +49,10 @@ class LczeroModel(NNsight):
 
         return (batched_tensor,), len(inputs)
 
+    def __call__(self, *inputs, **kwargs):
+        prepared_inputs, _ = self._prepare_inputs(*inputs, **kwargs)
+        return self._execute(*prepared_inputs, **kwargs)
+
     @property
     def device(self):
         """Returns the device."""
@@ -123,15 +127,31 @@ class Flow(LczeroModel):
     """Class for isolating a flow."""
 
     _flow_type: str
-    all_flows: Dict[str, Type["Flow"]] = {}
 
     def __init__(
         self,
-        model: nn.Module,
+        model_key,
+        *args,
+        **kwargs,
     ):
-        if not self.is_compatible(model):
+        if isinstance(model_key, LczeroModel):
+            raise ValueError("Use the constructor `FlowFactory.from_model` to create a flow.")
+        if not self.is_compatible(model_key):
             raise ValueError(f"The model does not have a {self._flow_type} head.")
-        super().__init__(model=model)
+        super().__init__(model_key, *args, **kwargs)
+
+    @classmethod
+    def is_compatible(cls, model: nn.Module):
+        return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
+
+    def __call__(self, *inputs, **kwargs):
+        return super().__call__(*inputs, **kwargs)[self._flow_type]
+
+
+class FlowFactory(LczeroModel):
+    """Class for isolating a flow."""
+
+    all_flows: Dict[str, Type["Flow"]] = {}
 
     @classmethod
     def register(cls, name: str):
@@ -144,9 +164,9 @@ class Flow(LczeroModel):
         return decorator
 
     @classmethod
-    def from_name(cls, name: str, **kwargs) -> "Flow":
+    def from_name(cls, name: str, *args, **kwargs) -> "Flow":
         """Returns the flow from its name."""
-        return cls.all_flows[name](**kwargs)
+        return cls.all_flows[name](*args, **kwargs)
 
     @classmethod
     def get_subclass(cls, name: str) -> Type["Flow"]:
@@ -154,43 +174,47 @@ class Flow(LczeroModel):
         return cls.all_flows[name]
 
     @classmethod
+    def from_model(cls, name: str, model: LczeroModel, *args, **kwargs):
+        """Returns the flow from a model."""
+        return cls.get_subclass(name)(model._model, *args, **kwargs)
+
+    @classmethod
     def is_compatible(cls, model: nn.Module):
         return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
 
-    def forward(self, x):
-        """Forward pass."""
-        return self.model(x)[self._flow_type]
+    def __call__(self, *inputs, **kwargs):
+        return super().__call__(*inputs, **kwargs)[self._flow_type]
 
 
-@Flow.register("policy")
+@FlowFactory.register("policy")
 class PolicyFlow(Flow):
     """Class for isolating the policy flow."""
 
     _flow_type = "policy"
 
 
-@Flow.register("value")
+@FlowFactory.register("value")
 class ValueFlow(Flow):
     """Class for isolating the value flow."""
 
     _flow_type = "value"
 
 
-@Flow.register("wdl")
+@FlowFactory.register("wdl")
 class WdlFlow(Flow):
     """Class for isolating the WDL flow."""
 
     _flow_type = "wdl"
 
 
-@Flow.register("mlh")
+@FlowFactory.register("mlh")
 class MlhFlow(Flow):
     """Class for isolating the MLH flow."""
 
     _flow_type = "mlh"
 
 
-@Flow.register("force_value")
+@FlowFactory.register("force_value")
 class ForceValueFlow(Flow):
     """Class for forcing and isolating the value flow."""
 
@@ -200,9 +224,8 @@ class ForceValueFlow(Flow):
     def is_compatible(cls, model: nn.Module):
         return ValueFlow.is_compatible(model) or WdlFlow.is_compatible(model)
 
-    def forward(self, x):
-        """Forward pass."""
-        out = self.model(x)
+    def __call__(self, *inputs, **kwargs):
+        out = super().__call__(*inputs, **kwargs)
         if "value" in out.keys():
             return out["value"]
         return out["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=out.device)

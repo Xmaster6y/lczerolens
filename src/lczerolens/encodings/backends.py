@@ -123,8 +123,8 @@ def moves_with_castling_swap(lczero_game: GameState, board: chess.Board):
                 lczero_policy_indices.remove(
                     move_encodings.encode_move(
                         chess.Move.from_uci(leela_uci_move),
-                        (board.turn, not board.turn),
+                        board.turn,
                     )
                 )
-                lczero_policy_indices.append(move_encodings.encode_move(move, (board.turn, not board.turn)))
+                lczero_policy_indices.append(move_encodings.encode_move(move, board.turn))
     return lczero_legal_moves, lczero_policy_indices

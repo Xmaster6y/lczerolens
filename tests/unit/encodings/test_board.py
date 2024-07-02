@@ -5,7 +5,7 @@ Tests for the board utils.
 from lczero.backends import GameState
 
 from lczerolens import board_encodings
-from lczerolens.model import lczero as lczero_utils
+from lczerolens.encodings import backends as lczero_utils
 
 
 class TestWithBackend:

@@ -1,39 +1,39 @@
-"""Wrapper tests."""
+"""Model tests."""
 
 import chess
 
-from lczerolens.game import WrapperSampler, SelfPlay, PolicySampler, BatchedPolicySampler
+from lczerolens.play import ModelSampler, SelfPlay, PolicySampler, BatchedPolicySampler
 
 
-class TestWrapperSampler:
-    def test_get_utility_tiny(self, tiny_wrapper):
+class TestModelSampler:
+    def test_get_utility_tiny(self, tiny_model):
         """Test get_utility method."""
         board = chess.Board()
-        sampler = WrapperSampler(wrapper=tiny_wrapper)
+        sampler = ModelSampler(model=tiny_model)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 
-    def test_get_utility_winner(self, winner_wrapper):
+    def test_get_utility_winner(self, winner_model):
         """Test get_utility method."""
         board = chess.Board()
-        sampler = WrapperSampler(wrapper=winner_wrapper)
+        sampler = ModelSampler(model=winner_model)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 
-    def test_policy_sampler_tiny(self, tiny_wrapper):
+    def test_policy_sampler_tiny(self, tiny_model):
         """Test policy_sampler method."""
         board = chess.Board()
-        sampler = PolicySampler(wrapper=tiny_wrapper)
+        sampler = PolicySampler(model=tiny_model)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 
 
 class TestSelfPlay:
-    def test_play(self, tiny_wrapper, winner_wrapper):
+    def test_play(self, tiny_model, winner_model):
         """Test play method."""
         board = chess.Board()
-        white = WrapperSampler(wrapper=tiny_wrapper)
-        black = WrapperSampler(wrapper=winner_wrapper)
+        white = ModelSampler(model=tiny_model)
+        black = ModelSampler(model=winner_model)
         self_play = SelfPlay(white=white, black=black)
         logs = []
 
@@ -46,27 +46,27 @@ class TestSelfPlay:
 
 
 class TestBatchedPolicySampler:
-    def test_batched_policy_sampler_ag(self, tiny_wrapper):
+    def test_batched_policy_sampler_ag(self, tiny_model):
         """Test batched_policy_sampler method."""
         boards = [chess.Board() for _ in range(10)]
 
-        sampler_ag = BatchedPolicySampler(wrapper=tiny_wrapper, use_argmax=True)
+        sampler_ag = BatchedPolicySampler(model=tiny_model, use_argmax=True)
         moves = sampler_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
         assert all([move == moves[0] for move in moves])
 
-    def test_batched_policy_sampler_no_ag(self, tiny_wrapper):
+    def test_batched_policy_sampler_no_ag(self, tiny_model):
         """Test batched_policy_sampler method."""
         boards = [chess.Board() for _ in range(10)]
 
-        sampler_no_ag = BatchedPolicySampler(wrapper=tiny_wrapper, use_argmax=False)
+        sampler_no_ag = BatchedPolicySampler(model=tiny_model, use_argmax=False)
         moves = sampler_no_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
 
-    def test_batched_policy_sampler_no_ag_sub(self, tiny_wrapper):
+    def test_batched_policy_sampler_no_ag_sub(self, tiny_model):
         """Test batched_policy_sampler method."""
         boards = [chess.Board() for _ in range(10)]
 
-        sampler_no_ag = BatchedPolicySampler(wrapper=tiny_wrapper, use_argmax=False, use_suboptimal=True)
+        sampler_no_ag = BatchedPolicySampler(model=tiny_model, use_argmax=False, use_suboptimal=True)
         moves = sampler_no_ag.get_next_moves(boards)
         assert len(list(moves)) == 10

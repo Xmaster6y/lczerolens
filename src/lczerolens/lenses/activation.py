@@ -1,16 +1,16 @@
 """Activation lens for XAI."""
 
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Tuple
 import re
 
 import chess
 import torch
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens
+from lczerolens.lens import Lens, LensFactory
 
 
-@Lens.register("activation")
+@LensFactory.register("activation")
 class ActivationLens(Lens):
     """
     Class for activation-based XAI methods.
@@ -40,7 +40,7 @@ class ActivationLens(Lens):
 
     def is_compatible(self, model: LczeroModel) -> bool:
         """Caching is compatible with all torch models."""
-        return isinstance(model._model, torch.nn.Module)
+        return isinstance(model, LczeroModel)
 
     def _get_modules(self, model: torch.nn.Module):
         for name, module in model.named_modules():
@@ -52,7 +52,7 @@ class ActivationLens(Lens):
         *inputs: Union[chess.Board, torch.Tensor],
         model: LczeroModel,
         **kwargs,
-    ) -> Any:
+    ) -> Tuple[Any, ...]:
         """
         Cache the activations for a given model and input.
         """
@@ -66,6 +66,4 @@ class ActivationLens(Lens):
             if return_output:
                 output = model.output.save()
 
-        if return_output:
-            return self._storage, output
-        return (self._storage,)
+        return (self._storage, output) if return_output else (self._storage,)

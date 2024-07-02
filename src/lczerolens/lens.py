@@ -1,57 +1,68 @@
 """Generic lens class."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type, Iterator, Generator, Union
-
-import torch
-import chess
+from typing import Any, Dict, Iterator, Generator, Tuple
 
 from lczerolens.model import LczeroModel
 
 
 class Lens(ABC):
+    """Generic lens class.
+
+    Examples
+    --------
+
+    This class is used to define the interface of a lens. A lens is a class that
+    can be used to analyse the activations of a model.
+
+    .. code-block:: python
+
+            from lczerolens import Lens
+
+            class InputLens(Lens):
+                def is_compatible(self, model: LczeroModel) -> bool:
+                    return True
+
+                def analyse(self, *inputs: Any, model: LczeroModel, **kwargs) -> Tuple[Any, ...]:
+                    return inputs
     """
-    Generic lens class.
-    """
-
-    all_lenses: Dict[str, Type["Lens"]] = {}
-
-    @classmethod
-    def register(cls, name: str):
-        """Registers the lens."""
-
-        def decorator(subclass):
-            cls.all_lenses[name] = subclass
-            return subclass
-
-        return decorator
-
-    @classmethod
-    def from_name(cls, name: str, **kwargs) -> "Lens":
-        """Returns the lens from its name."""
-        return cls.all_lenses[name](**kwargs)
-
-    @classmethod
-    def get_subclass(cls, name: str) -> Type["Lens"]:
-        """Returns the subclass."""
-        return cls.all_lenses[name]
 
     @abstractmethod
     def is_compatible(self, model: LczeroModel) -> bool:
-        """
-        Returns whether the lens is compatible with the model.
+        """Returns whether the lens is compatible with the model.
+
+        Parameters
+        ----------
+        model : LczeroModel
+            The NNsight model.
+
+        Returns
+        -------
+        bool
+            Whether the lens is compatible with the model.
         """
         pass
 
     @abstractmethod
     def analyse(
         self,
-        *inputs: Union[chess.Board, torch.Tensor],
+        *inputs: Any,
         model: LczeroModel,
         **kwargs,
-    ) -> Any:
-        """
-        Computes the statistics for a given inputs.
+    ) -> Tuple[Any, ...]:
+        """Analyse the input.
+
+        Parameters
+        ----------
+        inputs : Any
+            The inputs.
+        model : LczeroModel
+            The NNsight model.
+
+        Returns
+        -------
+        Tuple
+            The output.
         """
         pass
 
@@ -60,21 +71,80 @@ class Lens(ABC):
         iter_inputs: Iterator,
         model: LczeroModel,
         **kwargs,
-    ) -> Generator:
-        """Cache the activations for a given model.
+    ) -> Generator[Tuple[Any, ...], None, None]:
+        """Analyse a batches of inputs.
 
         Parameters
         ----------
         iter_inputs : Iterator
-            The iterator over the boards.
+            The iterator over the inputs.
         model : LczeroModel
-            The model wrapper.
+            The NNsight model.
 
         Returns
         -------
-        Iterator
-            The iterator over the activations.
+        Generator
+            The iterator over the statistics.
         """
 
         for inputs in iter_inputs:
             yield self.analyse(*inputs, model=model, **kwargs)
+
+
+class LensFactory:
+    """Factory class for lenses."""
+
+    all_lenses: Dict[str, Lens] = {}
+
+    @classmethod
+    def register(cls, name: str):
+        """Registers the lens.
+
+        Parameters
+        ----------
+        name : str
+            The name of the lens.
+
+        Returns
+        -------
+        Callable
+            The decorator.
+        """
+
+        def decorator(subclass):
+            cls.all_lenses[name] = subclass
+            return subclass
+
+        return decorator
+
+    @classmethod
+    def from_name(cls, name: str, *args, **kwargs) -> Lens:
+        """Returns the lens from its name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the lens.
+
+        Returns
+        -------
+        Lens
+            The lens instance.
+        """
+        return cls.all_lenses[name](*args, **kwargs)
+
+    @classmethod
+    def get_subclass(cls, name: str) -> Lens:
+        """Returns the subclass.
+
+        Parameters
+        ----------
+        name : str
+            The name of the subclass.
+
+        Returns
+        -------
+        Type
+            The subclass.
+        """
+        return cls.all_lenses[name]

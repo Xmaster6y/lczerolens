@@ -6,7 +6,7 @@ import chess
 from lczero.backends import GameState
 
 from lczerolens import move_encodings
-from lczerolens.model import lczero as lczero_utils
+from lczerolens.encodings import backends as lczero_utils
 
 
 class TestStability:
@@ -16,8 +16,8 @@ class TestStability:
         """
         us, them = chess.WHITE, chess.BLACK
         for move, board in zip(*random_move_board_list):
-            encoded_move = move_encodings.encode_move(move, (us, them))
-            decoded_move = move_encodings.decode_move(encoded_move, (us, them), board)
+            encoded_move = move_encodings.encode_move(move, us)
+            decoded_move = move_encodings.decode_move(encoded_move, board)
             assert move == decoded_move
             us, them = them, us
 
@@ -37,9 +37,7 @@ class TestBackend:
             ) = lczero_utils.moves_with_castling_swap(lczero_game, board)
             assert len(legal_moves) == len(lczero_legal_moves)
             assert set(legal_moves) == set(lczero_legal_moves)
-            policy_indices = [
-                move_encodings.encode_move(move, (board.turn, not board.turn)) for move in board.legal_moves
-            ]
+            policy_indices = [move_encodings.encode_move(move, board.turn) for move in board.legal_moves]
             assert len(lczero_policy_indices) == len(policy_indices)
             assert set(lczero_policy_indices) == set(policy_indices)
 
@@ -57,8 +55,6 @@ class TestBackend:
             ) = lczero_utils.moves_with_castling_swap(lczero_game, board)
             assert len(legal_moves) == len(lczero_legal_moves)
             assert set(legal_moves) == set(lczero_legal_moves)
-            policy_indices = [
-                move_encodings.encode_move(move, (board.turn, not board.turn)) for move in board.legal_moves
-            ]
+            policy_indices = [move_encodings.encode_move(move, board.turn) for move in board.legal_moves]
             assert len(lczero_policy_indices) == len(policy_indices)
             assert set(lczero_policy_indices) == set(policy_indices)

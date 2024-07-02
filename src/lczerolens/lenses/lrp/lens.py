@@ -1,7 +1,7 @@
 """Compute LRP heatmap for a given model and input."""
 
 from contextlib import contextmanager
-from typing import Any, Callable, List, Optional, Iterator
+from typing import Any, Callable, List, Optional, Iterator, Generator
 
 import chess
 import onnx2torch
@@ -13,57 +13,31 @@ from zennit.types import Activation
 
 from lczerolens.model import LczeroModel
 from . import helpers
-from lczerolens.lens import Lens
+from lczerolens.lens import Lens, LensFactory
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-@Lens.register("lrp")
+@LensFactory.register("lrp")
 class LrpLens(Lens):
     """Class for wrapping the LCZero models."""
 
     def is_compatible(self, model: LczeroModel) -> bool:
-        """Returns whether the lens is compatible with the model.
+        return isinstance(model, LczeroModel)
 
-        Parameters
-        ----------
-        model : LczeroModel
-            The model model.
-
-        Returns
-        -------
-        bool
-            Whether the lens is compatible with the model.
-        """
-        return isinstance(model.model, torch.nn.Module)
-
-    def analyse_board(
+    def analyse(
         self,
         board: chess.Board,
         model: LczeroModel,
         **kwargs,
     ) -> torch.Tensor:
-        """Runs basic LRP on the model.
-
-        Parameters
-        ----------
-        board : chess.Board
-            The board to compute the heatmap for.
-        model : LczeroModel
-            The model model.
-
-        Returns
-        -------
-        torch.Tensor
-            The heatmap for the given board.
-        """
         composite = kwargs.get("composite", None)
         target = kwargs.get("target", "policy")
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
         linearise_softmax = kwargs.get("linearise_softmax", False)
         init_rel_fn = kwargs.get("init_rel_fn", None)
         return_output = kwargs.get("return_output", False)
-        relevance = self._compute_lrp_relevance(
+        return self._compute_lrp_relevance(
             [board],
             model,
             composite=composite,
@@ -73,28 +47,13 @@ class LrpLens(Lens):
             init_rel_fn=init_rel_fn,
             return_output=return_output,
         )
-        return relevance
 
-    def analyse_batched_boards(
+    def analyse_batched(
         self,
         iter_boards: Iterator,
         model: LczeroModel,
         **kwargs,
     ) -> Iterator:
-        """Cache the relevances for a given model and iterator.
-
-        Parameters
-        ----------
-        iter_boards : Iterator
-            The iterator over the boards.
-        model : LczeroModel
-            The model model.
-
-        Returns
-        -------
-        Iterator
-            The iterator over the relevances.
-        """
         composite = kwargs.get("composite", None)
         target = kwargs.get("target", "policy")
         replace_onnx2torch = kwargs.get("replace_onnx2torch", True)
@@ -128,22 +87,15 @@ class LrpLens(Lens):
         return_output: bool = False,
         infos: Optional[List[Any]] = None,
     ):
-        """
-        Compute LRP heatmap for a given model and input.
-        """
-
         with self.context(model, composite, replace_onnx2torch, linearise_softmax) as modified_model:
-            output, input_tensor = modified_model.predict(
-                boards,
-                with_grad=True,
-                input_requires_grad=True,
-                return_input=True,
-            )
-            if target is not None:
-                output = output[target]
-
-            output.backward(gradient=(output if init_rel_fn is None else init_rel_fn(output, infos)))
-        return (input_tensor.grad, output) if return_output else input_tensor.grad
+            with modified_model.trace(*boards):
+                modified_model.input[0][0].requires_grad = True
+                output = modified_model.output.save()
+                if target is not None:
+                    output = output[target]
+                relevance = modified_model.input[0][0].grad.save()
+                output.backward(gradient=(output if init_rel_fn is None else init_rel_fn(output, infos)))
+        return (relevance, output) if return_output else (relevance,)
 
     @staticmethod
     def make_default_composite():
@@ -164,7 +116,7 @@ class LrpLens(Lens):
         composite: Optional[Composite] = None,
         replace_onnx2torch: bool = True,
         linearise_softmax: bool = False,
-    ):
+    ) -> Generator[LczeroModel, None, None]:
         """Context manager for the lens."""
         if composite is None:
             composite = LrpLens.make_default_composite()
@@ -172,7 +124,7 @@ class LrpLens(Lens):
         new_module_mapping = {}
         old_module_mapping = {}
 
-        for name, module in model.model.named_modules():
+        for name, module in model.named_modules():
             if linearise_softmax:
                 if isinstance(module, torch.nn.Softmax):
                     new_module_mapping[name] = torch.nn.Identity()
@@ -199,10 +151,10 @@ class LrpLens(Lens):
                     new_module_mapping[name] = torch.nn.AdaptiveAvgPool2d(1)
                     old_module_mapping[name] = module
         for name, module in new_module_mapping.items():
-            setattr(model.model, name, module)
+            setattr(model, name, module)
 
         with composite.context(model) as modified_model:
             yield modified_model
 
         for name, module in old_module_mapping.items():
-            setattr(model.model, name, module)
+            setattr(model, name, module)

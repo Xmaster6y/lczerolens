@@ -4,15 +4,15 @@ Test the policy lens.
 
 import torch
 
-from lczerolens import Lens
-from lczerolens.xai import PolicyLens
+from lczerolens import LensFactory
+from lczerolens.lenses import PolicyLens
 
 
 class TestLens:
-    def test_is_compatible(self, tiny_wrapper):
-        lens = Lens.from_name("policy")
+    def test_is_compatible(self, tiny_model):
+        lens = LensFactory.from_name("policy")
         assert isinstance(lens, PolicyLens)
-        assert lens.is_compatible(tiny_wrapper)
+        assert lens.is_compatible(tiny_model)
 
 
 class TestAggregatePolicy:
@@ -21,7 +21,7 @@ class TestAggregatePolicy:
         Test that the aggregate policy function works.
         """
         policy = torch.zeros(1858)
-        lens = Lens.from_name("policy")
+        lens = LensFactory.from_name("policy")
         pickup_agg, dropoff_agg = lens.aggregate_policy(policy)
         assert (pickup_agg == torch.zeros(64)).all()
         assert (dropoff_agg == torch.zeros(64)).all()
@@ -31,7 +31,7 @@ class TestAggregatePolicy:
         Test that the aggregate policy function works.
         """
         policy = torch.ones(1858)
-        lens = Lens.from_name("policy")
+        lens = LensFactory.from_name("policy")
         pickup_agg, dropoff_agg = lens.aggregate_policy(policy)
         assert pickup_agg.sum() == 1858
         assert dropoff_agg.sum() == 1858

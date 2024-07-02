@@ -51,7 +51,7 @@ class ModelSampler(Sampler):
     ):
         to_log = {}
         legal_moves, next_legal_boards = get_next_legal_boards(board)
-        all_stats = self.model.predict([board, *next_legal_boards])[0]
+        all_stats = self.model(*[board, *next_legal_boards])
         utility = 0
         q_values = self._get_q_values(all_stats, to_log)
         utility += self.alpha * q_values
@@ -93,7 +93,7 @@ class ModelSampler(Sampler):
         to_log,
     ):
         if "policy" in all_stats.keys():
-            indices = torch.tensor([move_encodings.encode_move(move, (us, not us)) for move in legal_moves])
+            indices = torch.tensor([move_encodings.encode_move(move, us) for move in legal_moves])
             legal_policy = all_stats["policy"][0].gather(0, indices)
             to_log["max_legal_policy"] = legal_policy.max().item()
             return legal_policy
@@ -118,7 +118,7 @@ class PolicySampler(ModelSampler):
     ):
         to_log = {}
         legal_moves = board.legal_moves
-        all_stats = self.model.predict([board])[0]
+        all_stats = self.model(board)
         us = board.turn
         utility = self._get_p_values(all_stats, legal_moves, us, to_log)
         to_log["max_utility"] = utility.max().item()
@@ -138,7 +138,7 @@ class PolicySampler(ModelSampler):
         to_log,
     ):
         if "policy" in all_stats.keys():
-            indices = torch.tensor([move_encodings.encode_move(move, (us, not us)) for move in legal_moves])
+            indices = torch.tensor([move_encodings.encode_move(move, us) for move in legal_moves])
             legal_policy = all_stats["policy"][0].gather(0, indices)
             to_log["max_legal_policy"] = legal_policy.max().item()
             return legal_policy
@@ -202,10 +202,10 @@ class BatchedPolicySampler:
         self,
         boards: List[chess.Board],
     ):
-        all_stats = self.model.predict(boards)[0]
+        all_stats = self.model(*boards)
         for board, policy in zip(boards, all_stats["policy"]):
             us = board.turn
-            indices = torch.tensor([move_encodings.encode_move(move, (us, not us)) for move in board.legal_moves])
+            indices = torch.tensor([move_encodings.encode_move(move, us) for move in board.legal_moves])
             legal_policy = policy.gather(0, indices)
             if self.use_argmax:
                 idx = legal_policy.argmax()

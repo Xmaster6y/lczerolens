@@ -8,7 +8,7 @@ import torch
 import chess
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens
+from lczerolens.lens import Lens, LensFactory
 
 
 EPS = 1e-6
@@ -70,7 +70,7 @@ class SignalCav(Probe):
         return dot_prod / (activations.norm(dim=1, keepdim=True) + EPS)
 
 
-@Lens.register("probing")
+@LensFactory.register("probing")
 class ProbingLens(Lens):
     """
     Class for probing-based XAI methods.
@@ -84,9 +84,9 @@ class ProbingLens(Lens):
         """
         Returns whether the lens is compatible with the model.
         """
-        return isinstance(model.model, torch.nn.Module)
+        return isinstance(model, LczeroModel)
 
-    def analyse_board(
+    def analyse(
         self,
         board: chess.Board,
         model: LczeroModel,
@@ -98,8 +98,8 @@ class ProbingLens(Lens):
         measures = {}
         for measure_hook in self.measure_hooks.values():
             measure_hook.clear()
-            measure_hook.register(model.model)
-        model.predict(board)
+            measure_hook.register(model)
+        model(board)
         for measure_hook in self.measure_hooks.values():
             measures.update(measure_hook.storage)
             measure_hook.clear()

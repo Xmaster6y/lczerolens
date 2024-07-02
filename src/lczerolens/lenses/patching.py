@@ -6,10 +6,10 @@ import chess
 import torch
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens
+from lczerolens.lens import Lens, LensFactory
 
 
-@Lens.register("patching")
+@LensFactory.register("patching")
 class PatchingLens(Lens):
     """
     Class for patching-based XAI methods.
@@ -23,9 +23,9 @@ class PatchingLens(Lens):
         """
         Returns whether the lens is compatible with the model.
         """
-        return isinstance(model.model, torch.nn.Module)
+        return isinstance(model, LczeroModel)
 
-    def analyse_board(
+    def analyse(
         self,
         board: chess.Board,
         model: LczeroModel,
@@ -36,8 +36,8 @@ class PatchingLens(Lens):
         """
         for modify_hook in self.modify_hooks.values():
             modify_hook.clear()
-            modify_hook.register(model.model)
-        out = model.predict(board)
+            modify_hook.register(model)
+        out = model(board)
         for modify_hook in self.modify_hooks.values():
             modify_hook.clear()
         return out
