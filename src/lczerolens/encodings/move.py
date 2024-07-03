@@ -39,7 +39,7 @@ def encode_move(
 
 def decode_move(
     index: int,
-    board: chess.Board = chess.Board(),
+    board: chess.Board,
 ) -> chess.Move:
     """
     Converts an index to a chess.Move object.
