@@ -1,6 +1,9 @@
 """Utils for the move module."""
 
+from typing import Generator
+
 import chess
+import torch
 
 from .constants import INVERTED_POLICY_INDEX, POLICY_INDEX
 
@@ -62,9 +65,20 @@ def decode_move(
 
 def get_legal_indices(
     board: chess.Board,
-) -> list:
+) -> torch.Tensor:
     """
     Gets the legal indices for the given board.
     """
     us = board.turn
-    return [encode_move(move, us) for move in board.legal_moves]
+    return torch.tensor([encode_move(move, us) for move in board.legal_moves])
+
+
+def get_next_legal_boards(
+    board: chess.Board,
+    n_history: int = 7,
+) -> Generator[chess.Board, None, None]:
+    working_board = board.copy(stack=n_history)
+    for move in working_board.legal_moves:
+        working_board.push(move)
+        yield working_board.copy(stack=n_history)
+        working_board.pop()

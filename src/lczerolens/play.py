@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Generator
 
 import chess
 import torch
@@ -10,17 +10,6 @@ from torch.distributions import Categorical
 
 from lczerolens.encodings import move as move_encodings
 from lczerolens.model import LczeroModel
-
-
-def get_next_legal_boards(board: chess.Board):
-    working_board = board.copy(stack=7)
-    legal_moves = working_board.legal_moves
-    next_legal_boards = []
-    for move in legal_moves:
-        working_board.push(move)
-        next_legal_boards.append(working_board.copy(stack=7))
-        working_board.pop()
-    return legal_moves, next_legal_boards
 
 
 class Sampler(ABC):
@@ -50,16 +39,16 @@ class ModelSampler(Sampler):
         board: chess.Board,
     ):
         to_log = {}
-        legal_moves, next_legal_boards = get_next_legal_boards(board)
-        all_stats = self.model(*[board, *next_legal_boards])
+        next_legal_boards = move_encodings.get_next_legal_boards(board)
+        legal_indices = move_encodings.get_legal_indices(board)
+        all_stats = self.model(board, *next_legal_boards)
         utility = 0
         q_values = self._get_q_values(all_stats, to_log)
         utility += self.alpha * q_values
         utility += self.beta * self._get_m_values(all_stats, q_values, to_log)
-        us = board.turn
-        utility += self.gamma * self._get_p_values(all_stats, legal_moves, us, to_log)
+        utility += self.gamma * self._get_p_values(all_stats, legal_indices, to_log)
         to_log["max_utility"] = utility.max().item()
-        return utility, legal_moves, to_log
+        return utility, legal_indices, to_log
 
     def _get_q_values(self, all_stats, to_log):
         if "value" in all_stats.keys():
@@ -88,26 +77,25 @@ class ModelSampler(Sampler):
     def _get_p_values(
         self,
         all_stats,
-        legal_moves,
-        us,
+        legal_indices,
         to_log,
     ):
         if "policy" in all_stats.keys():
-            indices = torch.tensor([move_encodings.encode_move(move, us) for move in legal_moves])
-            legal_policy = all_stats["policy"][0].gather(0, indices)
+            legal_policy = all_stats["policy"][0].gather(0, legal_indices)
             to_log["max_legal_policy"] = legal_policy.max().item()
             return legal_policy
         else:
-            return torch.zeros(all_stats.batch_size[0] - 1)
+            return torch.zeros_like(legal_indices)
 
     def get_next_move(self, board: chess.Board):
-        utility, legal_moves, to_log = self.get_utility(board)
+        utility, legal_indices, to_log = self.get_utility(board)
         if self.use_argmax:
             idx = utility.argmax()
         else:
             m = Categorical(logits=utility)
             idx = m.sample()
-        return list(legal_moves)[idx], to_log
+        move = move_encodings.decode_move(legal_indices[idx], board)
+        return move, to_log
 
 
 class PolicySampler(ModelSampler):
@@ -117,10 +105,9 @@ class PolicySampler(ModelSampler):
         board: chess.Board,
     ):
         to_log = {}
-        legal_moves = board.legal_moves
+        legal_indices = move_encodings.get_legal_indices(board)
         all_stats = self.model(board)
-        us = board.turn
-        utility = self._get_p_values(all_stats, legal_moves, us, to_log)
+        utility = self._get_p_values(all_stats, legal_indices, to_log)
         to_log["max_utility"] = utility.max().item()
         if "value" in all_stats.keys():
             to_log["value"] = all_stats["value"][0].item()
@@ -128,22 +115,7 @@ class PolicySampler(ModelSampler):
             to_log["wdl_w"] = all_stats["wdl"][0][0].item()
             to_log["wdl_d"] = all_stats["wdl"][0][1].item()
             to_log["wdl_l"] = all_stats["wdl"][0][2].item()
-        return utility, legal_moves, to_log
-
-    def _get_p_values(
-        self,
-        all_stats,
-        legal_moves,
-        us,
-        to_log,
-    ):
-        if "policy" in all_stats.keys():
-            indices = torch.tensor([move_encodings.encode_move(move, us) for move in legal_moves])
-            legal_policy = all_stats["policy"][0].gather(0, indices)
-            to_log["max_legal_policy"] = legal_policy.max().item()
-            return legal_policy
-        else:
-            return torch.zeros(len(legal_moves))
+        return utility, legal_indices, to_log
 
 
 @dataclass
@@ -201,11 +173,10 @@ class BatchedPolicySampler:
     def get_next_moves(
         self,
         boards: List[chess.Board],
-    ):
+    ) -> Generator[chess.Move, None, None]:
         all_stats = self.model(*boards)
         for board, policy in zip(boards, all_stats["policy"]):
-            us = board.turn
-            indices = torch.tensor([move_encodings.encode_move(move, us) for move in board.legal_moves])
+            indices = move_encodings.get_legal_indices(board)
             legal_policy = policy.gather(0, indices)
             if self.use_argmax:
                 idx = legal_policy.argmax()
