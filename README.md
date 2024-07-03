@@ -22,14 +22,14 @@ pip install lczerolens
 
 ### Features
 
-- [Move Prediction](move-prediction): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/features/move-prediction.ipynb)
-- [Convert Official Weights](convert_official_weights): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/features/convert-official-weights.ipynb)
+- [Move Prediction](move-prediction): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/move-prediction.ipynb)
+- [Convert Official Weights](convert_official_weights): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/convert-official-weights.ipynb)
 
 ### Tutorials
 
 - [Walkthrough](walkthrough): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/walkthrough.ipynb)
-- [Piece Value Estimation Using LRP](piece-value-estimation-using-lrp): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/tutorials/piece-value-estimation-using-lrp.ipynb)
-- [Evidence of Learned Look-Ahead](evidence-of-learned-look-ahead): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/tutorials/evidence-of-learned-look-ahead.ipynb)
+- [Piece Value Estimation Using LRP](piece-value-estimation-using-lrp): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/tutorials/piece-value-estimation-using-lrp.ipynb)
+- [Evidence of Learned Look-Ahead](evidence-of-learned-look-ahead): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/tutorials/evidence-of-learned-look-ahead.ipynb)
 
 ## Demo
 
