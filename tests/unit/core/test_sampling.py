@@ -2,7 +2,7 @@
 
 import chess
 
-from lczerolens.play import ModelSampler, SelfPlay, PolicySampler, BatchedPolicySampler
+from lczerolens.play.sampling import ModelSampler, SelfPlay, PolicySampler, BatchedPolicySampler
 
 
 class TestModelSampler:

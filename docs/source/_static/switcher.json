@@ -2,5 +2,13 @@
     {
       "version": "dev",
       "url": "https://lczerolens.readthedocs.io/en/latest/"
+    },
+    {
+      "version": "v0.2.0",
+      "url": "https://lczerolens.readthedocs.io/en/v0.2.0/"
+    },
+    {
+      "version": "v0.1.2",
+      "url": "https://lczerolens.readthedocs.io/en/v0.1.2/"
     }
   ]

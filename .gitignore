@@ -135,5 +135,6 @@ debug
 lc0
 !bin/lc0
 wandb
+**/.DS_Store
 
 *secret*

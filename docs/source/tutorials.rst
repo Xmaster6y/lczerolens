@@ -1,5 +1,5 @@
 Tutorials
-============
+=========
 
 .. grid:: 2
    :gutter: 2
@@ -9,14 +9,20 @@ Tutorials
 
       :bdg-primary:`Main Features`
 
-   .. grid-item-card:: IOI Patching
-      :link: notebooks/tutorials/wip.ipynb
+   .. grid-item-card:: Evidence of Learned Look-Ahead
+      :link: notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
 
-      :bdg-primary:`arXiv:2211.00593`
+      :bdg-primary:`Main Features`
 
+   .. grid-item-card:: Piece Value Estimation Using LRP
+      :link: notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
+
+      :bdg-primary:`Main Features`
 
 .. toctree::
-   :maxdepth: 1
    :hidden:
+   :maxdepth: 2
 
-   notebooks/tutorials/wip.ipynb
+   notebooks/walkthrough.ipynb
+   notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
+   notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
