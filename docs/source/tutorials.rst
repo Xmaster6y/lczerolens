@@ -1,5 +1,5 @@
 Tutorials
-============
+=========
 
 .. grid:: 2
    :gutter: 2
@@ -9,14 +9,19 @@ Tutorials
 
       :bdg-primary:`Main Features`
 
-   .. grid-item-card:: IOI Patching
-      :link: notebooks/tutorials/wip.ipynb
+   .. grid-item-card:: Move Prediction
+      :link: notebooks/tutorials/move_prediction.ipynb
 
-      :bdg-primary:`arXiv:2211.00593`
+      :bdg-primary:`Utils`
 
+   .. grid-item-card:: Convert Official Weights
+      :link: notebooks/tutorials/convert_official_weights.ipynb
+
+      :bdg-primary:`Utils`
 
 .. toctree::
    :maxdepth: 1
    :hidden:
 
-   notebooks/tutorials/wip.ipynb
+   notebooks/tutorials/move_prediction.ipynb
+   notebooks/tutorials/convert_official_weights.ipynb

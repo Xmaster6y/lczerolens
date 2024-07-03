@@ -58,6 +58,7 @@ elif version_match == "stable":
 
 html_theme_options = {
     "show_nav_level": 2,
+    "show_toc_level": 1,
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     "navbar_align": "left",
     "icon_links": [
