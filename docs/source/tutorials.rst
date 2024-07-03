@@ -9,19 +9,19 @@ Tutorials
 
       :bdg-primary:`Main Features`
 
-   .. grid-item-card:: Move Prediction
-      :link: notebooks/tutorials/move_prediction.ipynb
+   .. grid-item-card:: Evidence of Learned Look-Ahead
+      :link: notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
 
-      :bdg-primary:`Utils`
+      :bdg-primary:`Main Features`
 
-   .. grid-item-card:: Convert Official Weights
-      :link: notebooks/tutorials/convert_official_weights.ipynb
+   .. grid-item-card:: Piece Value Estimation Using LRP
+      :link: notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
 
-      :bdg-primary:`Utils`
+      :bdg-primary:`Main Features`
 
 .. toctree::
    :maxdepth: 1
-   :hidden:
 
-   notebooks/tutorials/move_prediction.ipynb
-   notebooks/tutorials/convert_official_weights.ipynb
+   notebooks/walkthrough.ipynb
+   notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
+   notebooks/tutorials/piece-value-estimation-using-lrp.ipynb

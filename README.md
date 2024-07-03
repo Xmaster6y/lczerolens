@@ -20,10 +20,16 @@ Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make the analy
 pip install lczerolens
 ```
 
+### Features
+
+- [Move Prediction](move_prediction): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/features/move-prediction.ipynb)
+- [Convert Official Weights](convert_official_weights): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/features/convert-official-weights.ipynb)
+
 ### Tutorials
 
-- [Move Prediction](move_prediction): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/move_prediction.ipynb)
-- [Convert Official Weights](convert_official_weights): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/convert_official_weights.ipynb)
+- [Walkthrough](walkthrough): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/walkthrough.ipynb)
+- [Piece Value Estimation Using LRP](piece-value-estimation-using-lrp): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/tutorials/piece-value-estimation-using-lrp.ipynb)
+- [Evidence of Learned Look-Ahead](evidence-of-learned-look-ahead): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/tutorials/evidence-of-learned-look-ahead.ipynb)
 
 ## Demo
 
