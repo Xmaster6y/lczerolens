@@ -9,9 +9,9 @@ lczerolens
    :hidden:
 
    start
-   documentation
    features
    tutorials
+   api
    About <about>
 
 .. grid:: 1 1 2 2
@@ -51,11 +51,11 @@ lczerolens
 
                 Tutorials
 
-          .. button-ref:: documentation
+          .. button-ref:: api
             :color: primary
             :outline:
 
-                Docs
+                API Reference
 
 
 .. div:: sd-fs-1 sd-font-weight-bold sd-text-center sd-text-primary sd-mb-5

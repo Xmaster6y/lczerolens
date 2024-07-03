@@ -2,6 +2,7 @@ Flow
 ====
 
 .. module:: lczerolens.model
+    :no-index:
 
     .. autoclass:: Flow
         :members:

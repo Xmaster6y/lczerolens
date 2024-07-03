@@ -15,7 +15,6 @@ To get started with lczerolens, install it with ``pip``.
 
    pip install lczerolens
 
-
 First Steps
 -----------
 
@@ -33,15 +32,29 @@ First Steps
 
       Check out the basic features provided by :bdg-primary:`lczerolens`.
 
+More Advanced
+-------------
+
+.. grid:: 2
+   :gutter: 2
+
    .. grid-item-card:: Tutorials
       :link: tutorials
       :link-type: doc
 
       See implementations of :bdg-primary:`lczerolens` through common interpretability techniques.
 
+   .. grid-item-card:: API Reference
+      :link: api
+      :link-type: doc
+
+      See the full API reference for :bdg-primary:`lczerolens` to extend its functionality.
 
 .. toctree::
    :maxdepth: 1
    :hidden:
 
    notebooks/walkthrough.ipynb
+   features
+   tutorials
+   api

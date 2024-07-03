@@ -1,4 +1,4 @@
-Documentation
+API Reference
 =============
 
 Chess Modeling
@@ -7,8 +7,8 @@ Chess Modeling
 .. toctree::
    :maxdepth: 3
 
-   documentation/model
-   documentation/encodings
+   api/model
+   api/encodings
 
 XAI Methods
 -----------
@@ -16,22 +16,22 @@ XAI Methods
 .. toctree::
    :maxdepth: 2
 
-   documentation/lens
+   api/lens
 
 .. toctree::
    :maxdepth: 3
 
-   documentation/lenses
+   api/lenses
 
 .. toctree::
    :maxdepth: 2
 
-   documentation/concept
+   api/concept
 
 .. toctree::
    :maxdepth: 3
 
-   documentation/concepts
+   api/concepts
 
 Play with the Models
 --------------------
@@ -39,4 +39,4 @@ Play with the Models
 .. toctree::
    :maxdepth: 3
 
-   documentation/play
+   api/play
