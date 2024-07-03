@@ -1,21 +1,62 @@
 Features
 ==========
 
+.. raw:: html
+
+   <script>
+   document.addEventListener('DOMContentLoaded', (event) => {
+      document.querySelectorAll('h5.card-title').forEach(el => {
+      el.style.margin = '0';
+      });
+   });
+   </script>
+
+   <style>
+      .toctree-wrapper {
+         display: none !important;
+      }
+   </style>
+
 .. grid:: 2
-   :gutter: 2
+   :gutter: 3
 
-   .. grid-item-card:: Move Prediction
+   .. grid-item-card::
       :link: notebooks/features/move-prediction.ipynb
+      :class-card: surface
+      :class-body: surface
 
-      :bdg-primary:`Utils`
+      .. raw:: html
 
-   .. grid-item-card:: Convert Official Weights
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-arrow-turn-up fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Move Prediction</h5>
+               <p class="card-text">Make a move prediction for a given chess board.</p>
+            </div>
+         </div>
+
+   .. grid-item-card::
       :link: notebooks/features/convert-official-weights.ipynb
+      :class-card: surface
+      :class-body: surface
 
-      :bdg-primary:`Utils`
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-arrows-rotate fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Convert Official Weights</h5>
+               <p class="card-text">Convert <strong>lc0</strong> networks to <strong>onnx</strong>.</p>
+            </div>
+         </div>
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
    notebooks/features/move-prediction.ipynb
    notebooks/features/convert-official-weights.ipynb

@@ -5,14 +5,14 @@ lczerolens
 ==========
 
 .. toctree::
-   :maxdepth: 1
-   :hidden:
+    :maxdepth: 1
+    :hidden:
 
-   start
-   features
-   tutorials
-   api
-   About <about>
+    start
+    features
+    tutorials
+    api
+    About <about>
 
 .. grid:: 1 1 2 2
     :class-container: hero

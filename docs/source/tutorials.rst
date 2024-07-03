@@ -20,7 +20,8 @@ Tutorials
       :bdg-primary:`Main Features`
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
    notebooks/walkthrough.ipynb
    notebooks/tutorials/evidence-of-learned-look-ahead.ipynb

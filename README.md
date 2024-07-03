@@ -22,7 +22,7 @@ pip install lczerolens
 
 ### Features
 
-- [Move Prediction](move_prediction): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/features/move-prediction.ipynb)
+- [Move Prediction](move-prediction): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/features/move-prediction.ipynb)
 - [Convert Official Weights](convert_official_weights): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/features/convert-official-weights.ipynb)
 
 ### Tutorials
