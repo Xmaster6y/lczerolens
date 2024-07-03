@@ -2,7 +2,6 @@ Getting Started
 ===============
 
 **lczerolens** is a package for running interpretability methods on lc0 models.
-**lczerolens** is a package for running interpretability methods on lc0 models.
 It is designed to be easy to use and to work with the most common interpretability
 techniques.
 
@@ -34,8 +33,8 @@ First Steps
 
       Check out the basic features provided by :bdg-primary:`lczerolens`.
 
-More Advanced
--------------
+Advanced Features
+-----------------
 
 .. grid:: 2
    :gutter: 2
