@@ -7,7 +7,7 @@ import chess
 from lczerolens.concept import BinaryConcept
 
 
-class HasPieceConcept(BinaryConcept):
+class HasPiece(BinaryConcept):
     """Class for material concept-based XAI methods."""
 
     def __init__(
@@ -32,7 +32,7 @@ class HasPieceConcept(BinaryConcept):
         return 1 if len(squares) > 0 else 0
 
 
-class HasMaterialAdvantageConcept(BinaryConcept):
+class HasMaterialAdvantage(BinaryConcept):
     """Class for material concept-based XAI methods.
 
     Attributes

@@ -8,7 +8,7 @@ from lczerolens.model import LczeroModel, PolicyFlow
 from lczerolens.concept import BinaryConcept, MulticlassConcept
 
 
-class BestLegalMoveConcept(MulticlassConcept):
+class BestLegalMove(MulticlassConcept):
     """Class for move concept-based XAI methods."""
 
     def __init__(
@@ -31,7 +31,7 @@ class BestLegalMoveConcept(MulticlassConcept):
         return legal_move_indices[sub_index]
 
 
-class PieceBestLegalMoveConcept(BinaryConcept):
+class PieceBestLegalMove(BinaryConcept):
     """Class for move concept-based XAI methods."""
 
     def __init__(

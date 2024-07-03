@@ -5,7 +5,7 @@ import chess
 from lczerolens.concept import BinaryConcept
 
 
-class HasThreatConcept(BinaryConcept):
+class HasThreat(BinaryConcept):
     """
     Class for material concept-based XAI methods.
     """
@@ -39,7 +39,7 @@ class HasThreatConcept(BinaryConcept):
         return 0
 
 
-class HasMateThreatConcept(BinaryConcept):
+class HasMateThreat(BinaryConcept):
     """
     Class for material concept-based XAI methods.
     """

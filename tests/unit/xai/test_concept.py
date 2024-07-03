@@ -6,8 +6,8 @@ import chess
 
 from lczerolens.concept import BinaryConcept, AndBinaryConcept
 from lczerolens.concepts import (
-    HasPieceConcept,
-    HasThreatConcept,
+    HasPiece,
+    HasThreat,
 )
 
 
@@ -31,7 +31,7 @@ class TestBinaryConcept:
         """
         Test the compute_label method.
         """
-        concept = AndBinaryConcept(HasPieceConcept("p"), HasPieceConcept("n"))
+        concept = AndBinaryConcept(HasPiece("p"), HasPiece("n"))
         assert concept.compute_label(chess.Board("8/8/8/8/8/8/8/8 w - - 0 1")) == 0
         assert concept.compute_label(chess.Board("8/p7/8/8/8/8/8/8 w - - 0 1")) == 0
         assert concept.compute_label(chess.Board("8/pn6/8/8/8/8/8/8 w - - 0 1")) == 1
@@ -40,7 +40,7 @@ class TestBinaryConcept:
         """
         Test the relative threat concept.
         """
-        concept = HasThreatConcept("p", relative=True)  # Is an enemy pawn threatened?
+        concept = HasThreat("p", relative=True)  # Is an enemy pawn threatened?
         assert concept.compute_label(chess.Board("8/8/8/8/8/8/8/8 w - - 0 1")) == 0
         assert concept.compute_label(chess.Board("R7/8/8/8/8/8/p7/8 w - - 0 1")) == 1
         assert concept.compute_label(chess.Board("R7/8/8/8/8/8/p7/8 b - - 0 1")) == 0

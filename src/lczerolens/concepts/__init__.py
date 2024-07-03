@@ -1,14 +1,14 @@
 """Concepts module."""
 
-from .material import HasMaterialAdvantageConcept, HasPieceConcept
-from .move import BestLegalMoveConcept, PieceBestLegalMoveConcept
-from .threat import HasMateThreatConcept, HasThreatConcept
+from .material import HasMaterialAdvantage, HasPiece
+from .move import BestLegalMove, PieceBestLegalMove
+from .threat import HasMateThreat, HasThreat
 
 __all__ = [
-    "HasPieceConcept",
-    "HasThreatConcept",
-    "HasMateThreatConcept",
-    "HasMaterialAdvantageConcept",
-    "BestLegalMoveConcept",
-    "PieceBestLegalMoveConcept",
+    "HasPiece",
+    "HasThreat",
+    "HasMateThreat",
+    "HasMaterialAdvantage",
+    "BestLegalMove",
+    "PieceBestLegalMove",
 ]
