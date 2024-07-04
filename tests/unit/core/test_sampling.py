@@ -1,29 +1,38 @@
-"""Model tests."""
+"""Sampling tests."""
 
 import chess
 
-from lczerolens.play.sampling import ModelSampler, SelfPlay, PolicySampler, BatchedPolicySampler
+from lczerolens.play.sampling import ModelSampler, SelfPlay, PolicySampler, BatchedPolicySampler, RandomSampler
+
+
+class TestRandomSampler:
+    def test_get_utility(self):
+        """Test get_utility method."""
+        board = chess.Board()
+        sampler = RandomSampler(use_argmax=False)
+        utility, _, _ = sampler.get_utility(board)
+        assert utility.shape[0] == 20
 
 
 class TestModelSampler:
     def test_get_utility_tiny(self, tiny_model):
         """Test get_utility method."""
         board = chess.Board()
-        sampler = ModelSampler(model=tiny_model)
+        sampler = ModelSampler(model=tiny_model, use_argmax=False)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 
     def test_get_utility_winner(self, winner_model):
         """Test get_utility method."""
         board = chess.Board()
-        sampler = ModelSampler(model=winner_model)
+        sampler = ModelSampler(model=winner_model, use_argmax=False)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 
     def test_policy_sampler_tiny(self, tiny_model):
         """Test policy_sampler method."""
         board = chess.Board()
-        sampler = PolicySampler(model=tiny_model)
+        sampler = PolicySampler(model=tiny_model, use_argmax=False)
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 
@@ -32,8 +41,8 @@ class TestSelfPlay:
     def test_play(self, tiny_model, winner_model):
         """Test play method."""
         board = chess.Board()
-        white = ModelSampler(model=tiny_model)
-        black = ModelSampler(model=winner_model)
+        white = ModelSampler(model=tiny_model, use_argmax=False)
+        black = ModelSampler(model=winner_model, use_argmax=False)
         self_play = SelfPlay(white=white, black=black)
         logs = []
 

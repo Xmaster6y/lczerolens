@@ -6,3 +6,4 @@ lczerolens.play
 
     play/game
     play/sampling
+    play/puzzle

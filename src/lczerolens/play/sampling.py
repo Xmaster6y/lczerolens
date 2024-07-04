@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Callable, List, Generator
+from typing import Optional, Callable, List, Generator, Tuple, Dict
 
 import chess
 import torch
@@ -12,16 +12,72 @@ from lczerolens.encodings import move as move_encodings
 from lczerolens.model import LczeroModel
 
 
+@dataclass
 class Sampler(ABC):
+    use_argmax: bool
+
     @abstractmethod
-    def get_next_move(self, board: chess.Board):
+    def get_utility(self, board: chess.Board) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]:
+        """Get the utility of the board.
+
+        Parameters
+        ----------
+        board : chess.Board
+            The current board.
+
+        Returns
+        -------
+        Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]
+            The utility, the legal indices, and the log dictionary.
+        """
         pass
+
+    def choose_move(self, board: chess.Board, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
+        """Choose the next move.
+
+        Parameters
+        ----------
+        utility : torch.Tensor
+            The utility tensor.
+        legal_indices : torch.Tensor
+            The legal indices tensor.
+        """
+        if self.use_argmax:
+            idx = utility.argmax()
+        else:
+            m = Categorical(logits=utility)
+            idx = m.sample()
+        return move_encodings.decode_move(legal_indices[idx], board)
+
+    def get_next_move(self, board: chess.Board) -> Tuple[chess.Move, Dict[str, float]]:
+        """Get the next move.
+
+        Parameters
+        ----------
+        board : chess.Board
+            The current board.
+
+        Returns
+        -------
+        Tuple[chess.Move, Dict[str, float]]
+            The move and the log dictionary.
+        """
+        utility, legal_indices, to_log = self.get_utility(board)
+        return self.choose_move(board, utility, legal_indices), to_log
+
+
+class RandomSampler(Sampler):
+    def get_utility(
+        self,
+        board: chess.Board,
+    ):
+        legal_indices = move_encodings.get_legal_indices(board)
+        return torch.ones_like(legal_indices, dtype=torch.float32), legal_indices, {}
 
 
 @dataclass
 class ModelSampler(Sampler):
     model: LczeroModel
-    use_argmax: bool = True
     alpha: float = 1.0
     beta: float = 1.0
     gamma: float = 1.0
@@ -86,16 +142,6 @@ class ModelSampler(Sampler):
             return legal_policy
         else:
             return torch.zeros_like(legal_indices)
-
-    def get_next_move(self, board: chess.Board):
-        utility, legal_indices, to_log = self.get_utility(board)
-        if self.use_argmax:
-            idx = utility.argmax()
-        else:
-            m = Categorical(logits=utility)
-            idx = m.sample()
-        move = move_encodings.decode_move(legal_indices[idx], board)
-        return move, to_log
 
 
 class PolicySampler(ModelSampler):
