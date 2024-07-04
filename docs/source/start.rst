@@ -22,16 +22,16 @@ First Steps
 .. grid:: 2
    :gutter: 2
 
-   .. grid-item-card:: Walkthrough
-      :link: notebooks/walkthrough.ipynb
-
-      Walk through the basic functionality of the package.
-
    .. grid-item-card:: Features
       :link: features
       :link-type: doc
 
       Check out the basic features provided by :bdg-primary:`lczerolens`.
+
+   .. grid-item-card:: Walkthrough
+      :link: notebooks/walkthrough.ipynb
+
+      Walk through the basic functionality of the package.
 
 Advanced Features
 -----------------
@@ -55,7 +55,6 @@ Advanced Features
    :maxdepth: 1
    :hidden:
 
-   notebooks/walkthrough.ipynb
    features
    tutorials
    api
