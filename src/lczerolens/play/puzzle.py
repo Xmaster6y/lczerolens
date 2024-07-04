@@ -59,9 +59,14 @@ class Puzzle:
             opening_tags=obj["OpeningTags"].split(),
         )
 
-    def evaluate(self, sampler: Sampler, use_perplexity: bool = False) -> Tuple[float, Optional[float]]:
+    @property
+    def initial_board(self) -> chess.Board:
         board = chess.Board(self.fen)
         board.push(self.initial_move)
+        return board
+
+    def evaluate(self, sampler: Sampler, use_perplexity: bool = False) -> Tuple[float, Optional[float]]:
+        board = self.initial_board
         length = len(self.moves)
         score = 0.0
         perplexity = 1.0 if use_perplexity else 0.0
@@ -81,3 +86,9 @@ class Puzzle:
         else:
             perplexity = perplexity ** (-1 / length)
         return score, perplexity
+
+    def __repr__(self) -> str:
+        return self.initial_board.__repr__()
+
+    def _repr_svg_(self) -> str:
+        return self.initial_board._repr_svg_()
