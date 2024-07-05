@@ -12,6 +12,7 @@ author = "Yoann Poupart"
 
 # General Configuration
 extensions = [
+    # 'sphinx.ext.autosectionlabel',
     "sphinx.ext.autodoc",  # Auto documentation from docstrings
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
     "sphinx_copybutton",  # Copy button for code blocks
@@ -58,7 +59,8 @@ elif version_match == "stable":
 
 html_theme_options = {
     "show_nav_level": 2,
-    "show_toc_level": 1,
+    "navigation_depth": 2,
+    "show_toc_level": 2,
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     "navbar_align": "left",
     "icon_links": [
@@ -87,6 +89,7 @@ html_theme_options = {
         "version_match": version_match,
     },
 }
+html_sidebars = {"about": [], "start": []}
 
 html_context = {"default_mode": "auto"}
 
