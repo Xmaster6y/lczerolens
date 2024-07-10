@@ -42,7 +42,7 @@ class Puzzle:
     opening_tags: List[str]
 
     @classmethod
-    def from_dict(cls, obj: Dict[str, Union[str, int]]) -> "Puzzle":
+    def from_dict(cls, obj: Dict[str, Union[str, int, None]]) -> "Puzzle":
         uci_moves = obj["Moves"].split()
         moves = [chess.Move.from_uci(uci_move) for uci_move in uci_moves]
         return cls(
@@ -54,9 +54,9 @@ class Puzzle:
             rating_deviation=obj["RatingDeviation"],
             popularity=obj["Popularity"],
             nb_plays=obj["NbPlays"],
-            themes=obj["Themes"].split(),
+            themes=obj["Themes"].split() if obj["Themes"] is not None else [],
             game_url=obj["GameUrl"],
-            opening_tags=obj["OpeningTags"].split(),
+            opening_tags=obj["OpeningTags"].split() if obj["OpeningTags"] is not None else [],
         )
 
     @property
