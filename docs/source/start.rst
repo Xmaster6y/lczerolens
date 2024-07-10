@@ -18,7 +18,7 @@ To get started with lczerolens, install it with ``pip``.
 
 .. note::
 
-   The dependencies for lczerolens are heavy at the moment.
+   The dependencies for lczerolens are currently substantial.
    It mainly depends on ``torch``, ``nnsight``, ``zennit`` and ``datasets``.
 
 First Steps
