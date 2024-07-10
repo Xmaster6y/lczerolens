@@ -32,7 +32,7 @@ class LczeroModel(NNsight):
         return super()._execute(*prepared_inputs, **kwargs)
 
     def _prepare_inputs(self, *inputs: Union[chess.Board, torch.Tensor], **kwargs) -> Tuple[Tuple[Any], int]:
-        input_encoding = kwargs.pop("input_encoding", InputEncoding.INPUT_CLASSICAL_112_PLANE)
+        input_encoding = kwargs.pop("input_encoding", InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED)
         input_requires_grad = kwargs.pop("input_requires_grad", False)
 
         if len(inputs) == 1 and isinstance(inputs[0], torch.Tensor):
