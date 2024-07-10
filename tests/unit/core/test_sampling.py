@@ -9,7 +9,7 @@ class TestRandomSampler:
     def test_get_utility(self):
         """Test get_utility method."""
         board = chess.Board()
-        sampler = RandomSampler(use_argmax=False)
+        sampler = RandomSampler()
         utility, _, _ = sampler.get_utility(board)
         assert utility.shape[0] == 20
 

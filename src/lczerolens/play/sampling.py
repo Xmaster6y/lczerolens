@@ -66,6 +66,7 @@ class Sampler(ABC):
         return self.choose_move(board, utility, legal_indices), to_log
 
 
+@dataclass
 class RandomSampler(Sampler):
     use_argmax: bool = False
 
