@@ -65,18 +65,31 @@ class Puzzle:
         board.push(self.initial_move)
         return board
 
-    def evaluate(self, sampler: Sampler, use_perplexity: bool = False) -> Tuple[float, Optional[float]]:
+    def evaluate(
+        self, sampler: Sampler, use_perplexity: bool = False, all_moves: bool = False
+    ) -> Tuple[float, Optional[float]]:
         board = self.initial_board
+        initial_turn = board.turn
         length = len(self.moves)
         score = 0.0
         perplexity = 1.0 if use_perplexity else 0.0
+        boards = []
         for move in self.moves:
-            utility, legal_indices, _ = next(iter(sampler.get_utility([board])))
+            boards.append(board.copy())
+            board.push(move)
+
+        utilities, all_legal_indices, _ = zip(*sampler.get_utility(boards))
+        predicted_moves = sampler.choose_move(zip(boards, utilities, all_legal_indices))
+
+        for board, move, utility, legal_indices, predicted_move in zip(
+            boards, self.moves, utilities, all_legal_indices, predicted_moves
+        ):
+            if not all_moves and board.turn != initial_turn:
+                continue
             if use_perplexity:
                 index = move_encodings.encode_move(move, board.turn)
                 probs = torch.softmax(utility, dim=0)
                 perplexity *= probs[legal_indices == index].item()
-            predicted_move = next(iter(sampler.choose_move([[board, utility, legal_indices]])))
             if predicted_move == move:
                 score += 1
             board.push(move)

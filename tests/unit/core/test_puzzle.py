@@ -28,6 +28,6 @@ class TestRandomSampler:
         """Test puzzle evaluation."""
         puzzle = Puzzle.from_dict(easy_puzzle)
         sampler = RandomSampler(use_argmax=True)
-        score, perplexity = puzzle.evaluate(sampler, use_perplexity=True)
+        score, perplexity = puzzle.evaluate(sampler, use_perplexity=True, all_moves=True)
         assert score == 0.0
         assert abs(perplexity - 20.0) < 1e-3
