@@ -67,6 +67,8 @@ class Sampler(ABC):
 
 
 class RandomSampler(Sampler):
+    use_argmax: bool = False
+
     def get_utility(
         self,
         board: chess.Board,
