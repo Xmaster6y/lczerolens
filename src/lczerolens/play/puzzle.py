@@ -71,12 +71,12 @@ class Puzzle:
         score = 0.0
         perplexity = 1.0 if use_perplexity else 0.0
         for move in self.moves:
-            utility, legal_indices, _ = sampler.get_utility(board)
+            utility, legal_indices, _ = next(iter(sampler.get_utility([board])))
             if use_perplexity:
                 index = move_encodings.encode_move(move, board.turn)
                 probs = torch.softmax(utility, dim=0)
                 perplexity *= probs[legal_indices == index].item()
-            predicted_move = sampler.choose_move(board, utility, legal_indices)
+            predicted_move = next(iter(sampler.choose_move([[board, utility, legal_indices]])))
             if predicted_move == move:
                 score += 1
             board.push(move)

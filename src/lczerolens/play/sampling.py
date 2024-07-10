@@ -68,7 +68,7 @@ class Sampler(ABC):
         Iterable[Tuple[chess.Move, Dict[str, float]]]
             The iterable over the moves and log dictionaries.
         """
-        utility, legal_indices, to_log = zip(*self.get_utility(*boards))
+        utility, legal_indices, to_log = zip(*self.get_utility(boards))
         return zip(self.choose_move(zip(boards, utility, legal_indices)), to_log)
 
 
@@ -123,8 +123,8 @@ class ModelSampler(Sampler):
         def generator():
             all_stats = self.model(*next_batch)
             offset = 0
-            for legal_indices in zip(next_legal_indices):
-                n_boards = legal_indices.shape[0] + 1
+            for legal_indices in next_legal_indices:
+                n_boards = legal_indices.shape[0] + 1 if use_next_boards else 1
                 batch_stats = all_stats[offset : offset + n_boards]
                 offset += n_boards
                 yield legal_indices, batch_stats
@@ -132,7 +132,7 @@ class ModelSampler(Sampler):
         for board in boards:
             next_legal_indices.append(move_encodings.get_legal_indices(board))
             if use_next_boards:
-                next_boards = move_encodings.get_next_legal_boards(board)
+                next_boards = list(move_encodings.get_next_legal_boards(board))
             else:
                 next_boards = []
             if len(next_batch) + len(next_boards) + 1 > batch_size and batch_size != -1:
@@ -181,6 +181,7 @@ class ModelSampler(Sampler):
             return torch.zeros_like(legal_indices)
 
 
+@dataclass
 class PolicySampler(ModelSampler):
     use_suboptimal: bool = False
 
@@ -192,7 +193,7 @@ class PolicySampler(ModelSampler):
 
         to_log = {}
         for legal_indices, batch_stats in self._get_batched_stats(boards, batch_size, use_next_boards=False):
-            legal_policy = batch_stats["policy"].gather(0, legal_indices)
+            legal_policy = batch_stats["policy"][0].gather(0, legal_indices)
             if self.use_suboptimal:
                 idx = legal_policy.argmax()
                 legal_policy[idx] = torch.tensor(-1e3)
@@ -220,7 +221,7 @@ class SelfPlay:
             board = chess.Board()
         game = []
         if to_play == chess.BLACK:
-            move, _ = next(iter(self.black.get_next_move(board)))
+            move, _ = next(iter(self.black.get_next_move([board])))
             board.push(move)
             game.append(move)
         for _ in range(max_moves):
