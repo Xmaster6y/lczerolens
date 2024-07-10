@@ -1,7 +1,7 @@
 """Preproces functions for chess puzzles."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Union, Tuple, Optional
+from typing import Dict, List, Union, Tuple, Optional, Iterable
 
 import chess
 import torch
@@ -66,38 +66,51 @@ class Puzzle:
         return board
 
     def evaluate(
-        self, sampler: Sampler, use_perplexity: bool = False, all_moves: bool = False
+        self, sampler: Sampler, use_perplexity: bool = False, all_moves: bool = False, **kwargs
     ) -> Tuple[float, Optional[float]]:
         board = self.initial_board
         initial_turn = board.turn
-        length = len(self.moves)
-        score = 0.0
-        perplexity = 1.0 if use_perplexity else 0.0
         boards = []
         for move in self.moves:
+            if not all_moves and board.turn != initial_turn:
+                continue
             boards.append(board.copy())
             board.push(move)
 
-        utilities, all_legal_indices, _ = zip(*sampler.get_utility(boards))
+        utilities, all_legal_indices, _ = zip(*sampler.get_utility(boards, **kwargs))
         predicted_moves = sampler.choose_move(zip(boards, utilities, all_legal_indices))
 
+        return self.compute_metrics(boards, self.moves, utilities, all_legal_indices, predicted_moves, use_perplexity)
+
+    @staticmethod
+    def compute_metrics(
+        boards: Iterable[chess.Board],
+        moves: Iterable[chess.Move],
+        utilities: Iterable[torch.Tensor],
+        all_legal_indices: Iterable[torch.Tensor],
+        predicted_moves: Iterable[chess.Move],
+        use_perplexity: bool = False,
+    ) -> Tuple[float, Optional[float]]:
+        total = 0
+        score = 0.0
+        perplexity = 1.0 if use_perplexity else 0.0
+
         for board, move, utility, legal_indices, predicted_move in zip(
-            boards, self.moves, utilities, all_legal_indices, predicted_moves
+            boards, moves, utilities, all_legal_indices, predicted_moves
         ):
-            if not all_moves and board.turn != initial_turn:
-                continue
             if use_perplexity:
                 index = move_encodings.encode_move(move, board.turn)
                 probs = torch.softmax(utility, dim=0)
                 perplexity *= probs[legal_indices == index].item()
             if predicted_move == move:
                 score += 1
+            total += 1
             board.push(move)
-        score /= length
+        score /= total
         if not use_perplexity or perplexity == 0:
             perplexity = None
         else:
-            perplexity = perplexity ** (-1 / length)
+            perplexity = perplexity ** (-1 / total)
         return score, perplexity
 
     def __repr__(self) -> str:
