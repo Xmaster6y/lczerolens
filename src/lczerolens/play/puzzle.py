@@ -83,7 +83,6 @@ class Puzzle:
         cls,
         puzzles: Iterable["Puzzle"],
         sampler: Sampler,
-        use_perplexity: bool = False,
         all_moves: bool = False,
         **kwargs,
     ) -> Iterable[Tuple[float, Optional[float]]]:
@@ -104,39 +103,32 @@ class Puzzle:
                 predicted_move = sampler.choose_move(board, utility, legal_indices)
                 yield utility, legal_indices, predicted_move
 
-        return cls.compute_metrics(metric_puzzles, metric_inputs_generator(), use_perplexity)
+        return cls.compute_metrics(metric_puzzles, metric_inputs_generator())
 
-    def evaluate(
-        self, sampler: Sampler, use_perplexity: bool = False, all_moves: bool = False, **kwargs
-    ) -> Tuple[float, Optional[float]]:
-        return next(iter(self.evaluate_multiple([self], sampler, use_perplexity, all_moves, **kwargs)))
+    def evaluate(self, sampler: Sampler, all_moves: bool = False, **kwargs) -> Tuple[float, Optional[float]]:
+        return next(iter(self.evaluate_multiple([self], sampler, all_moves, **kwargs)))
 
     @staticmethod
     def compute_metrics(
         puzzles: Iterable["Puzzle"],
         inputs: Iterable[Tuple[torch.Tensor, torch.Tensor, chess.Move]],
-        use_perplexity: bool = False,
-    ) -> Iterable[Tuple[float, Optional[float]]]:
+    ) -> Iterable[Dict[str, float]]:
         iter_inputs = iter(inputs)
         for puzzle in puzzles:
             total = 0
-            score = 0.0
-            perplexity = 1.0 if use_perplexity else 0.0
+            metrics = {"score": 0.0, "perplexity": 1.0}
             for board, move in puzzle.board_move_generator():
                 utility, legal_indices, predicted_move = next(iter_inputs)
-                if use_perplexity:
-                    index = move_encodings.encode_move(move, board.turn)
-                    probs = torch.softmax(utility, dim=0)
-                    perplexity *= probs[legal_indices == index].item()
+                index = move_encodings.encode_move(move, board.turn)
+                probs = torch.softmax(utility, dim=0)
+                metrics["perplexity"] *= probs[legal_indices == index].item()
                 if predicted_move == move:
-                    score += 1
+                    metrics["score"] += 1
                 total += 1
-            score /= total
-            if not use_perplexity or perplexity == 0:
-                perplexity = None
-            else:
-                perplexity = perplexity ** (-1 / total)
-            yield score, perplexity
+            metrics["score"] /= total
+            if metrics["perplexity"] != 0:
+                metrics["perplexity"] = metrics["perplexity"] ** (-1 / total)
+            yield metrics
 
     def __repr__(self) -> str:
         return self.initial_board.__repr__()
