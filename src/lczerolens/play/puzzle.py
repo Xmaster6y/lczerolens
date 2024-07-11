@@ -60,6 +60,9 @@ class Puzzle:
             opening_tags=obj["OpeningTags"].split() if obj["OpeningTags"] is not None else [],
         )
 
+    def __len__(self) -> int:
+        return len(self.moves)
+
     @property
     def initial_board(self) -> chess.Board:
         board = chess.Board(self.fen)
