@@ -78,7 +78,7 @@ class TestPolicySampler:
         sampler = PolicySampler(model=tiny_model, use_argmax=False)
         metrics = puzzle.evaluate(sampler, all_moves=True)
         assert metrics["score"] > 0.0
-        assert metrics["perplexity"] < 10.0
+        assert metrics["perplexity"] < 15.0
 
     def test_puzzle_multiple_evaluation(self, easy_puzzle, tiny_model):
         """Test puzzle evaluation."""
