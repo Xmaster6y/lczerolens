@@ -55,6 +55,23 @@ Features
          </div>
 
    .. grid-item-card::
+      :link: notebooks/features/run-models-on-gpu.ipynb
+      :class-card: surface
+      :class-body: surface
+
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-forward-fast fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Run Models on GPU</h5>
+               <p class="card-text">Take advantage of GPU acceleration.</p>
+            </div>
+         </div>
+
+   .. grid-item-card::
       :link: notebooks/features/convert-official-weights.ipynb
       :class-card: surface
       :class-body: surface
@@ -77,4 +94,5 @@ Features
 
    notebooks/features/evaluate-models-on-puzzles.ipynb
    notebooks/features/move-prediction.ipynb
+   notebooks/features/run-models-on-gpu.ipynb
    notebooks/features/convert-official-weights.ipynb
