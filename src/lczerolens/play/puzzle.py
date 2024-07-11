@@ -1,11 +1,12 @@
 """Preproces functions for chess puzzles."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Union, Tuple, Optional
+from typing import Dict, List, Union, Tuple, Optional, Iterable
 
 import chess
 import torch
 from datasets import Features, Value
+from itertools import tee, chain
 
 from lczerolens.encodings import move as move_encodings
 from .sampling import Sampler
@@ -42,7 +43,7 @@ class Puzzle:
     opening_tags: List[str]
 
     @classmethod
-    def from_dict(cls, obj: Dict[str, Union[str, int]]) -> "Puzzle":
+    def from_dict(cls, obj: Dict[str, Union[str, int, None]]) -> "Puzzle":
         uci_moves = obj["Moves"].split()
         moves = [chess.Move.from_uci(uci_move) for uci_move in uci_moves]
         return cls(
@@ -54,10 +55,13 @@ class Puzzle:
             rating_deviation=obj["RatingDeviation"],
             popularity=obj["Popularity"],
             nb_plays=obj["NbPlays"],
-            themes=obj["Themes"].split(),
+            themes=obj["Themes"].split() if obj["Themes"] is not None else [],
             game_url=obj["GameUrl"],
-            opening_tags=obj["OpeningTags"].split(),
+            opening_tags=obj["OpeningTags"].split() if obj["OpeningTags"] is not None else [],
         )
+
+    def __len__(self) -> int:
+        return len(self.moves)
 
     @property
     def initial_board(self) -> chess.Board:
@@ -65,27 +69,72 @@ class Puzzle:
         board.push(self.initial_move)
         return board
 
-    def evaluate(self, sampler: Sampler, use_perplexity: bool = False) -> Tuple[float, Optional[float]]:
+    def board_move_generator(self, all_moves: bool = False) -> Iterable[Tuple[chess.Board, chess.Move]]:
         board = self.initial_board
-        length = len(self.moves)
-        score = 0.0
-        perplexity = 1.0 if use_perplexity else 0.0
+        initial_turn = board.turn
         for move in self.moves:
-            utility, legal_indices, _ = sampler.get_utility(board)
-            if use_perplexity:
+            if not all_moves and board.turn != initial_turn:
+                board.push(move)
+                continue
+            yield board.copy(), move
+            board.push(move)
+
+    @classmethod
+    def evaluate_multiple(
+        cls,
+        puzzles: Iterable["Puzzle"],
+        sampler: Sampler,
+        all_moves: bool = False,
+        compute_metrics: bool = True,
+        **kwargs,
+    ) -> Union[Iterable[Dict[str, float]], Iterable[Tuple[torch.Tensor, torch.Tensor, chess.Move]]]:
+        metric_puzzles, board_move_puzzles = tee(puzzles)
+        board_move_generator = chain.from_iterable(
+            puzzle.board_move_generator(all_moves) for puzzle in board_move_puzzles
+        )
+
+        def board_generator():
+            for board, _ in board_move_generator:
+                yield board
+
+        util_boards, move_boards = tee(board_generator())
+
+        def metric_inputs_generator():
+            util_gen = sampler.get_utilities(util_boards, **kwargs)
+            for board, (utility, legal_indices, _) in zip(move_boards, util_gen):
+                predicted_move = sampler.choose_move(board, utility, legal_indices)
+                yield utility, legal_indices, predicted_move
+
+        if compute_metrics:
+            return cls.compute_metrics(metric_puzzles, metric_inputs_generator(), all_moves=all_moves)
+        else:
+            return metric_inputs_generator()
+
+    def evaluate(self, sampler: Sampler, all_moves: bool = False, **kwargs) -> Tuple[float, Optional[float]]:
+        return next(iter(self.evaluate_multiple([self], sampler, all_moves, **kwargs)))
+
+    @staticmethod
+    def compute_metrics(
+        puzzles: Iterable["Puzzle"],
+        inputs: Iterable[Tuple[torch.Tensor, torch.Tensor, chess.Move]],
+        all_moves: bool = False,
+    ) -> Iterable[Dict[str, float]]:
+        iter_inputs = iter(inputs)
+        for puzzle in puzzles:
+            total = 0
+            metrics = {"score": 0.0, "perplexity": 1.0}
+            for board, move in puzzle.board_move_generator(all_moves=all_moves):
+                utility, legal_indices, predicted_move = next(iter_inputs)
                 index = move_encodings.encode_move(move, board.turn)
                 probs = torch.softmax(utility, dim=0)
-                perplexity *= probs[legal_indices == index].item()
-            predicted_move = sampler.choose_move(board, utility, legal_indices)
-            if predicted_move == move:
-                score += 1
-            board.push(move)
-        score /= length
-        if not use_perplexity or perplexity == 0:
-            perplexity = None
-        else:
-            perplexity = perplexity ** (-1 / length)
-        return score, perplexity
+                metrics["perplexity"] *= probs[legal_indices == index].item()
+                if predicted_move == move:
+                    metrics["score"] += 1
+                total += 1
+            metrics["score"] /= total
+            if metrics["perplexity"] != 0:
+                metrics["perplexity"] = metrics["perplexity"] ** (-1 / total)
+            yield metrics
 
     def __repr__(self) -> str:
         return self.initial_board.__repr__()

@@ -21,6 +21,23 @@ Features
    :gutter: 3
 
    .. grid-item-card::
+      :link: notebooks/features/move-prediction.ipynb
+      :class-card: surface
+      :class-body: surface
+
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-arrow-turn-up fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Move Prediction</h5>
+               <p class="card-text">Make a move prediction for a given chess board.</p>
+            </div>
+         </div>
+
+   .. grid-item-card::
       :link: notebooks/features/evaluate-models-on-puzzles.ipynb
       :class-card: surface
       :class-body: surface
@@ -37,9 +54,8 @@ Features
             </div>
          </div>
 
-
    .. grid-item-card::
-      :link: notebooks/features/move-prediction.ipynb
+      :link: notebooks/features/run-models-on-gpu.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -47,11 +63,11 @@ Features
 
          <div class="d-flex align-items-center">
             <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
-               <i class="fa-solid fa-arrow-turn-up fa-2x"></i>
+               <i class="fa-solid fa-forward-fast fa-2x"></i>
             </div>
             <div>
-               <h5 class="card-title">Move Prediction</h5>
-               <p class="card-text">Make a move prediction for a given chess board.</p>
+               <h5 class="card-title">Run Models on GPU</h5>
+               <p class="card-text">Take advantage of GPU acceleration.</p>
             </div>
          </div>
 
@@ -78,4 +94,5 @@ Features
 
    notebooks/features/evaluate-models-on-puzzles.ipynb
    notebooks/features/move-prediction.ipynb
+   notebooks/features/run-models-on-gpu.ipynb
    notebooks/features/convert-official-weights.ipynb

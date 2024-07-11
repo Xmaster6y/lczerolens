@@ -16,6 +16,11 @@ To get started with lczerolens, install it with ``pip``.
 
    pip install lczerolens
 
+.. note::
+
+   The dependencies for lczerolens are currently substantial.
+   It mainly depends on ``torch``, ``nnsight``, ``zennit`` and ``datasets``.
+
 First Steps
 -----------
 
@@ -26,15 +31,23 @@ First Steps
       :link: features
       :link-type: doc
 
-      Check out the basic features provided by :bdg-primary:`lczerolens`.
+      Review the basic features provided by :bdg-primary:`lczerolens`.
 
    .. grid-item-card:: Walkthrough
       :link: notebooks/walkthrough.ipynb
 
       Walk through the basic functionality of the package.
 
+.. note::
+
+   Check out the :bdg-secondary:`walkthrough` to get a better understanding of the package.
+
 Advanced Features
 -----------------
+
+.. warning::
+
+   This following section is under construction, not yet stable nor fully functional.
 
 .. grid:: 2
    :gutter: 2
@@ -50,11 +63,3 @@ Advanced Features
       :link-type: doc
 
       See the full API reference for :bdg-primary:`lczerolens` to extend its functionality.
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   features
-   tutorials
-   api

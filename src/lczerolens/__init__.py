@@ -7,7 +7,7 @@ from .encodings import board as board_encodings
 from .encodings import move as move_encodings
 from .model import LczeroModel, Flow, FlowFactory
 from .lens import Lens, LensFactory
-from . import lenses, concepts
+from . import lenses, concepts, encodings, play
 
 __all__ = [
     "LczeroModel",
@@ -19,4 +19,6 @@ __all__ = [
     "move_encodings",
     "lenses",
     "concepts",
+    "encodings",
+    "play",
 ]
