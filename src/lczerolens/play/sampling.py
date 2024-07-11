@@ -18,7 +18,7 @@ class Sampler(ABC):
     use_argmax: bool
 
     @abstractmethod
-    def get_utility(
+    def get_utilities(
         self, boards: Iterable[chess.Board], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         """Get the utility of the board.
@@ -59,7 +59,7 @@ class Sampler(ABC):
             idx = m.sample()
         return move_encodings.decode_move(legal_indices[idx], board)
 
-    def get_next_move(self, boards: Iterable[chess.Board]) -> Iterable[Tuple[chess.Move, Dict[str, float]]]:
+    def get_next_moves(self, boards: Iterable[chess.Board]) -> Iterable[Tuple[chess.Move, Dict[str, float]]]:
         """Get the next move.
 
         Parameters
@@ -73,7 +73,7 @@ class Sampler(ABC):
             The iterable over the moves and log dictionaries.
         """
         util_boards, move_boards = tee(boards)
-        for board, (utility, legal_indices, to_log) in zip(move_boards, self.get_utility(util_boards)):
+        for board, (utility, legal_indices, to_log) in zip(move_boards, self.get_utilities(util_boards)):
             predicted_move = self.choose_move(board, utility, legal_indices)
             yield predicted_move, to_log
 
@@ -82,7 +82,7 @@ class Sampler(ABC):
 class RandomSampler(Sampler):
     use_argmax: bool = False
 
-    def get_utility(
+    def get_utilities(
         self, boards: Iterable[chess.Board], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         for board in boards:
@@ -107,7 +107,7 @@ class ModelSampler(Sampler):
     q_threshold: float = 0.8
 
     @torch.no_grad
-    def get_utility(
+    def get_utilities(
         self, boards: Iterable[chess.Board], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.get("batch_size", -1)
@@ -159,8 +159,7 @@ class ModelSampler(Sampler):
             to_log["wdl_l"] = batch_stats["wdl"][0][2].item()
             scores = torch.tensor([1, self.draw_score, -1])
             return batch_stats["wdl"][1:] @ scores
-        else:
-            return torch.zeros(batch_stats.batch_size[0] - 1)
+        return torch.zeros(batch_stats.batch_size[0] - 1)
 
     def _get_m_values(self, batch_stats, q_values, to_log):
         if "mlh" in batch_stats.keys():
@@ -170,8 +169,7 @@ class ModelSampler(Sampler):
             scaled_q_values = torch.relu(q_values.abs() - self.q_threshold) / (1 - self.q_threshold)
             poly_q_values = self.k_0 + self.k_1 * scaled_q_values + self.k_2 * scaled_q_values**2
             return -q_values.sign() * delta_m_values * poly_q_values
-        else:
-            return torch.zeros(batch_stats.batch_size[0] - 1)
+        return torch.zeros(batch_stats.batch_size[0] - 1)
 
     def _get_p_values(
         self,
@@ -183,8 +181,7 @@ class ModelSampler(Sampler):
             legal_policy = batch_stats["policy"][0].gather(0, legal_indices)
             to_log["max_legal_policy"] = legal_policy.max().item()
             return legal_policy
-        else:
-            return torch.zeros_like(legal_indices)
+        return torch.zeros_like(legal_indices)
 
 
 @dataclass
@@ -192,7 +189,7 @@ class PolicySampler(ModelSampler):
     use_suboptimal: bool = False
 
     @torch.no_grad
-    def get_utility(
+    def get_utilities(
         self, boards: Iterable[chess.Board], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.get("batch_size", -1)
@@ -227,13 +224,13 @@ class SelfPlay:
             board = chess.Board()
         game = []
         if to_play == chess.BLACK:
-            move, _ = next(iter(self.black.get_next_move([board])))
+            move, _ = next(iter(self.black.get_next_moves([board])))
             board.push(move)
             game.append(move)
         for _ in range(max_moves):
             if board.is_game_over() or len(game) >= max_moves:
                 break
-            move, to_log = next(iter(self.white.get_next_move([board])))
+            move, to_log = next(iter(self.white.get_next_moves([board])))
             if report_fn is not None:
                 report_fn(to_log, board.turn)
             board.push(move)
@@ -241,7 +238,7 @@ class SelfPlay:
 
             if board.is_game_over() or len(game) >= max_moves:
                 break
-            move, to_log = next(iter(self.black.get_next_move([board])))
+            move, to_log = next(iter(self.black.get_next_moves([board])))
             if report_fn is not None:
                 report_fn(to_log, board.turn)
             board.push(move)

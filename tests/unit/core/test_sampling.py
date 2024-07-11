@@ -6,34 +6,34 @@ from lczerolens.play.sampling import ModelSampler, SelfPlay, PolicySampler, Rand
 
 
 class TestRandomSampler:
-    def test_get_utility(self):
-        """Test get_utility method."""
+    def test_get_utilities(self):
+        """Test get_utilities method."""
         board = chess.Board()
         sampler = RandomSampler()
-        utility, _, _ = next(iter(sampler.get_utility([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board])))
         assert utility.shape[0] == 20
 
 
 class TestModelSampler:
-    def test_get_utility_tiny(self, tiny_model):
-        """Test get_utility method."""
+    def test_get_utilities_tiny(self, tiny_model):
+        """Test get_utilities method."""
         board = chess.Board()
         sampler = ModelSampler(model=tiny_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utility([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board])))
         assert utility.shape[0] == 20
 
-    def test_get_utility_winner(self, winner_model):
-        """Test get_utility method."""
+    def test_get_utilities_winner(self, winner_model):
+        """Test get_utilities method."""
         board = chess.Board()
         sampler = ModelSampler(model=winner_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utility([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board])))
         assert utility.shape[0] == 20
 
     def test_policy_sampler_tiny(self, tiny_model):
         """Test policy_sampler method."""
         board = chess.Board()
         sampler = PolicySampler(model=tiny_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utility([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board])))
         assert utility.shape[0] == 20
 
 
@@ -60,7 +60,7 @@ class TestBatchedPolicySampler:
         boards = [chess.Board() for _ in range(10)]
 
         sampler_ag = PolicySampler(model=tiny_model, use_argmax=True)
-        moves = sampler_ag.get_next_move(boards)
+        moves = sampler_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
         assert all([move == moves[0] for move in moves])
 
@@ -69,7 +69,7 @@ class TestBatchedPolicySampler:
         boards = [chess.Board() for _ in range(10)]
 
         sampler_no_ag = PolicySampler(model=tiny_model, use_argmax=False)
-        moves = sampler_no_ag.get_next_move(boards)
+        moves = sampler_no_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
 
     def test_batched_policy_sampler_no_ag_sub(self, tiny_model):
@@ -77,5 +77,5 @@ class TestBatchedPolicySampler:
         boards = [chess.Board() for _ in range(10)]
 
         sampler_no_ag = PolicySampler(model=tiny_model, use_argmax=False, use_suboptimal=True)
-        moves = sampler_no_ag.get_next_move(boards)
+        moves = sampler_no_ag.get_next_moves(boards)
         assert len(list(moves)) == 10

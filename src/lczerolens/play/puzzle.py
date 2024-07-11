@@ -100,7 +100,7 @@ class Puzzle:
         util_boards, move_boards = tee(board_generator())
 
         def metric_inputs_generator():
-            util_gen = sampler.get_utility(util_boards, **kwargs)
+            util_gen = sampler.get_utilities(util_boards, **kwargs)
             for board, (utility, legal_indices, _) in zip(move_boards, util_gen):
                 predicted_move = sampler.choose_move(board, utility, legal_indices)
                 yield utility, legal_indices, predicted_move
