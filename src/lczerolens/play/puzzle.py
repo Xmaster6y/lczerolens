@@ -69,11 +69,12 @@ class Puzzle:
         board.push(self.initial_move)
         return board
 
-    def board_move_generator(self, all_moves: bool = False) -> Iterable[chess.Board]:
+    def board_move_generator(self, all_moves: bool = False) -> Iterable[Tuple[chess.Board, chess.Move]]:
         board = self.initial_board
         initial_turn = board.turn
         for move in self.moves:
             if not all_moves and board.turn != initial_turn:
+                board.push(move)
                 continue
             yield board.copy(), move
             board.push(move)

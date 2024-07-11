@@ -12,7 +12,7 @@ def easy_puzzle():
     return {
         "PuzzleId": "1",
         "FEN": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        "Moves": "e2e4 e7e5",
+        "Moves": "e2e4 e7e5 d2d4 d7d5",
         "Rating": 1000,
         "RatingDeviation": 100,
         "Popularity": 1000,
@@ -21,6 +21,25 @@ def easy_puzzle():
         "GameUrl": "https://lichess.org/training/1",
         "OpeningTags": "Ruy Lopez",
     }
+
+
+class TestPuzzle:
+    def test_puzzle_creation(self, easy_puzzle):
+        """Test puzzle creation."""
+        puzzle = Puzzle.from_dict(easy_puzzle)
+        assert len(puzzle) == 3
+        assert puzzle.rating == 1000
+        assert puzzle.rating_deviation == 100
+        assert puzzle.popularity == 1000
+        assert puzzle.nb_plays == 1000
+        assert puzzle.themes == ["Opening"]
+        assert puzzle.game_url == "https://lichess.org/training/1"
+        assert puzzle.opening_tags == ["Ruy", "Lopez"]
+
+    def test_puzzle_use(self, easy_puzzle):
+        """Test puzzle use."""
+        puzzle = Puzzle.from_dict(easy_puzzle)
+        assert len(list(puzzle.board_move_generator())) == 3
 
 
 class TestRandomSampler:
