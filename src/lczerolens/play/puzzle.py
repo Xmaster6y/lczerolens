@@ -83,51 +83,57 @@ class Puzzle:
         use_perplexity: bool = False,
         all_moves: bool = False,
         **kwargs,
-    ) -> Tuple[float, Optional[float]]:
-        board_move_generator = chain.from_iterable(puzzle.board_move_generator(all_moves) for puzzle in puzzles)
-        in_board_move_generator, out_board_move_generator = tee(board_move_generator)
+    ) -> Iterable[Tuple[float, Optional[float]]]:
+        metric_puzzles, board_move_puzzles = tee(puzzles)
+        board_move_generator = chain.from_iterable(
+            puzzle.board_move_generator(all_moves) for puzzle in board_move_puzzles
+        )
 
         def board_generator():
-            for board, _ in in_board_move_generator:
+            for board, _ in board_move_generator:
                 yield board
 
-        def metric_inputs_generator():
-            util_gen = sampler.get_utility(board_generator(), **kwargs)
-            for (board, move), (utility, legal_indices, _) in zip(out_board_move_generator, util_gen):
-                predicted_move = sampler.choose_move(board, utility, legal_indices)
-                yield board, move, utility, legal_indices, predicted_move
+        util_boards, move_boards = tee(board_generator())
 
-        return cls.compute_metrics(metric_inputs_generator(), use_perplexity)
+        def metric_inputs_generator():
+            util_gen = sampler.get_utility(util_boards, **kwargs)
+            for board, (utility, legal_indices, _) in zip(move_boards, util_gen):
+                predicted_move = sampler.choose_move(board, utility, legal_indices)
+                yield utility, legal_indices, predicted_move
+
+        return cls.compute_metrics(metric_puzzles, metric_inputs_generator(), use_perplexity)
 
     def evaluate(
         self, sampler: Sampler, use_perplexity: bool = False, all_moves: bool = False, **kwargs
     ) -> Tuple[float, Optional[float]]:
-        return self.evaluate_multiple([self], sampler, use_perplexity, all_moves, **kwargs)
+        return next(iter(self.evaluate_multiple([self], sampler, use_perplexity, all_moves, **kwargs)))
 
     @staticmethod
     def compute_metrics(
-        inputs: Iterable[Tuple[chess.Board, chess.Move, torch.Tensor, torch.Tensor, chess.Move]],
+        puzzles: Iterable["Puzzle"],
+        inputs: Iterable[Tuple[torch.Tensor, torch.Tensor, chess.Move]],
         use_perplexity: bool = False,
-    ) -> Tuple[float, Optional[float]]:
-        total = 0
-        score = 0.0
-        perplexity = 1.0 if use_perplexity else 0.0
-
-        for board, move, utility, legal_indices, predicted_move in inputs:
-            if use_perplexity:
-                index = move_encodings.encode_move(move, board.turn)
-                probs = torch.softmax(utility, dim=0)
-                perplexity *= probs[legal_indices == index].item()
-            if predicted_move == move:
-                score += 1
-            total += 1
-            board.push(move)
-        score /= total
-        if not use_perplexity or perplexity == 0:
-            perplexity = None
-        else:
-            perplexity = perplexity ** (-1 / total)
-        return score, perplexity
+    ) -> Iterable[Tuple[float, Optional[float]]]:
+        iter_inputs = iter(inputs)
+        for puzzle in puzzles:
+            total = 0
+            score = 0.0
+            perplexity = 1.0 if use_perplexity else 0.0
+            for board, move in puzzle.board_move_generator():
+                utility, legal_indices, predicted_move = next(iter_inputs)
+                if use_perplexity:
+                    index = move_encodings.encode_move(move, board.turn)
+                    probs = torch.softmax(utility, dim=0)
+                    perplexity *= probs[legal_indices == index].item()
+                if predicted_move == move:
+                    score += 1
+                total += 1
+            score /= total
+            if not use_perplexity or perplexity == 0:
+                perplexity = None
+            else:
+                perplexity = perplexity ** (-1 / total)
+            yield score, perplexity
 
     def __repr__(self) -> str:
         return self.initial_board.__repr__()
