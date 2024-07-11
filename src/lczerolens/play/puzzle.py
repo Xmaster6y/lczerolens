@@ -85,8 +85,9 @@ class Puzzle:
         puzzles: Iterable["Puzzle"],
         sampler: Sampler,
         all_moves: bool = False,
+        compute_metrics: bool = True,
         **kwargs,
-    ) -> Iterable[Tuple[float, Optional[float]]]:
+    ) -> Union[Iterable[Dict[str, float]], Iterable[Tuple[torch.Tensor, torch.Tensor, chess.Move]]]:
         metric_puzzles, board_move_puzzles = tee(puzzles)
         board_move_generator = chain.from_iterable(
             puzzle.board_move_generator(all_moves) for puzzle in board_move_puzzles
@@ -104,7 +105,10 @@ class Puzzle:
                 predicted_move = sampler.choose_move(board, utility, legal_indices)
                 yield utility, legal_indices, predicted_move
 
-        return cls.compute_metrics(metric_puzzles, metric_inputs_generator())
+        if compute_metrics:
+            return cls.compute_metrics(metric_puzzles, metric_inputs_generator(), all_moves=all_moves)
+        else:
+            return metric_inputs_generator()
 
     def evaluate(self, sampler: Sampler, all_moves: bool = False, **kwargs) -> Tuple[float, Optional[float]]:
         return next(iter(self.evaluate_multiple([self], sampler, all_moves, **kwargs)))
@@ -113,12 +117,13 @@ class Puzzle:
     def compute_metrics(
         puzzles: Iterable["Puzzle"],
         inputs: Iterable[Tuple[torch.Tensor, torch.Tensor, chess.Move]],
+        all_moves: bool = False,
     ) -> Iterable[Dict[str, float]]:
         iter_inputs = iter(inputs)
         for puzzle in puzzles:
             total = 0
             metrics = {"score": 0.0, "perplexity": 1.0}
-            for board, move in puzzle.board_move_generator():
+            for board, move in puzzle.board_move_generator(all_moves=all_moves):
                 utility, legal_indices, predicted_move = next(iter_inputs)
                 index = move_encodings.encode_move(move, board.turn)
                 probs = torch.softmax(utility, dim=0)
