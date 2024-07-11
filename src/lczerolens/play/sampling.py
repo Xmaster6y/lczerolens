@@ -7,6 +7,7 @@ from typing import Optional, Callable, Tuple, Dict, Iterable
 import chess
 import torch
 from torch.distributions import Categorical
+from itertools import tee
 
 from lczerolens.encodings import move as move_encodings
 from lczerolens.model import LczeroModel
@@ -34,26 +35,29 @@ class Sampler(ABC):
         """
         pass
 
-    def choose_move(self, inputs: Iterable[Tuple[chess.Board, torch.Tensor, torch.Tensor]]) -> Iterable[chess.Move]:
+    def choose_move(self, board: chess.Board, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
         """Choose the next moves.
 
         Parameters
         ----------
-        inputs : Iterable[Tuple[chess.Board, torch.Tensor, torch.Tensor]]
-            The inputs to choose the moves.
+        board : chess.Board
+            The board.
+        utility : torch.Tensor
+            The utility of the board.
+        legal_indices : torch.Tensor
+            The legal indices.
 
         Returns
         -------
         Iterable[chess.Move]
             The iterable over the moves.
         """
-        for board, utility, legal_indices in inputs:
-            if self.use_argmax:
-                idx = utility.argmax()
-            else:
-                m = Categorical(logits=utility)
-                idx = m.sample()
-            yield move_encodings.decode_move(legal_indices[idx], board)
+        if self.use_argmax:
+            idx = utility.argmax()
+        else:
+            m = Categorical(logits=utility)
+            idx = m.sample()
+        return move_encodings.decode_move(legal_indices[idx], board)
 
     def get_next_move(self, boards: Iterable[chess.Board]) -> Iterable[Tuple[chess.Move, Dict[str, float]]]:
         """Get the next move.
@@ -68,8 +72,10 @@ class Sampler(ABC):
         Iterable[Tuple[chess.Move, Dict[str, float]]]
             The iterable over the moves and log dictionaries.
         """
-        utility, legal_indices, to_log = zip(*self.get_utility(boards))
-        return zip(self.choose_move(zip(boards, utility, legal_indices)), to_log)
+        util_boards, move_boards = tee(boards)
+        for board, (utility, legal_indices, to_log) in zip(move_boards, self.get_utility(util_boards)):
+            predicted_move = self.choose_move(board, utility, legal_indices)
+            yield predicted_move, to_log
 
 
 @dataclass
@@ -79,10 +85,10 @@ class RandomSampler(Sampler):
     def get_utility(
         self, boards: Iterable[chess.Board], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
-        all_legal_indices = [move_encodings.get_legal_indices(board) for board in boards]
-        utilities = [torch.ones_like(legal_indices, dtype=torch.float32) for legal_indices in all_legal_indices]
-        to_log = [{} for _ in boards]
-        return zip(utilities, all_legal_indices, to_log)
+        for board in boards:
+            legal_indices = move_encodings.get_legal_indices(board)
+            utilities = torch.ones_like(legal_indices, dtype=torch.float32)
+            yield utilities, legal_indices, {}
 
 
 @dataclass
