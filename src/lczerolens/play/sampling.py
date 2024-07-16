@@ -13,10 +13,7 @@ from lczerolens.encodings import move as move_encodings
 from lczerolens.model import LczeroModel
 
 
-@dataclass
 class Sampler(ABC):
-    use_argmax: bool
-
     @abstractmethod
     def get_utilities(
         self, boards: Iterable[chess.Board], **kwargs
@@ -52,11 +49,8 @@ class Sampler(ABC):
         Iterable[chess.Move]
             The iterable over the moves.
         """
-        if self.use_argmax:
-            idx = utility.argmax()
-        else:
-            m = Categorical(logits=utility)
-            idx = m.sample()
+        m = Categorical(logits=utility)
+        idx = m.sample()
         return move_encodings.decode_move(legal_indices[idx], board)
 
     def get_next_moves(self, boards: Iterable[chess.Board]) -> Iterable[Tuple[chess.Move, Dict[str, float]]]:
@@ -78,10 +72,7 @@ class Sampler(ABC):
             yield predicted_move, to_log
 
 
-@dataclass
 class RandomSampler(Sampler):
-    use_argmax: bool = False
-
     def get_utilities(
         self, boards: Iterable[chess.Board], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
@@ -92,9 +83,9 @@ class RandomSampler(Sampler):
 
 
 @dataclass
-class _ModelSampler(Sampler):
-    use_argmax: bool
+class ModelSampler(Sampler):
     model: LczeroModel
+    use_argmax: bool = True
     alpha: float = 1.0
     beta: float = 1.0
     gamma: float = 1.0
@@ -106,10 +97,12 @@ class _ModelSampler(Sampler):
     k_2: float = -0.6521
     q_threshold: float = 0.8
 
-
-class ModelSampler(_ModelSampler):
-    def __init__(self, model, *, use_argmax=True, **kwargs):
-        super().__init__(use_argmax=use_argmax, model=model, **kwargs)
+    def choose_move(self, board: chess.Board, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
+        if self.use_argmax:
+            idx = utility.argmax()
+            return move_encodings.decode_move(legal_indices[idx], board)
+        else:
+            return super().choose_move(board, utility, legal_indices)
 
     @torch.no_grad
     def get_utilities(

@@ -63,7 +63,7 @@ class TestRandomSampler:
     def test_puzzle_evaluation(self, opening_puzzle):
         """Test puzzle evaluation."""
         puzzle = Puzzle.from_dict(opening_puzzle)
-        sampler = RandomSampler(use_argmax=True)
+        sampler = RandomSampler()
         metrics = puzzle.evaluate(sampler)
         assert metrics["score"] == 0.0
         assert abs(metrics["perplexity"] - (20.0 * 30) ** 0.5) < 1e-3
