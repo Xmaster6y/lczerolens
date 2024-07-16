@@ -194,7 +194,7 @@ class PolicySampler(ModelSampler):
 
         to_log = {}
         for legal_indices, batch_stats in self._get_batched_stats(boards, batch_size, use_next_boards=False):
-            legal_policy = batch_stats["policy"][0].gather(0, legal_indices)
+            legal_policy = batch_stats["policy"][0].gather(0, legal_indices.to(batch_stats["policy"].device))
             if self.use_suboptimal:
                 idx = legal_policy.argmax()
                 legal_policy[idx] = torch.tensor(-1e3)
