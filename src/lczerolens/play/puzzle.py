@@ -79,6 +79,7 @@ class Puzzle:
             yield board.copy(), move
             board.push(move)
 
+    @torch.no_grad
     @classmethod
     def evaluate_multiple(
         cls,
