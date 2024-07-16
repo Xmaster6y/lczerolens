@@ -21,7 +21,7 @@ Features
    :gutter: 3
 
    .. grid-item-card::
-      :link: notebooks/features/move-prediction.ipynb
+      :link: notebooks/features/move_prediction.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -38,7 +38,7 @@ Features
          </div>
 
    .. grid-item-card::
-      :link: notebooks/features/evaluate-models-on-puzzles.ipynb
+      :link: notebooks/features/evaluate_models_on_puzzles.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -55,7 +55,7 @@ Features
          </div>
 
    .. grid-item-card::
-      :link: notebooks/features/run-models-on-gpu.ipynb
+      :link: notebooks/features/run_models_on_gpu.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -72,7 +72,7 @@ Features
          </div>
 
    .. grid-item-card::
-      :link: notebooks/features/convert-official-weights.ipynb
+      :link: notebooks/features/convert_official_weights.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -92,7 +92,7 @@ Features
    :hidden:
    :maxdepth: 2
 
-   notebooks/features/evaluate-models-on-puzzles.ipynb
-   notebooks/features/move-prediction.ipynb
-   notebooks/features/run-models-on-gpu.ipynb
-   notebooks/features/convert-official-weights.ipynb
+   notebooks/features/evaluate_models_on_puzzles.ipynb
+   notebooks/features/move_prediction.ipynb
+   notebooks/features/run_models_on_gpu.ipynb
+   notebooks/features/convert_official_weights.ipynb
