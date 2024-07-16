@@ -38,23 +38,6 @@ Features
          </div>
 
    .. grid-item-card::
-      :link: notebooks/features/evaluate_models_on_puzzles.ipynb
-      :class-card: surface
-      :class-body: surface
-
-      .. raw:: html
-
-         <div class="d-flex align-items-center">
-            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
-               <i class="fa-solid fa-puzzle-piece fa-2x"></i>
-            </div>
-            <div>
-               <h5 class="card-title">Evaluate Models on Puzzles</h5>
-               <p class="card-text">Evaluate a model on a set of puzzles.</p>
-            </div>
-         </div>
-
-   .. grid-item-card::
       :link: notebooks/features/run_models_on_gpu.ipynb
       :class-card: surface
       :class-body: surface
@@ -68,6 +51,23 @@ Features
             <div>
                <h5 class="card-title">Run Models on GPU</h5>
                <p class="card-text">Take advantage of GPU acceleration.</p>
+            </div>
+         </div>
+
+   .. grid-item-card::
+      :link: notebooks/features/evaluate_models_on_puzzles.ipynb
+      :class-card: surface
+      :class-body: surface
+
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-puzzle-piece fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Evaluate Models on Puzzles</h5>
+               <p class="card-text">Evaluate a model on a set of puzzles.</p>
             </div>
          </div>
 
@@ -92,7 +92,7 @@ Features
    :hidden:
    :maxdepth: 2
 
-   notebooks/features/evaluate_models_on_puzzles.ipynb
    notebooks/features/move_prediction.ipynb
    notebooks/features/run_models_on_gpu.ipynb
+   notebooks/features/evaluate_models_on_puzzles.ipynb
    notebooks/features/convert_official_weights.ipynb
