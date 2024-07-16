@@ -124,7 +124,7 @@ class ModelSampler(Sampler):
         next_batch = []
         next_legal_indices = []
 
-        def generator():
+        def generator(next_batch, next_legal_indices):
             all_stats = self.model(*next_batch)
             offset = 0
             for legal_indices in next_legal_indices:
@@ -134,18 +134,19 @@ class ModelSampler(Sampler):
                 yield legal_indices, batch_stats
 
         for board in boards:
-            next_legal_indices.append(move_encodings.get_legal_indices(board))
+            legal_indices = move_encodings.get_legal_indices(board)
             if use_next_boards:
                 next_boards = list(move_encodings.get_next_legal_boards(board))
             else:
                 next_boards = []
             if len(next_batch) + len(next_boards) + 1 > batch_size and batch_size != -1:
-                yield from generator()
+                yield from generator(next_batch, next_legal_indices)
                 next_batch = []
                 next_legal_indices = []
             next_batch.extend([board] + next_boards)
+            next_legal_indices.append(legal_indices)
         if next_batch:
-            yield from generator()
+            yield from generator(next_batch, next_legal_indices)
 
     def _get_q_values(self, batch_stats, to_log):
         if "value" in batch_stats.keys():

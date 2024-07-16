@@ -26,16 +26,16 @@ def opening_puzzle():
 @pytest.fixture
 def easy_puzzle():
     return {
-        "PuzzleId": "1",
-        "FEN": "1r5r/p3kp2/4p2p/4P3/3R1Pp1/6P1/P1P4P/4K2R w K - 1 25",
-        "Moves": "d4a4 b8b1 e1f2 b1h1 a4a7 e7f8",
-        "Rating": 1000,
-        "RatingDeviation": 100,
-        "Popularity": 1000,
-        "NbPlays": 1000,
-        "Themes": "Opening",
-        "GameUrl": "https://lichess.org/training/1",
-        "OpeningTags": "Ruy Lopez",
+        "PuzzleId": "00008",
+        "FEN": "r6k/pp2r2p/4Rp1Q/3p4/8/1N1P2R1/PqP2bPP/7K b - - 0 24",
+        "Moves": "f2g3 e6e7 b2b1 b3c1 b1c1 h6c1",
+        "Rating": 1913,
+        "RatingDeviation": 75,
+        "Popularity": 94,
+        "NbPlays": 6230,
+        "Themes": "crushing hangingPiece long middlegame",
+        "GameUrl": "https://lichess.org/787zsVup/black#47",
+        "OpeningTags": None,
     }
 
 
@@ -84,6 +84,15 @@ class TestRandomSampler:
         all_results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=True)
         assert len(list(all_results)) == 10
         results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=False)
+        assert len(list(results)) == 10
+
+    def test_puzzle_multiple_evaluation_batch_size(self, easy_puzzle):
+        """Test puzzle evaluation."""
+        puzzles = [Puzzle.from_dict(easy_puzzle) for _ in range(10)]
+        sampler = RandomSampler()
+        all_results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=True, batch_size=5)
+        assert len(list(all_results)) == 10
+        results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=False, batch_size=5)
         assert len(list(results)) == 10
 
 

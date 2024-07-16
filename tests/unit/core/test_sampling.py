@@ -10,7 +10,7 @@ class TestRandomSampler:
         """Test get_utilities method."""
         board = chess.Board()
         sampler = RandomSampler()
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
 
@@ -19,21 +19,21 @@ class TestModelSampler:
         """Test get_utilities method."""
         board = chess.Board()
         sampler = ModelSampler(tiny_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
     def test_get_utilities_winner(self, winner_model):
         """Test get_utilities method."""
         board = chess.Board()
         sampler = ModelSampler(winner_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
     def test_policy_sampler_tiny(self, tiny_model):
         """Test policy_sampler method."""
         board = chess.Board()
         sampler = PolicySampler(tiny_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
 
