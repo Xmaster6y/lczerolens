@@ -136,8 +136,5 @@ class Puzzle:
                 metrics["perplexity"] = metrics["perplexity"] ** (-1 / total)
             yield metrics
 
-    def __repr__(self) -> str:
-        return self.initial_board.__repr__()
-
     def _repr_svg_(self) -> str:
         return self.initial_board._repr_svg_()
