@@ -92,7 +92,7 @@ class RandomSampler(Sampler):
 
 
 @dataclass
-class ModelSampler(Sampler):
+class _ModelSampler(Sampler):
     use_argmax: bool
     model: LczeroModel
     alpha: float = 1.0
@@ -105,6 +105,11 @@ class ModelSampler(Sampler):
     k_1: float = 1.6521
     k_2: float = -0.6521
     q_threshold: float = 0.8
+
+
+class ModelSampler(_ModelSampler):
+    def __init__(self, model, *, use_argmax=True, **kwargs):
+        super().__init__(use_argmax=use_argmax, model=model, **kwargs)
 
     @torch.no_grad
     def get_utilities(
