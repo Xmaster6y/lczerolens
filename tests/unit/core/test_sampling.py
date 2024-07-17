@@ -10,7 +10,7 @@ class TestRandomSampler:
         """Test get_utilities method."""
         board = chess.Board()
         sampler = RandomSampler()
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
 
@@ -18,22 +18,22 @@ class TestModelSampler:
     def test_get_utilities_tiny(self, tiny_model):
         """Test get_utilities method."""
         board = chess.Board()
-        sampler = ModelSampler(model=tiny_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        sampler = ModelSampler(tiny_model, use_argmax=False)
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
     def test_get_utilities_winner(self, winner_model):
         """Test get_utilities method."""
         board = chess.Board()
-        sampler = ModelSampler(model=winner_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        sampler = ModelSampler(winner_model, use_argmax=False)
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
     def test_policy_sampler_tiny(self, tiny_model):
         """Test policy_sampler method."""
         board = chess.Board()
-        sampler = PolicySampler(model=tiny_model, use_argmax=False)
-        utility, _, _ = next(iter(sampler.get_utilities([board])))
+        sampler = PolicySampler(tiny_model, use_argmax=False)
+        utility, _, _ = next(iter(sampler.get_utilities([board, board])))
         assert utility.shape[0] == 20
 
 
@@ -41,8 +41,8 @@ class TestSelfPlay:
     def test_play(self, tiny_model, winner_model):
         """Test play method."""
         board = chess.Board()
-        white = ModelSampler(model=tiny_model, use_argmax=False)
-        black = ModelSampler(model=winner_model, use_argmax=False)
+        white = ModelSampler(tiny_model, use_argmax=False)
+        black = ModelSampler(winner_model, use_argmax=False)
         self_play = SelfPlay(white=white, black=black)
         logs = []
 
@@ -59,7 +59,7 @@ class TestBatchedPolicySampler:
         """Test batched_policy_sampler method."""
         boards = [chess.Board() for _ in range(10)]
 
-        sampler_ag = PolicySampler(model=tiny_model, use_argmax=True)
+        sampler_ag = PolicySampler(tiny_model, use_argmax=True)
         moves = sampler_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
         assert all([move == moves[0] for move in moves])
@@ -68,7 +68,7 @@ class TestBatchedPolicySampler:
         """Test batched_policy_sampler method."""
         boards = [chess.Board() for _ in range(10)]
 
-        sampler_no_ag = PolicySampler(model=tiny_model, use_argmax=False)
+        sampler_no_ag = PolicySampler(tiny_model, use_argmax=False)
         moves = sampler_no_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
 
@@ -76,6 +76,6 @@ class TestBatchedPolicySampler:
         """Test batched_policy_sampler method."""
         boards = [chess.Board() for _ in range(10)]
 
-        sampler_no_ag = PolicySampler(model=tiny_model, use_argmax=False, use_suboptimal=True)
+        sampler_no_ag = PolicySampler(tiny_model, use_argmax=False, use_suboptimal=True)
         moves = sampler_no_ag.get_next_moves(boards)
         assert len(list(moves)) == 10
