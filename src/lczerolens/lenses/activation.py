@@ -112,7 +112,14 @@ class ActivationBuffer:
             self._buffer.append(self._remainder)
             self._remainder = None
         activations_ds = TensorDataset(torch.cat(self._buffer, dim=0))
-        self._activations_it = iter(DataLoader(activations_ds, batch_size=self.train_batch_size, shuffle=True))
+
+        self._activations_it = iter(
+            DataLoader(
+                activations_ds,
+                batch_size=self.train_batch_size,
+                shuffle=True,
+            )
+        )
 
     def __iter__(self):
         self._make_dataloader_it()
@@ -123,12 +130,12 @@ class ActivationBuffer:
 
     def __next__(self):
         try:
-            activations = next(self._activations_it)
+            activations = next(self._activations_it)[0]
             if activations.shape[0] < self.train_batch_size:
                 self._remainder = activations
                 self._fill_buffer()
                 self._make_activations_it()
-                activations = next(self._activations_it)
+                activations = next(self._activations_it)[0]
             return activations
         except StopIteration:
             try:
