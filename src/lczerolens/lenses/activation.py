@@ -112,7 +112,7 @@ class ActivationBuffer:
             self._buffer.append(self._remainder)
             self._remainder = None
         activations_ds = TensorDataset(torch.cat(self._buffer, dim=0))
-        self._activations_it = iter(DataLoader(activations_ds, batch_size=self.train_batch_size), shuffle=True)
+        self._activations_it = iter(DataLoader(activations_ds, batch_size=self.train_batch_size, shuffle=True))
 
     def __iter__(self):
         self._make_dataloader_it()
