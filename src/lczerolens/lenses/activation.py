@@ -145,11 +145,11 @@ class ActivationBuffer:
         except StopIteration:
             try:
                 self._fill_buffer()
+                self._make_activations_it()
+                self.__next__()
             except StopIteration as e:
                 if self._remainder is not None:
                     activations = self._remainder
                     self._remainder = None
                     return activations
                 raise StopIteration from e
-            self._make_activations_it()
-            self.__next__()
