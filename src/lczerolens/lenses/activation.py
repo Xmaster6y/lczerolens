@@ -2,9 +2,12 @@
 
 from typing import Any, Optional, Union, Tuple
 import re
+from dataclasses import dataclass
 
 import chess
 import torch
+from datasets import Dataset
+from torch.utils.data import DataLoader, TensorDataset
 
 from lczerolens.model import LczeroModel
 from lczerolens.lens import Lens, LensFactory
@@ -67,3 +70,81 @@ class ActivationLens(Lens):
                 output = model.output.save()
 
         return (self._storage, output) if return_output else (self._storage,)
+
+
+@dataclass
+class ActivationBuffer:
+    model: LczeroModel
+    dataset: Dataset
+    module_name: str
+    n_batches_in_buffer: int
+    store_batch_size: int = 256
+    train_batch_size: int = 2048
+    dataloader_kwargs: Optional[dict] = None
+    len_kwargs: Optional[dict] = None
+
+    def __post_init__(self):
+        if self.n_batches_in_buffer * self.store_batch_size < self.train_batch_size:
+            raise ValueError("store_batch_size * n_batches_in_buffer should be greater than train_batch")
+        if self.dataloader_kwargs is None:
+            self.dataloader_kwargs = {}
+        if self.len_kwargs is None:
+            self.len_kwargs = {}
+        self._buffer = []
+        self._remainder = None
+        self._lens = ActivationLens(pattern=self.module_name)
+        self._make_dataloader_it()
+
+    def _make_dataloader_it(self):
+        self._dataloader_it = iter(
+            DataLoader(self.dataset, batch_size=self.store_batch_size, **self.dataloader_kwargs)
+        )
+
+    @torch.no_grad
+    def _fill_buffer(self):
+        self._buffer = []
+        while len(self._buffer) < self.n_batches_in_buffer:
+            try:
+                next_batch = next(self._dataloader_it)
+            except StopIteration:
+                break
+            storage = self._lens.analyse(next_batch, model=self.model, **self.len_kwargs)[0]
+            activations = storage[self.module_name]
+            self._buffer.append(activations)
+        if not self._buffer:
+            raise StopIteration
+
+    def _make_activations_it(self):
+        if self._remainder is not None:
+            self._buffer.append(self._remainder)
+            self._remainder = None
+        activations_ds = TensorDataset(torch.cat(self._buffer, dim=0))
+        self._activations_it = iter(DataLoader(activations_ds, batch_size=self.train_batch_size), shuffle=True)
+
+    def __iter__(self):
+        self._make_dataloader_it()
+        self._fill_buffer()
+        self._make_activations_it()
+        self._remainder = None
+        return self
+
+    def __next__(self):
+        try:
+            activations = next(self._activations_it)
+            if activations.shape[0] < self.train_batch_size:
+                self._remainder = activations
+                self._fill_buffer()
+                self._make_activations_it()
+                activations = next(self._activations_it)
+            return activations
+        except StopIteration:
+            try:
+                self._fill_buffer()
+            except StopIteration:
+                if self._remainder is not None:
+                    activations = self._remainder
+                    self._remainder = None
+                    return activations
+                raise StopIteration
+            self._make_activations_it()
+            self.__next__()

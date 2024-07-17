@@ -2,7 +2,7 @@
 Lenses implementation for XAI
 """
 
-from .activation import ActivationLens
+from .activation import ActivationLens, ActivationBuffer
 from .crp import CrpLens
 from .lrp import LrpLens
 from .patching import PatchingLens
@@ -11,6 +11,7 @@ from .policy import PolicyLens
 
 __all__ = [
     "ActivationLens",
+    "ActivationBuffer",
     "CrpLens",
     "LrpLens",
     "PatchingLens",
