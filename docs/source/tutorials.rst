@@ -19,6 +19,9 @@ Tutorials
 
       :bdg-primary:`Main Features`
 
+   .. grid-item-card:: Train SAEs
+      :link: notebooks/tutorials/train_saes.ipynb
+
 .. toctree::
    :hidden:
    :maxdepth: 2
@@ -26,3 +29,4 @@ Tutorials
    notebooks/walkthrough.ipynb
    notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
    notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
+   notebooks/tutorials/train_saes.ipynb
