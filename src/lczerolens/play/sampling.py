@@ -101,8 +101,7 @@ class ModelSampler(Sampler):
         if self.use_argmax:
             idx = utility.argmax()
             return move_encodings.decode_move(legal_indices[idx], board)
-        else:
-            return super().choose_move(board, utility, legal_indices)
+        return super().choose_move(board, utility, legal_indices)
 
     @torch.no_grad
     def get_utilities(
