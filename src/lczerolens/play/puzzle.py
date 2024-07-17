@@ -121,23 +121,19 @@ class Puzzle:
     ) -> Iterable[Dict[str, float]]:
         iter_inputs = iter(inputs)
         for puzzle in puzzles:
-            total = 0
-            metrics = {"score": 0.0, "perplexity": 1.0}
+            total = len(puzzle) if all_moves else (len(puzzle) + 1) // 2
+            metrics = {"score": 0.0, "perplexity": 1.0, "normalized_perplexity": 1.0}
             for board, move in puzzle.board_move_generator(all_moves=all_moves):
                 utility, legal_indices, predicted_move = next(iter_inputs)
                 index = move_encodings.encode_move(move, board.turn)
                 probs = torch.softmax(utility, dim=0)
-                metrics["perplexity"] *= probs[legal_indices == index].item()
+                move_prob = probs[legal_indices == index].item()
+                metrics["perplexity"] *= move_prob ** (-1 / total)
+                metrics["normalized_perplexity"] *= (len(legal_indices) * move_prob) ** (-1 / total)
                 if predicted_move == move:
                     metrics["score"] += 1
-                total += 1
             metrics["score"] /= total
-            if metrics["perplexity"] != 0:
-                metrics["perplexity"] = metrics["perplexity"] ** (-1 / total)
             yield metrics
-
-    def __repr__(self) -> str:
-        return self.initial_board.__repr__()
 
     def _repr_svg_(self) -> str:
         return self.initial_board._repr_svg_()
