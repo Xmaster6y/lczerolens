@@ -2308,14 +2308,12 @@ test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
 name = "nnsight"
-version = "0.2.19"
+version = "0.1.dev829+g1f37ee0"
 description = "Package for interpreting and manipulating the internals of deep learning models."
 optional = false
 python-versions = ">=3.7"
-files = [
-    {file = "nnsight-0.2.19-py3-none-any.whl", hash = "sha256:210e5a2bec51806422f234916799661d3a1504fb3a18ea294f311695a8ef66f6"},
-    {file = "nnsight-0.2.19.tar.gz", hash = "sha256:2ccbd5efdc79dea56f1828cb57470bec224220ec99dc02eb8a2f3ce762a6ef33"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 accelerate = "*"
@@ -2329,6 +2327,12 @@ tokenizers = ">=0.13.0"
 torch = ">=2.1.0"
 torchvision = "*"
 transformers = "*"
+
+[package.source]
+type = "git"
+url = "https://github.com/Xmaster6y/nnsight"
+reference = "modules"
+resolved_reference = "1f37ee04760bc26c84154478ab87d35ddf550689"
 
 [[package]]
 name = "nodeenv"
@@ -2758,8 +2762,8 @@ files = [
 [package.dependencies]
 numpy = [
     {version = ">=1.22.4", markers = "python_version < \"3.11\""},
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -5974,4 +5978,4 @@ demo = ["gradio"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "adc931d706867a10d8975e18190a4de04e4a416aeaf0b54c288ce0456e30381c"
+content-hash = "de3f9ee1a14cff8bcb2f2d3258feb66cbe1a7622bb8e0ee0083dc6cdd8af0e31"
