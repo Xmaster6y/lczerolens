@@ -65,7 +65,7 @@ class ActivationLens(Lens):
 
         with model.trace(*inputs, **model_kwargs):
             for name, module in self._get_modules(model):
-                self._storage[name] = getattr(module, name).output.save()
+                self._storage[name] = module.output.save()
             if return_output:
                 output = model.output.save()
 
