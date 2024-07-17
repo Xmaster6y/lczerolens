@@ -81,6 +81,7 @@ class ActivationBuffer:
     compute_batch_size: int = 64
     train_batch_size: int = 2048
     dataloader_kwargs: Optional[dict] = None
+    logger: Optional[Callable] = None
 
     def __post_init__(self):
         if self.dataloader_kwargs is None:
@@ -96,6 +97,8 @@ class ActivationBuffer:
 
     @torch.no_grad
     def _fill_buffer(self):
+        if self.logger is not None:
+            self.logger.info("Computing activations...")
         self._buffer = []
         while len(self._buffer) < self.n_batches_in_buffer:
             try:
@@ -112,6 +115,8 @@ class ActivationBuffer:
             self._buffer.append(self._remainder)
             self._remainder = None
         activations_ds = TensorDataset(torch.cat(self._buffer, dim=0))
+        if self.logger is not None:
+            self.logger.info(f"Activations dataset of size {len(activations_ds)}")
 
         self._activations_it = iter(
             DataLoader(
