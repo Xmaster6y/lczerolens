@@ -1,6 +1,6 @@
 """Activation lens for XAI."""
 
-from typing import Any, Optional, Union, Tuple
+from typing import Any, Optional, Union, Tuple, Callable
 import re
 from dataclasses import dataclass
 
@@ -76,28 +76,22 @@ class ActivationLens(Lens):
 class ActivationBuffer:
     model: LczeroModel
     dataset: Dataset
-    module_name: str
-    n_batches_in_buffer: int
-    store_batch_size: int = 256
+    compute_fn: Callable[[Any, LczeroModel], torch.Tensor]
+    n_batches_in_buffer: int = 10
+    compute_batch_size: int = 64
     train_batch_size: int = 2048
     dataloader_kwargs: Optional[dict] = None
-    len_kwargs: Optional[dict] = None
 
     def __post_init__(self):
-        if self.n_batches_in_buffer * self.store_batch_size < self.train_batch_size:
-            raise ValueError("store_batch_size * n_batches_in_buffer should be greater than train_batch")
         if self.dataloader_kwargs is None:
             self.dataloader_kwargs = {}
-        if self.len_kwargs is None:
-            self.len_kwargs = {}
         self._buffer = []
         self._remainder = None
-        self._lens = ActivationLens(pattern=self.module_name)
         self._make_dataloader_it()
 
     def _make_dataloader_it(self):
         self._dataloader_it = iter(
-            DataLoader(self.dataset, batch_size=self.store_batch_size, **self.dataloader_kwargs)
+            DataLoader(self.dataset, batch_size=self.compute_batch_size, **self.dataloader_kwargs)
         )
 
     @torch.no_grad
@@ -108,8 +102,7 @@ class ActivationBuffer:
                 next_batch = next(self._dataloader_it)
             except StopIteration:
                 break
-            storage = self._lens.analyse(next_batch, model=self.model, **self.len_kwargs)[0]
-            activations = storage[self.module_name]
+            activations = self.compute_fn(next_batch, self.model)
             self._buffer.append(activations)
         if not self._buffer:
             raise StopIteration
