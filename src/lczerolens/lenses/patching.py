@@ -61,7 +61,7 @@ class PatchingLens(Lens):
 
         return output
 
-    def patched_model_factory(
+    def patched_forward_factory(
         self,
         model: LczeroModel,
         patch_fn: Callable,
