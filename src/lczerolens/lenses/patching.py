@@ -60,35 +60,3 @@ class PatchingLens(Lens):
             output = model.output.save()
 
         return output
-
-    def patched_forward_factory(
-        self,
-        model: LczeroModel,
-        patch_fn: Callable,
-        **kwargs,
-    ) -> LczeroModel:
-        """
-        Create a patched model.
-
-        Parameters
-        ----------
-        model : LczeroModel
-            The model to patch.
-        patch_fn : Callable
-            The patch function.
-        kwargs : Dict
-            The keyword arguments.
-
-        Returns
-        -------
-        LczeroModel
-            The patched model.
-        """
-        model_kwargs = kwargs.get("model_kwargs", {})
-
-        def patched_forward(*inputs: Any, **kwargs: Any) -> torch.Tensor:
-            model_kwargs.update(kwargs)
-
-            return self.analyse(*inputs, model=model, patch_fn=patch_fn, model_kwargs=model_kwargs)
-
-        return patched_forward
