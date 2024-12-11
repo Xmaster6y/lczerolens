@@ -33,7 +33,7 @@ scikit-learn = "^1.4.0"
 zennit-crp = "^0.6.0"
 einops = "^0.7.0"
 datasets = "^2.19.1"
-nnsight = "^0.3.7"
+nnsight = {git = "https://github.com/Xmaster6y/nnsight", rev = "modules"}
 
 [tool.poetry.extras]
 demo = ["gradio"]
@@ -69,7 +69,6 @@ plotly = "^5.18.0"
 sphinx-design = "^0.5.0"
 nbsphinx = "^0.9.3"
 pandoc = "^2.3"
-typing-extensions = "^4.12.2"
 
 [tool.poetry.group.scripts]
 optional = true
