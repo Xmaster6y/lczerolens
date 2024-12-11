@@ -33,9 +33,9 @@ class PatchingLens(Lens):
 
         Args:
             pattern: Optional regex pattern to match node names for patching.
-                    Defaults to r".*\d+$" which matches any string ending in one 
-                    or more digits. This default is chosen to match typical neural 
-                    network layer names that end in numeric indices (e.g. 'layer1', 
+                    Defaults to r".*\d+$" which matches any string ending in one
+                    or more digits. This default is chosen to match typical neural
+                    network layer names that end in numeric indices (e.g. 'layer1',
                     'conv2d_42', etc).
         """
         if pattern is None:
