@@ -106,7 +106,7 @@ class ActivationBuffer:
             except StopIteration:
                 break
             activations = self.compute_fn(next_batch, self.model)
-            self._buffer.append(activations)
+            self._buffer.append(activations.to("cpu"))
         if not self._buffer:
             raise StopIteration
 
@@ -153,3 +153,4 @@ class ActivationBuffer:
                     self._remainder = None
                     return activations
                 raise StopIteration from e
+        raise StopIteration
