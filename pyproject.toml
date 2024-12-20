@@ -33,9 +33,9 @@ scikit-learn = "^1.4.0"
 zennit-crp = "^0.6.0"
 einops = "^0.7.0"
 datasets = "^2.19.1"
-nnsight = {git = "https://github.com/Xmaster6y/nnsight", rev = "modules"}
 typing-extensions = "^4.12.2"
 
+nnsight = "^0.3.7"
 [tool.poetry.extras]
 demo = ["gradio"]
 
