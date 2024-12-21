@@ -53,6 +53,21 @@ class LczeroModel(NNsight):
         prepared_inputs, _ = self._prepare_inputs(*inputs, **kwargs)
         return self._execute(*prepared_inputs, **kwargs)
 
+    def __getattr__(self, key):
+        if self._envoy._tracer is None:
+            return getattr(self._model, key)
+        return super().__getattr__(key)
+
+    def __setattr__(self, key, value):
+        if (
+            (key not in ("_model", "_model_key"))
+            and (isinstance(value, torch.nn.Module))
+            and (self._envoy._tracer is None)
+        ):
+            setattr(self._model, key, value)
+        else:
+            super().__setattr__(key, value)
+
     @property
     def device(self):
         """Returns the device."""
