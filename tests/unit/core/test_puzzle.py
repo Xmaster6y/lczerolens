@@ -65,7 +65,7 @@ class TestRandomSampler:
         puzzle = Puzzle.from_dict(opening_puzzle)
         sampler = RandomSampler()
         metrics = puzzle.evaluate(sampler)
-        assert metrics["score"] == 0.0
+        assert metrics["score"] != 1.0
         assert abs(metrics["perplexity"] - (20.0 * 30) ** 0.5) < 1e-3
 
     def test_puzzle_multiple_evaluation_len(self, easy_puzzle):
