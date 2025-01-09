@@ -51,6 +51,8 @@ pytest-cov = "*"
 lczero-bindings = {git = "https://github.com/LeelaChessZero/lc0.git"}
 onnxruntime = "^1.16.3"
 gdown = "^5.0.1"
+nbconvert = "^7.16.5"
+ipykernel = "^6.29.5"
 
 [tool.poetry.group.demo]
 optional = true
