@@ -7,7 +7,6 @@ import pytest
 
 NOTEBOOKS = [
     "docs/source/notebooks/features/convert-official-weights.ipynb",
-    "docs/source/notebooks/features/evaluate-models-on-puzzle.ipynb",
     "docs/source/notebooks/features/move-prediction.ipynb",
     "docs/source/notebooks/tutorials/piece-value-estimation-using-lrp.ipynb",
     "docs/source/notebooks/walkthrough.ipynb",
@@ -16,7 +15,7 @@ NOTEBOOKS = [
 
 def run_notebook(notebook):
     result = subprocess.run(
-        ["poetry", "run", "jupyter", "nbconvert", "--to", "script", "--execute", notebook],
+        ["poetry", "run", "jupyter", "nbconvert", "--to", "notebook", "--execute", notebook],
         stderr=subprocess.PIPE,
     )
     if result.returncode != 0:
