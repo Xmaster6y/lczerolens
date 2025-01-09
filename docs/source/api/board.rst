@@ -1,12 +1,6 @@
 lczerolens.board
 ================
 
-.. module:: lczerolens.board
-
-    .. autoclass:: InputEncoding
-        :members:
-        :show-inheritance:
-
-    .. autoclass:: LczeroBoard
-        :members:
-        :show-inheritance:
+.. automodule:: lczerolens.board
+    :members:
+    :show-inheritance:
