@@ -1,9 +1,8 @@
 """LRP lens tests."""
 
-import chess
 import torch
 
-from lczerolens import LensFactory
+from lczerolens import LensFactory, LczeroBoard
 from lczerolens.lenses import LrpLens
 
 
@@ -18,6 +17,6 @@ class TestLens:
         Test that the wrapper prediction works.
         """
         lens = LrpLens()
-        board = chess.Board(fen=None)
+        board = LczeroBoard(fen=None)
         (rel,) = lens.analyse(board, tiny_model)
         assert torch.allclose(rel.abs()[0, :104].sum(0).view(64), torch.zeros(64))

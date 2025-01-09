@@ -1,12 +1,11 @@
 """Model tests."""
 
-import chess
 import pytest
 import torch
 from lczero.backends import GameState
 
-from lczerolens import FlowFactory
-from lczerolens.encodings import backends as lczero_utils
+from lczerolens import FlowFactory, LczeroBoard
+from lczerolens import backends as lczero_utils
 
 
 class TestModel:
@@ -16,7 +15,7 @@ class TestModel:
 
     def test_model_prediction(self, tiny_lczero_backend, tiny_model):
         """Test that the model prediction works."""
-        board = chess.Board()
+        board = LczeroBoard()
         (out,) = tiny_model(board)
         policy = out["policy"]
         value = out["value"]
@@ -66,7 +65,7 @@ class TestFlows:
     def test_policy_flow(self, tiny_model):
         """Test that the policy flow works."""
         policy_flow = FlowFactory.from_model("policy", tiny_model)
-        board = chess.Board()
+        board = LczeroBoard()
         (policy,) = policy_flow(board)
         model_policy = tiny_model(board)[0]["policy"]
         assert torch.allclose(policy, model_policy)
@@ -74,7 +73,7 @@ class TestFlows:
     def test_value_flow(self, tiny_model):
         """Test that the value flow works."""
         value_flow = FlowFactory.from_model("value", tiny_model)
-        board = chess.Board()
+        board = LczeroBoard()
         (value,) = value_flow(board)
         model_value = tiny_model(board)[0]["value"]
         assert torch.allclose(value, model_value)
@@ -82,7 +81,7 @@ class TestFlows:
     def test_wdl_flow(self, winner_model):
         """Test that the wdl flow works."""
         wdl_flow = FlowFactory.from_model("wdl", winner_model)
-        board = chess.Board()
+        board = LczeroBoard()
         (wdl,) = wdl_flow(board)
         model_wdl = winner_model(board)[0]["wdl"]
         assert torch.allclose(wdl, model_wdl)
@@ -90,7 +89,7 @@ class TestFlows:
     def test_mlh_flow(self, winner_model):
         """Test that the mlh flow works."""
         mlh_flow = FlowFactory.from_model("mlh", winner_model)
-        board = chess.Board()
+        board = LczeroBoard()
         (mlh,) = mlh_flow(board)
         model_mlh = winner_model(board)[0]["mlh"]
         assert torch.allclose(mlh, model_mlh)

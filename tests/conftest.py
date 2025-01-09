@@ -7,7 +7,7 @@ import pytest
 from lczero.backends import Backend, Weights
 
 from lczerolens import LczeroModel
-from lczerolens.encodings import backends as lczero_utils
+from lczerolens import backends as lczero_utils
 
 
 @pytest.fixture(scope="session")
