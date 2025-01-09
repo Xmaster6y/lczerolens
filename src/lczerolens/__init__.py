@@ -3,22 +3,20 @@
 __version__ = "0.2.0-dev"
 
 
-from .encodings import board as board_encodings
-from .encodings import move as move_encodings
+from .board import LczeroBoard, InputEncoding
 from .model import LczeroModel, Flow, FlowFactory
 from .lens import Lens, LensFactory
-from . import lenses, concepts, encodings, play
+from . import lenses, concepts, play
 
 __all__ = [
+    "LczeroBoard",
     "LczeroModel",
     "Flow",
     "FlowFactory",
+    "InputEncoding",
     "Lens",
     "LensFactory",
-    "board_encodings",
-    "move_encodings",
     "lenses",
     "concepts",
-    "encodings",
     "play",
 ]

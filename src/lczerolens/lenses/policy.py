@@ -3,7 +3,7 @@
 import chess
 import torch
 
-from lczerolens.encodings.constants import (
+from lczerolens.constants import (
     INVERTED_FROM_INDEX,
     INVERTED_TO_INDEX,
 )

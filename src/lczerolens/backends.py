@@ -11,7 +11,7 @@ import subprocess
 import chess
 import torch
 
-from lczerolens.encodings import move as move_encodings
+from lczerolens.board import LczeroBoard
 
 try:
     from lczero.backends import Backend, GameState
@@ -105,7 +105,7 @@ def prediction_from_backend(
     return filtered_policy, value
 
 
-def moves_with_castling_swap(lczero_game: GameState, board: chess.Board):
+def moves_with_castling_swap(lczero_game: GameState, board: LczeroBoard):
     """
     Get the moves with castling swap.
     """
@@ -121,10 +121,10 @@ def moves_with_castling_swap(lczero_game: GameState, board: chess.Board):
                 lczero_legal_moves.remove(leela_uci_move)
                 lczero_legal_moves.append(uci_move)
                 lczero_policy_indices.remove(
-                    move_encodings.encode_move(
+                    LczeroBoard.encode_move(
                         chess.Move.from_uci(leela_uci_move),
                         board.turn,
                     )
                 )
-                lczero_policy_indices.append(move_encodings.encode_move(move, board.turn))
+                lczero_policy_indices.append(LczeroBoard.encode_move(move, board.turn))
     return lczero_legal_moves, lczero_policy_indices

@@ -9,20 +9,20 @@ import torch
 from torch.distributions import Categorical
 from itertools import tee
 
-from lczerolens.encodings import move as move_encodings
 from lczerolens.model import LczeroModel
+from lczerolens.board import LczeroBoard
 
 
 class Sampler(ABC):
     @abstractmethod
     def get_utilities(
-        self, boards: Iterable[chess.Board], **kwargs
+        self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         """Get the utility of the board.
 
         Parameters
         ----------
-        boards : Iterable[chess.Board]
+        boards : Iterable[LczeroBoard]
             The boards to evaluate.
 
         Returns
@@ -32,12 +32,12 @@ class Sampler(ABC):
         """
         pass
 
-    def choose_move(self, board: chess.Board, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
+    def choose_move(self, board: LczeroBoard, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
         """Choose the next moves.
 
         Parameters
         ----------
-        board : chess.Board
+        board : LczeroBoard
             The board.
         utility : torch.Tensor
             The utility of the board.
@@ -51,14 +51,14 @@ class Sampler(ABC):
         """
         m = Categorical(logits=utility)
         idx = m.sample()
-        return move_encodings.decode_move(legal_indices[idx], board)
+        return board.decode_move(legal_indices[idx])
 
-    def get_next_moves(self, boards: Iterable[chess.Board], **kwargs) -> Iterable[Tuple[chess.Move, Dict[str, float]]]:
+    def get_next_moves(self, boards: Iterable[LczeroBoard], **kwargs) -> Iterable[Tuple[chess.Move, Dict[str, float]]]:
         """Get the next move.
 
         Parameters
         ----------
-        boards : Iterable[chess.Board]
+        boards : Iterable[LczeroBoard]
             The boards to evaluate.
 
         Returns
@@ -74,10 +74,10 @@ class Sampler(ABC):
 
 class RandomSampler(Sampler):
     def get_utilities(
-        self, boards: Iterable[chess.Board], **kwargs
+        self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         for board in boards:
-            legal_indices = move_encodings.get_legal_indices(board)
+            legal_indices = board.get_legal_indices()
             utilities = torch.ones_like(legal_indices, dtype=torch.float32)
             yield utilities, legal_indices, {}
 
@@ -97,15 +97,15 @@ class ModelSampler(Sampler):
     k_2: float = -0.6521
     q_threshold: float = 0.8
 
-    def choose_move(self, board: chess.Board, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
+    def choose_move(self, board: LczeroBoard, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
         if self.use_argmax:
             idx = utility.argmax()
-            return move_encodings.decode_move(legal_indices[idx], board)
+            return board.decode_move(legal_indices[idx])
         return super().choose_move(board, utility, legal_indices)
 
     @torch.no_grad
     def get_utilities(
-        self, boards: Iterable[chess.Board], **kwargs
+        self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.pop("batch_size", -1)
 
@@ -133,9 +133,9 @@ class ModelSampler(Sampler):
                 yield legal_indices, batch_stats
 
         for board in boards:
-            legal_indices = move_encodings.get_legal_indices(board)
+            legal_indices = board.get_legal_indices()
             if use_next_boards:
-                next_boards = list(move_encodings.get_next_legal_boards(board))
+                next_boards = list(board.get_next_legal_boards())
             else:
                 next_boards = []
             if len(next_batch) + len(next_boards) + 1 > batch_size and batch_size != -1:
@@ -188,7 +188,7 @@ class PolicySampler(ModelSampler):
 
     @torch.no_grad
     def get_utilities(
-        self, boards: Iterable[chess.Board], **kwargs
+        self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.pop("batch_size", -1)
 
@@ -210,7 +210,7 @@ class SelfPlay:
 
     def play(
         self,
-        board: Optional[chess.Board] = None,
+        board: Optional[LczeroBoard] = None,
         max_moves: int = 100,
         to_play: chess.Color = chess.WHITE,
         report_fn: Optional[Callable[[dict, chess.Color], None]] = None,
@@ -221,7 +221,7 @@ class SelfPlay:
         Plays a game.
         """
         if board is None:
-            board = chess.Board()
+            board = LczeroBoard()
         if white_kwargs is None:
             white_kwargs = {}
         if black_kwargs is None:
