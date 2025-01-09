@@ -330,7 +330,7 @@ class LczeroBoard(chess.Board):
             import matplotlib.pyplot as plt
         except ImportError as e:
             raise ImportError(
-                "matplotlib is required to render heatmaps, install it with `pip install lczerolens[visualisation]`."
+                "matplotlib is required to render heatmaps, install it with `pip install lczerolens[viz]`."
             ) from e
 
         cmap = matplotlib.colormaps[cmap_name].resampled(1000)

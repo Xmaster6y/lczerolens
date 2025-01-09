@@ -34,10 +34,12 @@ zennit-crp = "^0.6.0"
 einops = "^0.7.0"
 datasets = "^2.19.1"
 typing-extensions = "^4.12.2"
-
 nnsight = "^0.3.7"
+matplotlib = {version = "^3.8.2", extras = ["viz"]}
+
 [tool.poetry.extras]
 demo = ["gradio"]
+viz = ["matplotlib"]
 
 [tool.poetry.group.dev]
 optional = true
