@@ -36,8 +36,7 @@ class LczeroBoard(chess.Board):
             The plane order.
         """
         plane_orders = {chess.WHITE: "PNBRQK", chess.BLACK: "pnbrqk"}
-        plane_order = plane_orders[us] + plane_orders[not us]
-        return plane_order
+        return plane_orders[us] + plane_orders[not us]
 
     @staticmethod
     def get_piece_index(piece: str, us: bool, plane_order: Optional[str] = None):
@@ -329,10 +328,10 @@ class LczeroBoard(chess.Board):
         try:
             import matplotlib
             import matplotlib.pyplot as plt
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "matplotlib is required to render heatmaps, install it with `pip install lczerolens[visualisation]`."
-            )
+            ) from e
 
         cmap = matplotlib.colormaps[cmap_name].resampled(1000)
 
@@ -379,10 +378,10 @@ class LczeroBoard(chess.Board):
             size=350,
             arrows=arrows,
         )
-        if save_to is not None:
-            plt.savefig(save_to)
-            with open(save_to.replace(".png", ".svg"), "w") as f:
-                f.write(svg_board)
-            plt.close()
-        else:
+        if save_to is None:
             return svg_board, fig
+
+        plt.savefig(save_to)
+        with open(save_to.replace(".png", ".svg"), "w") as f:
+            f.write(svg_board)
+        plt.close()

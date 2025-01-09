@@ -134,10 +134,7 @@ class ModelSampler(Sampler):
 
         for board in boards:
             legal_indices = board.get_legal_indices()
-            if use_next_boards:
-                next_boards = list(board.get_next_legal_boards())
-            else:
-                next_boards = []
+            next_boards = list(board.get_next_legal_boards()) if use_next_boards else []
             if len(next_batch) + len(next_boards) + 1 > batch_size and batch_size != -1:
                 yield from generator(next_batch, next_legal_indices)
                 next_batch = []
