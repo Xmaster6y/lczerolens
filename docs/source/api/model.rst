@@ -1,5 +1,5 @@
-Lczero Model
-============
+lczerolens.model
+================
 
 Base Model
 ----------
@@ -10,8 +10,8 @@ Base Model
         :members:
         :show-inheritance:
 
-Flow
-----
+Flows
+-----
 
 .. module:: lczerolens.model
     :no-index:

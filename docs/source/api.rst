@@ -8,7 +8,7 @@ Chess Modeling
    :maxdepth: 3
 
    api/model
-   api/encodings
+   api/board
 
 XAI Methods
 -----------

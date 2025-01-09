@@ -1,5 +1,5 @@
-Lczero Board
-===========
+lczerolens.board
+================
 
 .. module:: lczerolens.board
 
