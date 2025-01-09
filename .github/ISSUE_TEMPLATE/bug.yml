@@ -25,10 +25,10 @@ body:
       label: Version
       description: What version of the software are you running?
       options:
-        - 0.2.0-dev (Latest)
+        - 0.2.0-dev
         - 0.2.0
         - 0.1.2
-      default: 0
+      default: 0.2.0-dev
     validations:
       required: true
   - type: dropdown

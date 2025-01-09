@@ -1,9 +1,9 @@
 ---
 name: Roadmap
 about: Detail the roadmap to implement a new feature or solve a bug.
-title: ''
-labels: ''
-assignees: ''
+title: '[Roadmap]: '
+labels: ['roadmap']
+assignees: []
 
 ---
 
