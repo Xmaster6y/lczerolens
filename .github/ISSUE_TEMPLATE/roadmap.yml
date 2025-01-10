@@ -1,0 +1,29 @@
+name: Roadmap
+description: Detail the roadmap to implement a new feature or solve a bug.
+title: "[Roadmap]: "
+labels: ["roadmap"]
+projects: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this roadmap!
+  - type: textarea
+    id: shortline
+    attributes:
+      label: Shortline
+      description: A shortline description of the roadmap.
+      placeholder: Key insights about the roadmap.
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tasks
+      description: List of tasks to implement the roadmap.
+      value: |
+        * [ ] The code is documented
+        * [ ] Utilities and class test are written
+    validations:
+      required: true
