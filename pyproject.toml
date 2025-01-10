@@ -38,7 +38,7 @@ nnsight = "^0.3.7"
 matplotlib = {version = "^3.8.2", extras = ["viz"]}
 
 [tool.poetry.extras]
-demo = ["gradio"]
+demo = ["gradio", "matplotlib"]
 viz = ["matplotlib"]
 
 [tool.poetry.group.dev]
@@ -53,14 +53,6 @@ onnxruntime = "^1.16.3"
 gdown = "^5.0.1"
 nbconvert = "^7.16.5"
 ipykernel = "^6.29.5"
-
-[tool.poetry.group.demo]
-optional = true
-
-[tool.poetry.group.demo.dependencies]
-gradio = "^4.14.0"
-lczero-bindings = {git = "https://github.com/LeelaChessZero/lc0.git"}
-matplotlib = "^3.8.2"
 
 [tool.poetry.group.docs]
 optional = true
