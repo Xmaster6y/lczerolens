@@ -106,3 +106,27 @@ class TestFlows:
             Flow.from_model("mlh", tiny_model)
         with pytest.raises(ValueError):
             Flow.get_subclass("value")(tiny_model)
+
+
+@Flow.register("test_flow")
+class TestFlow(Flow):
+    """Test flow."""
+
+
+class TestFlowRegistry:
+    def test_flow_registry_duplicate(self):
+        """Test that registering a flow with an existing name raises an error."""
+        with pytest.raises(ValueError, match="Flow .* already registered"):
+
+            @Flow.register("test_flow")
+            class DuplicateFlow(Flow):
+                """Duplicate flow."""
+
+    def test_flow_registry_missing(self, tiny_model):
+        """Test that instantiating a non-registered flow raises an error."""
+        with pytest.raises(KeyError, match="Flow .* not found"):
+            Flow.from_model("non_existent_flow", tiny_model)
+
+    def test_flow_type(self):
+        """Test that the flow type is correct."""
+        assert TestFlow._flow_type == "test_flow"

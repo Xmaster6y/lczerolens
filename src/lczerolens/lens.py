@@ -12,14 +12,27 @@ class Lens(ABC):
     _registry: Dict[str, Type["Lens"]] = {}
 
     @classmethod
-    def register(cls, name: str):
+    def register(cls, name: str) -> Callable:
         """Registers the lens.
 
         Parameters
         ----------
         name : str
             The name of the lens.
+
+        Returns
+        -------
+        Callable
+            The decorator to register the lens.
+
+        Raises
+        ------
+        ValueError
+            If the lens name is already registered.
         """
+
+        if name in cls._registry:
+            raise ValueError(f"Lens {name} already registered.")
 
         def decorator(subclass):
             cls._registry[name] = subclass
@@ -40,7 +53,14 @@ class Lens(ABC):
         -------
         Lens
             The lens instance.
+
+        Raises
+        ------
+        KeyError
+            If the lens name is not found.
         """
+        if name not in cls._registry:
+            raise KeyError(f"Lens {name} not found.")
         return cls._registry[name](*args, **kwargs)
 
     @abstractmethod
@@ -105,32 +125,3 @@ class Lens(ABC):
 
         for inputs in iter_inputs:
             yield self.analyse(*inputs, model=model, **kwargs)
-
-    def forward_factory(
-        self,
-        model: LczeroModel,
-        **kwargs,
-    ) -> Callable:
-        """
-        Create a patched model.
-
-        Parameters
-        ----------
-        model : LczeroModel
-            The model to patch.
-        patch_fn : Callable
-            The patch function.
-        kwargs : Dict
-            The keyword arguments.
-
-        Returns
-        -------
-        Callable
-            The patched model forward function.
-        """
-
-        def forward(*inputs: Any, **model_kwargs):
-            kwargs["model_kwargs"] = model_kwargs
-            return self.analyse(*inputs, model=model, **kwargs)
-
-        return forward

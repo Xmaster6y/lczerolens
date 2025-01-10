@@ -230,7 +230,15 @@ class Flow(LczeroModel):
         -------
         Callable
             Decorator function that registers the flow subclass.
+
+        Raises
+        ------
+        ValueError
+            If the flow name is already registered.
         """
+
+        if name in cls._registry:
+            raise ValueError(f"Flow {name} already registered.")
 
         def decorator(subclass):
             cls._registry[name] = subclass
@@ -256,7 +264,14 @@ class Flow(LczeroModel):
         -------
         Flow
             The instantiated flow.
+
+        Raises
+        ------
+        KeyError
+            If the flow name is not found.
         """
+        if name not in cls._registry:
+            raise KeyError(f"Flow {name} not found.")
         return cls._registry[name](*args, **kwargs)
 
     @classmethod
@@ -278,7 +293,14 @@ class Flow(LczeroModel):
         -------
         Flow
             The instantiated flow.
+
+        Raises
+        ------
+        KeyError
+            If the flow name is not found.
         """
+        if name not in cls._registry:
+            raise KeyError(f"Flow {name} not found.")
         flow_class = cls._registry[name]
         return flow_class(model._model, *args, **kwargs)
 
