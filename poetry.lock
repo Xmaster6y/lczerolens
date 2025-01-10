@@ -53,7 +53,7 @@ tests = ["hypothesis", "pytest"]
 name = "aiofiles"
 version = "23.2.1"
 description = "File support for asyncio."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "aiofiles-23.2.1-py3-none-any.whl", hash = "sha256:19297512c647d4b27a2cf7c34caa7e405c0d60b5560618a29a9fe027b18b0107"},
@@ -185,7 +185,7 @@ files = [
 name = "altair"
 version = "5.3.0"
 description = "Vega-Altair: A declarative statistical visualization library for Python."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "altair-5.3.0-py3-none-any.whl", hash = "sha256:7084a1dab4d83c5e7e5246b92dc1b4451a6c68fd057f3716ee9d315c8980e59a"},
@@ -221,7 +221,7 @@ files = [
 name = "anyio"
 version = "4.4.0"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "anyio-4.4.0-py3-none-any.whl", hash = "sha256:c1b2d8f46a8a812513012e1107cb0e68c17159a7a594208005a57dc776e1bdc7"},
@@ -943,7 +943,7 @@ files = [
 name = "dnspython"
 version = "2.6.1"
 description = "DNS toolkit"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "dnspython-2.6.1-py3-none-any.whl", hash = "sha256:5ef3b9680161f6fa89daf8ad451b5f1a33b18ae8a1c6778cdf4b43f08c0a6e50"},
@@ -999,7 +999,7 @@ files = [
 name = "email-validator"
 version = "2.2.0"
 description = "A robust email address syntax and deliverability validation library."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "email_validator-2.2.0-py3-none-any.whl", hash = "sha256:561977c2d73ce3611850a06fa56b414621e0c8faa9d66f2611407d87465da631"},
@@ -1042,7 +1042,7 @@ tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipyth
 name = "fastapi"
 version = "0.111.0"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "fastapi-0.111.0-py3-none-any.whl", hash = "sha256:97ecbf994be0bcbdadedf88c3150252bed7b2087075ac99735403b1b76cc8fc0"},
@@ -1069,7 +1069,7 @@ all = ["email_validator (>=2.0.0)", "httpx (>=0.23.0)", "itsdangerous (>=1.1.0)"
 name = "fastapi-cli"
 version = "0.0.4"
 description = "Run and manage FastAPI apps from the command line with FastAPI CLI. 🚀"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "fastapi_cli-0.0.4-py3-none-any.whl", hash = "sha256:a2552f3a7ae64058cdbb530be6fa6dbfc975dc165e4fa66d224c3d396e25e809"},
@@ -1100,7 +1100,7 @@ devel = ["colorama", "json-spec", "jsonschema", "pylint", "pytest", "pytest-benc
 name = "ffmpy"
 version = "0.3.2"
 description = "A simple Python wrapper for ffmpeg"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "ffmpy-0.3.2.tar.gz", hash = "sha256:475ebfff1044661b8d969349dbcd2db9bf56d3ee78c0627e324769b49a27a78f"},
@@ -1381,7 +1381,7 @@ test = ["coverage[toml]", "ddt (>=1.1.1,!=1.4.3)", "mock", "mypy", "pre-commit",
 name = "gradio"
 version = "4.37.2"
 description = "Python library for easily interacting with trained machine learning models"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "gradio-4.37.2-py3-none-any.whl", hash = "sha256:dede8c9429fe9d543f3516b0bb1fc3efa4c34a6ef34635cf8adf3f524a5d615a"},
@@ -1424,7 +1424,7 @@ oauth = ["authlib", "itsdangerous"]
 name = "gradio-client"
 version = "1.0.2"
 description = "Python library for easily interacting with trained machine learning models"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "gradio_client-1.0.2-py3-none-any.whl", hash = "sha256:f0af3fc39e7459b0703e6b3e9d59b6f7db0f2353b3f5e162a01d94d3bfcd5d97"},
@@ -1454,7 +1454,7 @@ files = [
 name = "httpcore"
 version = "1.0.5"
 description = "A minimal low-level HTTP client."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "httpcore-1.0.5-py3-none-any.whl", hash = "sha256:421f18bac248b25d310f3cacd198d55b8e6125c107797b609ff9b7a6ba7991b5"},
@@ -1475,7 +1475,7 @@ trio = ["trio (>=0.22.0,<0.26.0)"]
 name = "httptools"
 version = "0.6.1"
 description = "A collection of framework independent HTTP protocol utils."
-optional = true
+optional = false
 python-versions = ">=3.8.0"
 files = [
     {file = "httptools-0.6.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d2f6c3c4cb1948d912538217838f6e9960bc4a521d7f9b323b3da579cd14532f"},
@@ -1523,7 +1523,7 @@ test = ["Cython (>=0.29.24,<0.30.0)"]
 name = "httpx"
 version = "0.27.0"
 description = "The next generation HTTP client."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "httpx-0.27.0-py3-none-any.whl", hash = "sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5"},
@@ -2045,7 +2045,7 @@ dev = ["Sphinx (==7.2.5)", "colorama (==0.4.5)", "colorama (==0.4.6)", "exceptio
 name = "markdown-it-py"
 version = "3.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"},
@@ -2217,7 +2217,7 @@ traitlets = "*"
 name = "mdurl"
 version = "0.1.2"
 description = "Markdown URL utilities"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
@@ -2848,7 +2848,7 @@ dev = ["black", "mypy", "pytest"]
 name = "orjson"
 version = "3.10.6"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "orjson-3.10.6-cp310-cp310-macosx_10_15_x86_64.macosx_11_0_arm64.macosx_10_15_universal2.whl", hash = "sha256:fb0ee33124db6eaa517d00890fc1a55c3bfe1cf78ba4a8899d71a06f2d6ff5c7"},
@@ -3544,7 +3544,7 @@ test = ["pytest", "pytest-cov", "pytest-regressions", "sphinx[test]"]
 name = "pydub"
 version = "0.25.1"
 description = "Manipulate audio with an simple and easy high level interface"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "pydub-0.25.1-py2.py3-none-any.whl", hash = "sha256:65617e33033874b59d87db603aa1ed450633288aefead953b30bded59cb599a6"},
@@ -3696,7 +3696,7 @@ six = ">=1.5"
 name = "python-dotenv"
 version = "1.0.1"
 description = "Read key-value pairs from a .env file and set them as environment variables"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "python-dotenv-1.0.1.tar.gz", hash = "sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca"},
@@ -3729,7 +3729,7 @@ docs = ["sphinx"]
 name = "python-multipart"
 version = "0.0.9"
 description = "A streaming multipart parser for Python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "python_multipart-0.0.9-py3-none-any.whl", hash = "sha256:97ca7b8ea7b05f977dc3849c3ba99d51689822fab725c3703af7c866a0c2b215"},
@@ -4099,7 +4099,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 name = "rich"
 version = "13.7.1"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
-optional = true
+optional = false
 python-versions = ">=3.7.0"
 files = [
     {file = "rich-13.7.1-py3-none-any.whl", hash = "sha256:4edbae314f59eb482f54e9e30bf00d33350aaa94f4bfcd4e9e3110e64d0d7222"},
@@ -4225,7 +4225,7 @@ files = [
 name = "ruff"
 version = "0.5.0"
 description = "An extremely fast Python linter and code formatter, written in Rust."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "ruff-0.5.0-py3-none-linux_armv6l.whl", hash = "sha256:ee770ea8ab38918f34e7560a597cc0a8c9a193aaa01bfbd879ef43cb06bd9c4c"},
@@ -4461,7 +4461,7 @@ test = ["array-api-strict", "asv", "gmpy2", "hypothesis (>=6.30)", "mpmath", "po
 name = "semantic-version"
 version = "2.10.0"
 description = "A library implementing the 'SemVer' scheme."
-optional = true
+optional = false
 python-versions = ">=2.7"
 files = [
     {file = "semantic_version-2.10.0-py2.py3-none-any.whl", hash = "sha256:de78a3b8e0feda74cabc54aab2da702113e33ac9d9eb9d2389bcf1f58b7d9177"},
@@ -4703,7 +4703,7 @@ test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "importlib-metadata
 name = "shellingham"
 version = "1.5.4"
 description = "Tool to Detect Surrounding Shell"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
@@ -4754,7 +4754,7 @@ files = [
 name = "sniffio"
 version = "1.3.1"
 description = "Sniff out which async library your code is running under"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
@@ -4991,7 +4991,7 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 name = "starlette"
 version = "0.37.2"
 description = "The little ASGI library that shines."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "starlette-0.37.2-py3-none-any.whl", hash = "sha256:6fe59f29268538e5d0d182f2791a479a0c64638e6935d1c6989e63fb2699c6ee"},
@@ -5243,7 +5243,7 @@ files = [
 name = "tomlkit"
 version = "0.12.0"
 description = "Style preserving TOML library"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "tomlkit-0.12.0-py3-none-any.whl", hash = "sha256:926f1f37a1587c7a4f6c7484dae538f1345d96d793d9adab5d3675957b1d0766"},
@@ -5254,7 +5254,7 @@ files = [
 name = "toolz"
 version = "0.12.1"
 description = "List processing tools and functional utilities"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "toolz-0.12.1-py3-none-any.whl", hash = "sha256:d22731364c07d72eea0a0ad45bafb2c2937ab6fd38a3507bf55eae8744aa7d85"},
@@ -5503,7 +5503,7 @@ tutorials = ["matplotlib", "pandas", "tabulate"]
 name = "typer"
 version = "0.12.3"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "typer-0.12.3-py3-none-any.whl", hash = "sha256:070d7ca53f785acbccba8e7d28b08dcd88f79f1fbda035ade0aecec71ca5c914"},
@@ -5542,7 +5542,7 @@ files = [
 name = "ujson"
 version = "5.10.0"
 description = "Ultra fast JSON encoder and decoder for Python"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "ujson-5.10.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:2601aa9ecdbee1118a1c2065323bda35e2c5a2cf0797ef4522d485f9d3ef65bd"},
@@ -5646,7 +5646,7 @@ zstd = ["zstandard (>=0.18.0)"]
 name = "uvicorn"
 version = "0.30.1"
 description = "The lightning-fast ASGI server."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "uvicorn-0.30.1-py3-none-any.whl", hash = "sha256:cd17daa7f3b9d7a24de3617820e634d0933b69eed8e33a516071174427238c81"},
@@ -5672,7 +5672,7 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 name = "uvloop"
 version = "0.19.0"
 description = "Fast implementation of asyncio event loop on top of libuv"
-optional = true
+optional = false
 python-versions = ">=3.8.0"
 files = [
     {file = "uvloop-0.19.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:de4313d7f575474c8f5a12e163f6d89c0a878bc49219641d49e6f1444369a90e"},
@@ -5778,7 +5778,7 @@ sweeps = ["sweeps (>=0.2.0)"]
 name = "watchfiles"
 version = "0.22.0"
 description = "Simple, modern and high performance file watching and code reload in python."
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "watchfiles-0.22.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:da1e0a8caebf17976e2ffd00fa15f258e14749db5e014660f53114b676e68538"},
@@ -5903,7 +5903,7 @@ test = ["websockets"]
 name = "websockets"
 version = "11.0.3"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "websockets-11.0.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:3ccc8a0c387629aec40f2fc9fdcb4b9d5431954f934da3eaf16cdc94f67dbfac"},
@@ -6280,10 +6280,9 @@ doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linke
 test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [extras]
-demo = ["gradio", "matplotlib"]
 viz = ["matplotlib"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "5651a92a52fdae10fcff0df382fe40b0de6938b047de86d4628d898c7592b1b9"
+content-hash = "27398c64ac8a4e908a3081d1b2da25cb8adcfedc990f7bda730efb941476e902"
