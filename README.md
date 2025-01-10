@@ -38,10 +38,19 @@ pip install lczerolens
 
 :red_circle: Not up to date.
 
-Additionally, you can run the gradio demo locally (also deployed on HF). First you'll need gradio, which is packaged in the `demo` extra:
+### Spaces
+
+- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/lczerolens-demo)
+- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/lichess-puzzles-leaderboard)
+
+### Local Demo
+
+Additionally, you can run the gradio demo locally. First you'll need gradio, which is packaged in the `demo` group:
 
 ```bash
-pip install lczerolens[demo]
+git clone https://github.com/Xmaster6y/lczerolens.git
+cd lczerolens
+poetry install --with demo
 ```
 
 And then launch the demo (running on port `8000`):
