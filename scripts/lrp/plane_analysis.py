@@ -16,7 +16,7 @@ import torch
 from lczerolens.encodings import move as move_encoding
 from lczerolens.concept import MulticlassConcept
 from lczerolens.model import ForceValueFlow, PolicyFlow
-from lczerolens import concept, LensFactory
+from lczerolens import concept, Lens
 from scripts import visualisation
 
 
@@ -37,7 +37,7 @@ def main(args):
         init_rel_fn = None
     else:
         raise ValueError(f"Target '{args.target}' not supported.")
-    lens = LensFactory.from_name("lrp")
+    lens = Lens.from_name("lrp")
     if not lens.is_compatible(wrapper):
         raise ValueError(f"Lens of type 'lrp' not compatible with model '{args.model_name}'.")
 
