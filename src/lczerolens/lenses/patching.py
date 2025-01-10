@@ -1,16 +1,16 @@
 """Patching lens for XAI."""
 
-from typing import Callable, Any, Optional, Union, Tuple
+from typing import Callable, Any, Optional, Union
 
 import re
 import chess
 import torch
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens, LensFactory
+from lczerolens.lens import Lens
 
 
-@LensFactory.register("patching")
+@Lens.register("patching")
 class PatchingLens(Lens):
     """
     Class for activation-based XAI methods.
@@ -57,7 +57,7 @@ class PatchingLens(Lens):
         model: LczeroModel,
         patch_fn: Callable,
         **kwargs,
-    ) -> Tuple[Any, ...]:
+    ) -> Any:
         """
         Cache the activations for a given model and input.
         """

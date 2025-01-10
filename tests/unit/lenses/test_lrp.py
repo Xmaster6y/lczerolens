@@ -2,13 +2,13 @@
 
 import torch
 
-from lczerolens import LensFactory, LczeroBoard
+from lczerolens import Lens, LczeroBoard
 from lczerolens.lenses import LrpLens
 
 
 class TestLens:
     def test_is_compatible(self, tiny_model):
-        lens = LensFactory.from_name("lrp")
+        lens = Lens.from_name("lrp")
         assert isinstance(lens, LrpLens)
         assert lens.is_compatible(tiny_model)
 

@@ -4,7 +4,7 @@ import pytest
 import torch
 from lczero.backends import GameState
 
-from lczerolens import FlowFactory, LczeroBoard
+from lczerolens import Flow, LczeroBoard
 from lczerolens import backends as lczero_utils
 
 
@@ -64,7 +64,7 @@ class TestModel:
 class TestFlows:
     def test_policy_flow(self, tiny_model):
         """Test that the policy flow works."""
-        policy_flow = FlowFactory.from_model("policy", tiny_model)
+        policy_flow = Flow.from_model("policy", tiny_model)
         board = LczeroBoard()
         (policy,) = policy_flow(board)
         model_policy = tiny_model(board)[0]["policy"]
@@ -72,7 +72,7 @@ class TestFlows:
 
     def test_value_flow(self, tiny_model):
         """Test that the value flow works."""
-        value_flow = FlowFactory.from_model("value", tiny_model)
+        value_flow = Flow.from_model("value", tiny_model)
         board = LczeroBoard()
         (value,) = value_flow(board)
         model_value = tiny_model(board)[0]["value"]
@@ -80,7 +80,7 @@ class TestFlows:
 
     def test_wdl_flow(self, winner_model):
         """Test that the wdl flow works."""
-        wdl_flow = FlowFactory.from_model("wdl", winner_model)
+        wdl_flow = Flow.from_model("wdl", winner_model)
         board = LczeroBoard()
         (wdl,) = wdl_flow(board)
         model_wdl = winner_model(board)[0]["wdl"]
@@ -88,7 +88,7 @@ class TestFlows:
 
     def test_mlh_flow(self, winner_model):
         """Test that the mlh flow works."""
-        mlh_flow = FlowFactory.from_model("mlh", winner_model)
+        mlh_flow = Flow.from_model("mlh", winner_model)
         board = LczeroBoard()
         (mlh,) = mlh_flow(board)
         model_mlh = winner_model(board)[0]["mlh"]
@@ -99,10 +99,35 @@ class TestFlows:
         when the model is incompatible.
         """
         with pytest.raises(ValueError):
-            FlowFactory.from_model("value", winner_model)
+            Flow.from_model("value", winner_model)
         with pytest.raises(ValueError):
-            FlowFactory.from_model("wdl", tiny_model)
+            Flow.from_model("wdl", tiny_model)
         with pytest.raises(ValueError):
-            FlowFactory.from_model("mlh", tiny_model)
+            Flow.from_model("mlh", tiny_model)
+
         with pytest.raises(ValueError):
-            FlowFactory.get_subclass("value")(tiny_model)
+            Flow._registry["value"](tiny_model)
+
+
+@Flow.register("test_flow")
+class TestFlow(Flow):
+    """Test flow."""
+
+
+class TestFlowRegistry:
+    def test_flow_registry_duplicate(self):
+        """Test that registering a flow with an existing name raises an error."""
+        with pytest.raises(ValueError, match="Flow .* already registered"):
+
+            @Flow.register("test_flow")
+            class DuplicateFlow(Flow):
+                """Duplicate flow."""
+
+    def test_flow_registry_missing(self, tiny_model):
+        """Test that instantiating a non-registered flow raises an error."""
+        with pytest.raises(KeyError, match="Flow .* not found"):
+            Flow.from_model("non_existent_flow", tiny_model)
+
+    def test_flow_type(self):
+        """Test that the flow type is correct."""
+        assert TestFlow._flow_type == "test_flow"

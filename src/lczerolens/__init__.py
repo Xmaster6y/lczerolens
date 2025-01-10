@@ -4,18 +4,16 @@ __version__ = "0.2.0-dev"
 
 
 from .board import LczeroBoard, InputEncoding
-from .model import LczeroModel, Flow, FlowFactory
-from .lens import Lens, LensFactory
+from .model import LczeroModel, Flow
+from .lens import Lens
 from . import lenses, concepts, play
 
 __all__ = [
     "LczeroBoard",
     "LczeroModel",
     "Flow",
-    "FlowFactory",
     "InputEncoding",
     "Lens",
-    "LensFactory",
     "lenses",
     "concepts",
     "play",

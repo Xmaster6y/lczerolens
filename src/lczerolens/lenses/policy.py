@@ -8,12 +8,12 @@ from lczerolens.constants import (
     INVERTED_TO_INDEX,
 )
 from lczerolens.model import LczeroModel, PolicyFlow
-from lczerolens.lens import Lens, LensFactory
+from lczerolens.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-@LensFactory.register("policy")
+@Lens.register("policy")
 class PolicyLens(Lens):
     """
     Class for wrapping the LCZero models.

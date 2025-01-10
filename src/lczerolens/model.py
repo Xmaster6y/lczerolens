@@ -1,7 +1,7 @@
 """Class for wrapping the LCZero models."""
 
 import os
-from typing import Dict, Type, Any, Tuple, Union
+from typing import Dict, Type, Any, Tuple, Union, Callable
 
 import torch
 from onnx2torch import convert
@@ -78,8 +78,24 @@ class LczeroModel(NNsight):
         self.to(device)
 
     @classmethod
-    def from_path(cls, model_path: str):
-        """Creates a wrapper from a model path."""
+    def from_path(cls, model_path: str) -> "LczeroModel":
+        """Creates a wrapper from a model path.
+
+        Parameters
+        ----------
+        model_path : str
+            Path to the model file (.onnx or .pt)
+
+        Returns
+        -------
+        LczeroModel
+            The wrapped model instance
+
+        Raises
+        ------
+        NotImplementedError
+            If the model file extension is not supported
+        """
         if model_path.endswith(".onnx"):
             return cls.from_onnx_path(model_path)
         elif model_path.endswith(".pt"):
@@ -88,12 +104,30 @@ class LczeroModel(NNsight):
             raise NotImplementedError(f"Model path {model_path} is not supported.")
 
     @classmethod
-    def from_onnx_path(cls, onnx_model_path: str, check: bool = True):
-        """
-        Builds a model from a given path.
+    def from_onnx_path(cls, onnx_model_path: str, check: bool = True) -> "LczeroModel":
+        """Builds a model from an ONNX file path.
+
+        Parameters
+        ----------
+        onnx_model_path : str
+            Path to the ONNX model file
+        check : bool, optional
+            Whether to perform shape inference check, by default True
+
+        Returns
+        -------
+        LczeroModel
+            The wrapped model instance
+
+        Raises
+        ------
+        FileNotFoundError
+            If the model file does not exist
+        ValueError
+            If the model could not be loaded
         """
         if not os.path.exists(onnx_model_path):
-            raise FileExistsError(f"Model path {onnx_model_path} does not exist.")
+            raise FileNotFoundError(f"Model path {onnx_model_path} does not exist.")
         try:
             if check:
                 onnx_model = safe_shape_inference(onnx_model_path)
@@ -104,7 +138,19 @@ class LczeroModel(NNsight):
             raise ValueError(f"Could not load model at {onnx_model_path}.")
 
     @staticmethod
-    def make_onnx_td_forward(onnx_model):
+    def make_onnx_td_forward(onnx_model: nn.Module) -> Callable:
+        """Creates a forward function that returns a TensorDict for ONNX models.
+
+        Parameters
+        ----------
+        onnx_model : nn.Module
+            The ONNX model
+
+        Returns
+        -------
+        Callable
+            The forward function that returns a TensorDict
+        """
         old_forward = onnx_model.forward
         output_node = list(onnx_model.graph.nodes)[-1]
         output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
@@ -119,12 +165,28 @@ class LczeroModel(NNsight):
         return td_forward
 
     @classmethod
-    def from_torch_path(cls, torch_model_path: str):
-        """
-        Builds a model from a given path.
+    def from_torch_path(cls, torch_model_path: str) -> "LczeroModel":
+        """Builds a model from a PyTorch file path.
+
+        Parameters
+        ----------
+        torch_model_path : str
+            Path to the PyTorch model file
+
+        Returns
+        -------
+        LczeroModel
+            The wrapped model instance
+
+        Raises
+        ------
+        FileNotFoundError
+            If the model file does not exist
+        ValueError
+            If the model could not be loaded or is not a valid model type
         """
         if not os.path.exists(torch_model_path):
-            raise FileExistsError(f"Model path {torch_model_path} does not exist.")
+            raise FileNotFoundError(f"Model path {torch_model_path} does not exist.")
         try:
             torch_model = torch.load(torch_model_path)
         except Exception:
@@ -138,9 +200,10 @@ class LczeroModel(NNsight):
 
 
 class Flow(LczeroModel):
-    """Class for isolating a flow."""
+    """Base class for isolating a flow."""
 
     _flow_type: str
+    _registry: Dict[str, Type["Flow"]] = {}
 
     def __init__(
         self,
@@ -149,90 +212,155 @@ class Flow(LczeroModel):
         **kwargs,
     ):
         if isinstance(model_key, LczeroModel):
-            raise ValueError("Use the constructor `FlowFactory.from_model` to create a flow.")
+            raise ValueError("Use the `from_model` classmethod to create a flow.")
         if not self.is_compatible(model_key):
             raise ValueError(f"The model does not have a {self._flow_type} head.")
         super().__init__(model_key, *args, **kwargs)
 
     @classmethod
-    def is_compatible(cls, model: nn.Module):
-        return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
-
-    def __call__(self, *inputs, **kwargs):
-        return super().__call__(*inputs, **kwargs)[self._flow_type]
-
-
-class FlowFactory(LczeroModel):
-    """Class for isolating a flow."""
-
-    all_flows: Dict[str, Type["Flow"]] = {}
-
-    @classmethod
     def register(cls, name: str):
-        """Registers the flow."""
+        """Registers the flow.
+
+        Parameters
+        ----------
+        name : str
+            The name of the flow to register.
+
+        Returns
+        -------
+        Callable
+            Decorator function that registers the flow subclass.
+
+        Raises
+        ------
+        ValueError
+            If the flow name is already registered.
+        """
+
+        if name in cls._registry:
+            raise ValueError(f"Flow {name} already registered.")
 
         def decorator(subclass):
-            cls.all_flows[name] = subclass
+            cls._registry[name] = subclass
+            subclass._flow_type = name
             return subclass
 
         return decorator
 
     @classmethod
     def from_name(cls, name: str, *args, **kwargs) -> "Flow":
-        """Returns the flow from its name."""
-        return cls.all_flows[name](*args, **kwargs)
+        """Returns the flow from its name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the flow to instantiate.
+        *args
+            Positional arguments passed to flow constructor.
+        **kwargs
+            Keyword arguments passed to flow constructor.
+
+        Returns
+        -------
+        Flow
+            The instantiated flow.
+
+        Raises
+        ------
+        KeyError
+            If the flow name is not found.
+        """
+        if name not in cls._registry:
+            raise KeyError(f"Flow {name} not found.")
+        return cls._registry[name](*args, **kwargs)
 
     @classmethod
-    def get_subclass(cls, name: str) -> Type["Flow"]:
-        """Returns the subclass."""
-        return cls.all_flows[name]
+    def from_model(cls, name: str, model: LczeroModel, *args, **kwargs) -> "Flow":
+        """Returns the flow from a model.
+
+        Parameters
+        ----------
+        name : str
+            The name of the flow to instantiate.
+        model : LczeroModel
+            The model to create the flow from.
+        *args
+            Positional arguments passed to flow constructor.
+        **kwargs
+            Keyword arguments passed to flow constructor.
+
+        Returns
+        -------
+        Flow
+            The instantiated flow.
+
+        Raises
+        ------
+        KeyError
+            If the flow name is not found.
+        """
+        if name not in cls._registry:
+            raise KeyError(f"Flow {name} not found.")
+        flow_class = cls._registry[name]
+        return flow_class(model._model, *args, **kwargs)
 
     @classmethod
-    def from_model(cls, name: str, model: LczeroModel, *args, **kwargs):
-        """Returns the flow from a model."""
-        return cls.get_subclass(name)(model._model, *args, **kwargs)
+    def is_compatible(cls, model: nn.Module) -> bool:
+        """Checks if the model is compatible with this flow.
 
-    @classmethod
-    def is_compatible(cls, model: nn.Module):
+        Parameters
+        ----------
+        model : nn.Module
+            The model to check compatibility with.
+
+        Returns
+        -------
+        bool
+            Whether the model is compatible with this flow.
+        """
         return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
 
     def __call__(self, *inputs, **kwargs):
+        """Calls the flow on the given inputs.
+
+        Parameters
+        ----------
+        *inputs
+            The inputs to pass to the model.
+        **kwargs
+            Additional keyword arguments to pass to the model.
+
+        Returns
+        -------
+        Any
+            The output of the flow.
+        """
         return super().__call__(*inputs, **kwargs)[self._flow_type]
 
 
-@FlowFactory.register("policy")
+@Flow.register("policy")
 class PolicyFlow(Flow):
     """Class for isolating the policy flow."""
 
-    _flow_type = "policy"
 
-
-@FlowFactory.register("value")
+@Flow.register("value")
 class ValueFlow(Flow):
     """Class for isolating the value flow."""
 
-    _flow_type = "value"
 
-
-@FlowFactory.register("wdl")
+@Flow.register("wdl")
 class WdlFlow(Flow):
     """Class for isolating the WDL flow."""
 
-    _flow_type = "wdl"
 
-
-@FlowFactory.register("mlh")
+@Flow.register("mlh")
 class MlhFlow(Flow):
     """Class for isolating the MLH flow."""
 
-    _flow_type = "mlh"
 
-
-@FlowFactory.register("force_value")
+@Flow.register("force_value")
 class ForceValueFlow(Flow):
     """Class for forcing and isolating the value flow."""
-
-    _flow_type = "force_value"
 
     @classmethod
     def is_compatible(cls, model: nn.Module):

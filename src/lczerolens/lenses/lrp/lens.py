@@ -13,12 +13,12 @@ from zennit.types import Activation
 
 from lczerolens.model import LczeroModel
 from . import helpers
-from lczerolens.lens import Lens, LensFactory
+from lczerolens.lens import Lens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-@LensFactory.register("lrp")
+@Lens.register("lrp")
 class LrpLens(Lens):
     """Class for wrapping the LCZero models."""
 
