@@ -3,7 +3,8 @@ description: Detail the roadmap to implement a new feature or solve a bug.
 title: "[Roadmap]: "
 labels: ["roadmap"]
 projects: []
-assignees: []
+assignees:
+  - Xmaster6y
 body:
   - type: markdown
     attributes:
@@ -18,12 +19,11 @@ body:
     validations:
       required: true
   - type: textarea
-    id: tasks
+    id: issues
     attributes:
-      label: Tasks
-      description: List of tasks to implement the roadmap.
+      label: Linked Issues
+      description: List of issues for the roadmap.
       value: |
-        * [ ] The code is documented
-        * [ ] Utilities and class test are written
+        * [ ] #?
     validations:
       required: true

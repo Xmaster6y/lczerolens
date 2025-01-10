@@ -30,7 +30,7 @@ body:
         - Bug Fix
         - Documentation
         - Other
-      default: New Feature
+      default: 0
     validations:
       required: true
   - type: textarea
@@ -39,3 +39,11 @@ body:
       label: Use Case
       description: Please describe the use case for the feature. Use python code to describe the use case.
       render: python
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tasks
+      description: List of tasks to implement the feature.
+      value: |
+        * [ ] Code is documented
+        * [ ] Utilities and class tests are written
