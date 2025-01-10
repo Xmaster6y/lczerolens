@@ -104,8 +104,9 @@ class TestFlows:
             Flow.from_model("wdl", tiny_model)
         with pytest.raises(ValueError):
             Flow.from_model("mlh", tiny_model)
+
         with pytest.raises(ValueError):
-            Flow.from_model("value", tiny_model)
+            Flow._registry["value"](tiny_model)
 
 
 @Flow.register("test_flow")
