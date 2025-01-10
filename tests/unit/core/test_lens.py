@@ -33,7 +33,7 @@ class TestLensRegistry:
                 def analyse(self, *inputs, **kwargs) -> Any:
                     pass
 
-    def test_lens_registry_missing(self, tiny_model):
+    def test_lens_registry_missing(self):
         """Test that instantiating a non-registered lens raises an error."""
         with pytest.raises(KeyError, match="Lens .* not found"):
-            Lens.from_model("non_existent_lens", tiny_model)
+            Lens.from_name("non_existent_lens")
