@@ -24,4 +24,4 @@ docs:
 
 .PHONY: demo
 demo:
-	poetry run python -m demo.main
+	poetry run python spaces/lczerolens-demo/app/main.py
