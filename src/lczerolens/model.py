@@ -121,13 +121,13 @@ class LczeroModel(NNsight):
 
         Raises
         ------
-        FileExistsError
+        FileNotFoundError
             If the model file does not exist
         ValueError
             If the model could not be loaded
         """
         if not os.path.exists(onnx_model_path):
-            raise FileExistsError(f"Model path {onnx_model_path} does not exist.")
+            raise FileNotFoundError(f"Model path {onnx_model_path} does not exist.")
         try:
             if check:
                 onnx_model = safe_shape_inference(onnx_model_path)
@@ -180,13 +180,13 @@ class LczeroModel(NNsight):
 
         Raises
         ------
-        FileExistsError
+        FileNotFoundError
             If the model file does not exist
         ValueError
             If the model could not be loaded or is not a valid model type
         """
         if not os.path.exists(torch_model_path):
-            raise FileExistsError(f"Model path {torch_model_path} does not exist.")
+            raise FileNotFoundError(f"Model path {torch_model_path} does not exist.")
         try:
             torch_model = torch.load(torch_model_path)
         except Exception:
