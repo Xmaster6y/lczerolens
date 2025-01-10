@@ -12,7 +12,11 @@ demo-assets:
 
 .PHONY: tests
 tests:
-	poetry run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v
+	poetry run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyfast
+
+.PHONY: tests-slow
+tests-slow:
+	poetry run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyslow
 
 .PHONY: docs
 docs:

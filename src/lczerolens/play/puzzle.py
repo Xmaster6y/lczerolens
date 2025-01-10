@@ -8,7 +8,7 @@ import torch
 from datasets import Features, Value
 from itertools import tee, chain
 
-from lczerolens.encodings import move as move_encodings
+from lczerolens.board import LczeroBoard
 from .sampling import Sampler
 
 
@@ -64,12 +64,12 @@ class Puzzle:
         return len(self.moves)
 
     @property
-    def initial_board(self) -> chess.Board:
-        board = chess.Board(self.fen)
+    def initial_board(self) -> LczeroBoard:
+        board = LczeroBoard(self.fen)
         board.push(self.initial_move)
         return board
 
-    def board_move_generator(self, all_moves: bool = False) -> Iterable[Tuple[chess.Board, chess.Move]]:
+    def board_move_generator(self, all_moves: bool = False) -> Iterable[Tuple[LczeroBoard, chess.Move]]:
         board = self.initial_board
         initial_turn = board.turn
         for move in self.moves:
@@ -125,7 +125,7 @@ class Puzzle:
             metrics = {"score": 0.0, "perplexity": 1.0, "normalized_perplexity": 1.0}
             for board, move in puzzle.board_move_generator(all_moves=all_moves):
                 utility, legal_indices, predicted_move = next(iter_inputs)
-                index = move_encodings.encode_move(move, board.turn)
+                index = LczeroBoard.encode_move(move, board.turn)
                 probs = torch.softmax(utility, dim=0)
                 move_prob = probs[legal_indices == index].item()
                 metrics["perplexity"] *= move_prob ** (-1 / total)

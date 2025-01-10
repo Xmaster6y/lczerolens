@@ -3,7 +3,6 @@
 import os
 from typing import Dict, Type, Any, Tuple, Union
 
-import chess
 import torch
 from onnx2torch import convert
 from onnx2torch.utils.safe_shape_inference import safe_shape_inference
@@ -11,7 +10,7 @@ from tensordict import TensorDict
 from torch import nn
 from nnsight import NNsight
 
-from lczerolens.encodings import InputEncoding, board_to_input_tensor
+from lczerolens.board import InputEncoding, LczeroBoard
 
 
 class LczeroModel(NNsight):
@@ -31,17 +30,17 @@ class LczeroModel(NNsight):
         kwargs.pop("input_requires_grad", None)
         return super()._execute(*prepared_inputs, **kwargs)
 
-    def _prepare_inputs(self, *inputs: Union[chess.Board, torch.Tensor], **kwargs) -> Tuple[Tuple[Any], int]:
+    def _prepare_inputs(self, *inputs: Union[LczeroBoard, torch.Tensor], **kwargs) -> Tuple[Tuple[Any], int]:
         input_encoding = kwargs.pop("input_encoding", InputEncoding.INPUT_CLASSICAL_112_PLANE)
         input_requires_grad = kwargs.pop("input_requires_grad", False)
 
         if len(inputs) == 1 and isinstance(inputs[0], torch.Tensor):
             return inputs, len(inputs[0])
         for board in inputs:
-            if not isinstance(board, chess.Board):
+            if not isinstance(board, LczeroBoard):
                 raise ValueError(f"Got invalid input type {type(board)}.")
 
-        tensor_list = [board_to_input_tensor(board, input_encoding=input_encoding).unsqueeze(0) for board in inputs]
+        tensor_list = [board.to_input_tensor(input_encoding=input_encoding).unsqueeze(0) for board in inputs]
         batched_tensor = torch.cat(tensor_list, dim=0)
         if input_requires_grad:
             batched_tensor.requires_grad = True

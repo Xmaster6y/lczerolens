@@ -1,8 +1,6 @@
 lczerolens.model
 ================
 
-.. toctree::
-    :maxdepth: 2
-
-    model/model
-    model/flow
+.. automodule:: lczerolens.model
+   :members:
+   :show-inheritance:

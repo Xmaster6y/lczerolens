@@ -1,8 +1,6 @@
 lczerolens.lenses.activation
 ============================
 
-.. module:: lczerolens.lenses.activation
-
-    .. autoclass:: lczerolens.lenses.ActivationLens
-        :members:
-        :show-inheritance:
+.. automodule:: lczerolens.lenses.activation
+    :members:
+    :show-inheritance:

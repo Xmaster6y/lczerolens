@@ -1,8 +1,6 @@
 lczerolens.concepts.material
 ============================
 
-.. module:: lczerolens.concepts.material
-
-    .. autoclass:: lczerolens.concepts.material.HasPiece
-        :members:
-        :show-inheritance:
+.. automodule:: lczerolens.concepts.material
+    :members:
+    :show-inheritance:

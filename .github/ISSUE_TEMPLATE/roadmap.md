@@ -1,9 +1,9 @@
 ---
 name: Roadmap
 about: Detail the roadmap to implement a new feature or solve a bug.
-title: ''
-labels: ''
-assignees: ''
+title: '[Roadmap]: '
+labels: ['roadmap']
+assignees: []
 
 ---
 
@@ -11,12 +11,7 @@ assignees: ''
 
 Key insights about the issue.
 
-## Acceptance Criterion
+## Tasks
 
 * [ ] The code is documented
 * [ ] Utilities and class test are written
-* [ ] The code was reviewed
-
-## Tasks
-
-* [ ] Task 1
