@@ -1,13 +1,21 @@
 """Lens tests."""
 
+from typing import Any
 import pytest
 
 from lczerolens import Lens
+from lczerolens.model import LczeroModel
 
 
 @Lens.register("test_lens")
 class TestLens(Lens):
     """Test lens."""
+
+    def is_compatible(self, model: LczeroModel) -> bool:
+        return True
+
+    def analyse(self, *inputs, **kwargs) -> Any:
+        pass
 
 
 class TestLensRegistry:
@@ -18,6 +26,12 @@ class TestLensRegistry:
             @Lens.register("test_lens")
             class DuplicateLens(Lens):
                 """Duplicate lens."""
+
+                def is_compatible(self, model: LczeroModel) -> bool:
+                    return True
+
+                def analyse(self, *inputs, **kwargs) -> Any:
+                    pass
 
     def test_lens_registry_missing(self, tiny_model):
         """Test that instantiating a non-registered lens raises an error."""

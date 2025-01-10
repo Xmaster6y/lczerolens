@@ -1,7 +1,7 @@
 """Generic lens class."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, Generator, Tuple, Callable, Type
+from typing import Any, Dict, Iterable, Generator, Callable, Type
 
 from lczerolens.model import LczeroModel
 
@@ -85,7 +85,7 @@ class Lens(ABC):
         *inputs: Any,
         model: LczeroModel,
         **kwargs,
-    ) -> Tuple[Any, ...]:
+    ) -> Any:
         """Analyse the input.
 
         Parameters
@@ -97,7 +97,7 @@ class Lens(ABC):
 
         Returns
         -------
-        Tuple
+        Any
             The output.
         """
         pass
@@ -107,7 +107,7 @@ class Lens(ABC):
         iter_inputs: Iterable,
         model: LczeroModel,
         **kwargs,
-    ) -> Generator[Tuple[Any, ...], None, None]:
+    ) -> Generator[Any, None, None]:
         """Analyse a batches of inputs.
 
         Parameters
