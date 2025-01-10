@@ -1,7 +1,7 @@
-name: Feature Request
-description: File a feature request.
-title: "[Feature]: "
-labels: ["feature"]
+name: Other
+description: Detail an issue.
+title: "[Other]: "
+labels: ["other"]
 projects: []
 assignees:
   - Xmaster6y
@@ -9,36 +9,29 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this feature request!
+        Thanks for taking the time to fill out this issue!
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: A shortline description of the feature request.
-      placeholder: Tell us what you want!
-      value: "I want to use this feature!"
+      description: A shortline description of the issue.
+      placeholder: Key insights about the issue.
     validations:
       required: true
   - type: dropdown
     id: category
     attributes:
       label: Category
-      description: What category does the feature belong to?
+      description: What category does the issue belong to?
       options:
         - New Feature
         - Improvement
         - Bug Fix
         - Documentation
         - Other
-      default: 0
+      default: 4
     validations:
       required: true
-  - type: textarea
-    id: use-case
-    attributes:
-      label: Use Case
-      description: Please describe the use case for the feature. Use python code to describe the use case.
-      render: python
   - type: textarea
     id: tasks
     attributes:

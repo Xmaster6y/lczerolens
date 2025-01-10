@@ -11,9 +11,9 @@ body:
       value: |
         Thanks for taking the time to fill out this roadmap!
   - type: textarea
-    id: shortline
+    id: description
     attributes:
-      label: Shortline
+      label: Description
       description: A shortline description of the roadmap.
       placeholder: Key insights about the roadmap.
     validations:
