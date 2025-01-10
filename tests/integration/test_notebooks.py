@@ -27,6 +27,7 @@ class TestNotebooks:
         with pytest.raises(subprocess.CalledProcessError):
             run_notebook("tests/assets/error.ipynb")
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("notebook", NOTEBOOKS)
     def test_notebook(self, notebook):
         run_notebook(notebook)

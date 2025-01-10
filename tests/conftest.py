@@ -67,3 +67,25 @@ def winner_model(winner_ensure_network):
 @pytest.fixture(scope="class")
 def winner_senet_ort(winner_ensure_network):
     yield ort.InferenceSession("assets/384x30-2022_0108_1903_17_608.onnx")
+
+
+def pytest_addoption(parser):
+    parser.addoption("--onlyslow", action="store_true", default=False, help="run slow tests only")
+    parser.addoption("--onlyfast", action="store_true", default=False, help="run fast tests only")
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: mark test as slow to run")
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--onlyslow"):
+        skip_not_slow = pytest.mark.skip(reason="--onlyslow given in cli: skipping non-slow tests")
+        for item in items:
+            if "slow" not in item.keywords:
+                item.add_marker(skip_not_slow)
+    elif config.getoption("--onlyfast"):
+        skip_slow = pytest.mark.skip(reason="--onlyfast given in cli: skipping slow tests")
+        for item in items:
+            if "slow" in item.keywords:
+                item.add_marker(skip_slow)
