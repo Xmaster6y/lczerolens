@@ -6280,10 +6280,9 @@ doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linke
 test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [extras]
-demo = ["gradio"]
 viz = ["matplotlib"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "d4c905b8f8485ca8aadb1552172d064c0683a2e48c82c42c5d3abf7eac486ad6"
+content-hash = "27398c64ac8a4e908a3081d1b2da25cb8adcfedc990f7bda730efb941476e902"

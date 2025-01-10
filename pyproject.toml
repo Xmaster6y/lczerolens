@@ -26,7 +26,6 @@ python-chess = "^1.999"
 torch = ">=2"
 onnx2torch = "^1.5.13"
 tensordict = "^0.3.0"
-gradio = {version = "^4.14.0", optional = true}
 zennit = "<=0.4.6"
 jsonlines = "^4.0.0"
 scikit-learn = "^1.4.0"
@@ -38,7 +37,6 @@ nnsight = "^0.3.7"
 matplotlib = {version = "^3.8.2", extras = ["viz"]}
 
 [tool.poetry.extras]
-demo = ["gradio"]
 viz = ["matplotlib"]
 
 [tool.poetry.group.dev]
