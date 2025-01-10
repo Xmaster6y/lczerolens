@@ -105,7 +105,7 @@ class TestFlows:
         with pytest.raises(ValueError):
             Flow.from_model("mlh", tiny_model)
         with pytest.raises(ValueError):
-            Flow.get_subclass("value")(tiny_model)
+            Flow.from_model("value", tiny_model)
 
 
 @Flow.register("test_flow")
