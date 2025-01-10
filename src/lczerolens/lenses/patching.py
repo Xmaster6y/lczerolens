@@ -7,10 +7,10 @@ import chess
 import torch
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens, LensFactory
+from lczerolens.lens import Lens
 
 
-@LensFactory.register("patching")
+@Lens.register("patching")
 class PatchingLens(Lens):
     """
     Class for activation-based XAI methods.

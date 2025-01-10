@@ -8,14 +8,14 @@ from crp.attribution import CondAttribution
 from crp.helper import get_layer_names
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens, LensFactory
+from lczerolens.lens import Lens
 
 from lczerolens.lenses.lrp.lens import LrpLens
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-@LensFactory.register("crp")
+@Lens.register("crp")
 class CrpLens(Lens):
     """
     Class for wrapping the LCZero models.

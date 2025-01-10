@@ -10,10 +10,10 @@ from datasets import Dataset
 from torch.utils.data import DataLoader, TensorDataset
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens, LensFactory
+from lczerolens.lens import Lens
 
 
-@LensFactory.register("activation")
+@Lens.register("activation")
 class ActivationLens(Lens):
     """
     Class for activation-based XAI methods.

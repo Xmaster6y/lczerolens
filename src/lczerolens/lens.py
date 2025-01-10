@@ -1,31 +1,47 @@
 """Generic lens class."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, Generator, Tuple, Callable
+from typing import Any, Dict, Iterable, Generator, Tuple, Callable, Type
 
 from lczerolens.model import LczeroModel
 
 
 class Lens(ABC):
-    """Generic lens class.
+    """Generic lens class for analysing model activations."""
 
-    Examples
-    --------
+    _registry: Dict[str, Type["Lens"]] = {}
 
-    This class is used to define the interface of a lens. A lens is a class that
-    can be used to analyse the activations of a model.
+    @classmethod
+    def register(cls, name: str):
+        """Registers the lens.
 
-    .. code-block:: python
+        Parameters
+        ----------
+        name : str
+            The name of the lens.
+        """
 
-            from lczerolens import Lens
+        def decorator(subclass):
+            cls._registry[name] = subclass
+            return subclass
 
-            class InputLens(Lens):
-                def is_compatible(self, model: LczeroModel) -> bool:
-                    return True
+        return decorator
 
-                def analyse(self, *inputs: Any, model: LczeroModel, **kwargs) -> Tuple[Any, ...]:
-                    return inputs
-    """
+    @classmethod
+    def from_name(cls, name: str, *args, **kwargs) -> "Lens":
+        """Returns the lens from its name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the lens.
+
+        Returns
+        -------
+        Lens
+            The lens instance.
+        """
+        return cls._registry[name](*args, **kwargs)
 
     @abstractmethod
     def is_compatible(self, model: LczeroModel) -> bool:
@@ -118,62 +134,3 @@ class Lens(ABC):
             return self.analyse(*inputs, model=model, **kwargs)
 
         return forward
-
-
-class LensFactory:
-    """Factory class for lenses."""
-
-    all_lenses: Dict[str, Lens] = {}
-
-    @classmethod
-    def register(cls, name: str):
-        """Registers the lens.
-
-        Parameters
-        ----------
-        name : str
-            The name of the lens.
-
-        Returns
-        -------
-        Callable
-            The decorator.
-        """
-
-        def decorator(subclass):
-            cls.all_lenses[name] = subclass
-            return subclass
-
-        return decorator
-
-    @classmethod
-    def from_name(cls, name: str, *args, **kwargs) -> Lens:
-        """Returns the lens from its name.
-
-        Parameters
-        ----------
-        name : str
-            The name of the lens.
-
-        Returns
-        -------
-        Lens
-            The lens instance.
-        """
-        return cls.all_lenses[name](*args, **kwargs)
-
-    @classmethod
-    def get_subclass(cls, name: str) -> Lens:
-        """Returns the subclass.
-
-        Parameters
-        ----------
-        name : str
-            The name of the subclass.
-
-        Returns
-        -------
-        Type
-            The subclass.
-        """
-        return cls.all_lenses[name]

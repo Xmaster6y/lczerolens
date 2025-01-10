@@ -8,7 +8,7 @@ import torch
 import chess
 
 from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens, LensFactory
+from lczerolens.lens import Lens
 
 
 EPS = 1e-6
@@ -70,7 +70,7 @@ class SignalCav(Probe):
         return dot_prod / (activations.norm(dim=1, keepdim=True) + EPS)
 
 
-@LensFactory.register("probing")
+@Lens.register("probing")
 class ProbingLens(Lens):
     """
     Class for probing-based XAI methods.

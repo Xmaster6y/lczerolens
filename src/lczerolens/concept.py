@@ -4,9 +4,10 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import torch
-import chess
 from sklearn import metrics
 from datasets import Features, Value, Sequence, ClassLabel
+
+from lczerolens.board import LczeroBoard
 
 
 class Concept(ABC):
@@ -17,7 +18,7 @@ class Concept(ABC):
     @abstractmethod
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
     ) -> Any:
         """
         Compute the label for a given model and input.
@@ -81,7 +82,7 @@ class NullConcept(BinaryConcept):
 
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
     ) -> Any:
         """
         Compute the label for a given model and input.
@@ -102,7 +103,7 @@ class OrBinaryConcept(BinaryConcept):
 
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
     ) -> Any:
         """
         Compute the label for a given model and input.
@@ -123,7 +124,7 @@ class AndBinaryConcept(BinaryConcept):
 
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
     ) -> Any:
         """
         Compute the label for a given model and input.
@@ -194,7 +195,7 @@ def concept_collate_fn(batch):
     boards = []
     labels = []
     for element in batch:
-        board = chess.Board(element["fen"])
+        board = LczeroBoard(element["fen"])
         for move in element["moves"]:
             board.push_san(move)
         boards.append(board)
