@@ -42,7 +42,7 @@ class ProbingLens(Lens):
         model: LczeroModel,
         **kwargs,
     ) -> dict:
-        storage = {}
-        for name, module in self._get_modules(model):
-            storage[name] = self._probe_fn(module.output.save())
-        return storage
+        return {
+            name: self._probe_fn(module.output.save())
+            for name, module in self._get_modules(model)
+        }
