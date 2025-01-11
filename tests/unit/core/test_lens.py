@@ -14,7 +14,7 @@ class TestLens(Lens):
     def is_compatible(self, model: LczeroModel) -> bool:
         return True
 
-    def analyse(self, *inputs, **kwargs) -> Any:
+    def _intervene(self, model: LczeroModel, **kwargs) -> Any:
         pass
 
 
