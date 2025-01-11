@@ -42,7 +42,4 @@ class ProbingLens(Lens):
         model: LczeroModel,
         **kwargs,
     ) -> dict:
-        return {
-            name: self._probe_fn(module.output.save())
-            for name, module in self._get_modules(model)
-        }
+        return {name: self._probe_fn(module.output.save()) for name, module in self._get_modules(model)}
