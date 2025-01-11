@@ -32,7 +32,7 @@ class CompositeLens(Lens):
         return model
 
     def _intervene(self, model: LczeroModel, **kwargs) -> dict:
-        results = {}
-        for i, lens in enumerate(self.lenses):
-            results[f"lens_{i}"] = lens._intervene(model, **kwargs)
-        return results
+        return {
+            f"lens_{i}": lens._intervene(model, **kwargs)
+            for i, lens in enumerate(self.lenses)
+        }
