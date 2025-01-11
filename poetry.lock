@@ -6245,26 +6245,6 @@ torch = ">=1.7.0"
 torchvision = "*"
 
 [[package]]
-name = "zennit-crp"
-version = "0.6.0"
-description = "Concept Relevance Propagation and Relevance Maximization"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "zennit-crp-0.6.0.tar.gz", hash = "sha256:a0ca58990f54280df84623e78c396474a7ad4041baa0c2caa4ef0b46326446ba"},
-    {file = "zennit_crp-0.6.0-py3-none-any.whl", hash = "sha256:dd8341ca31b2e0bb12d1cbdaa7913a80f99c73299f81cfeeb4bda117603dca74"},
-]
-
-[package.dependencies]
-matplotlib = "*"
-torch = ">=1.7.0"
-tqdm = "*"
-zennit = "<=0.4.6"
-
-[package.extras]
-fast-img = ["Pillow-SIMD"]
-
-[[package]]
 name = "zipp"
 version = "3.19.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -6285,4 +6265,4 @@ viz = ["matplotlib"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "d7abe948f1676b004fc851dc9d0952b99a84ffd512b23b812685e3911618ee6e"
+content-hash = "8282cff5cc2568f5c8df7da8f82efaa2384249fec648e258103e824ce959b37e"

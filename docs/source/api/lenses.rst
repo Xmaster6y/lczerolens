@@ -6,7 +6,6 @@ lczerolens.lenses
 
     lenses/activation
     lenses/composite
-    lenses/crp
     lenses/gradient
     lenses/lrp
     lenses/output
