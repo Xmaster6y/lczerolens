@@ -6265,4 +6265,4 @@ viz = ["matplotlib"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "8282cff5cc2568f5c8df7da8f82efaa2384249fec648e258103e824ce959b37e"
+content-hash = "4730d83b037ae9d5db29edfb2d86e71e28d9891894333694e8d0e682da1c084a"
