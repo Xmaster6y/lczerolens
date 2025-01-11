@@ -41,7 +41,6 @@ class ActivationLens(Lens):
         model: LczeroModel,
         **kwargs,
     ) -> dict:
-        storage = {}
-        for name, module in self._get_modules(model):
-            storage[name] = module.output.save()
-        return storage
+        return {
+            name: module.output.save() for name, module in self._get_modules(model)
+        }
