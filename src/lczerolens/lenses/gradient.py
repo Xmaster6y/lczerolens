@@ -14,9 +14,6 @@ class GradientLens(Lens):
 
         model.input.requires_grad_(True)
         gradient = model.input.grad.save()
-        if target is not None:
-            output = model.output[target]
-        else:
-            output = model.output
+        output = model.output[target] if target is not None else model.output
         output.backward(gradient=init_fn(output, **kwargs))
         return {"gradient": gradient}
