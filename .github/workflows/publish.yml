@@ -24,9 +24,9 @@ jobs:
     - name: Run Python commands
       run: |
         pip install --upgrade pip
-        pip install poetry==1.6.1
+        pip install uv
     - name: Install dependencies
       run: |
-        poetry build
+        uv sync
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
