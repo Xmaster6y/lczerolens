@@ -14,7 +14,7 @@ class TestLens(Lens):
     def is_compatible(self, model: LczeroModel) -> bool:
         return True
 
-    def analyse(self, *inputs, **kwargs) -> Any:
+    def _intervene(self, model: LczeroModel, **kwargs) -> Any:
         pass
 
 
@@ -37,3 +37,7 @@ class TestLensRegistry:
         """Test that instantiating a non-registered lens raises an error."""
         with pytest.raises(KeyError, match="Lens .* not found"):
             Lens.from_name("non_existent_lens")
+
+    def test_lens_type(self):
+        """Test that the lens type is correct."""
+        assert TestLens._lens_type == "test_lens"

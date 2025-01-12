@@ -1,14 +1,10 @@
 """Probing lens for XAI."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 import einops
 import torch
-import chess
-
-from lczerolens.model import LczeroModel
-from lczerolens.lens import Lens
 
 
 EPS = 1e-6
@@ -68,39 +64,3 @@ class SignalCav(Probe):
 
         dot_prod = einops.einsum(activations, self._h, "b a, a d -> b d")
         return dot_prod / (activations.norm(dim=1, keepdim=True) + EPS)
-
-
-@Lens.register("probing")
-class ProbingLens(Lens):
-    """
-    Class for probing-based XAI methods.
-    """
-
-    def __init__(self, probe_dict: Dict[str, Probe]):
-        self.probe_dict = probe_dict
-        self.measure_hooks = {}
-
-    def is_compatible(self, model: LczeroModel) -> bool:
-        """
-        Returns whether the lens is compatible with the model.
-        """
-        return isinstance(model, LczeroModel)
-
-    def analyse(
-        self,
-        board: chess.Board,
-        model: LczeroModel,
-        **kwargs,
-    ) -> torch.Tensor:
-        """
-        Analyse a single board with the probing lens.
-        """
-        measures = {}
-        for measure_hook in self.measure_hooks.values():
-            measure_hook.clear()
-            measure_hook.register(model)
-        model(board)
-        for measure_hook in self.measure_hooks.values():
-            measures.update(measure_hook.storage)
-            measure_hook.clear()
-        return measures

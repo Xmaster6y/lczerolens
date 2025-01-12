@@ -1,14 +1,18 @@
 """Generic lens class."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, Generator, Callable, Type
+from typing import Dict, Iterable, Generator, Callable, Type, Union
+
+import torch
 
 from lczerolens.model import LczeroModel
+from lczerolens.board import LczeroBoard
 
 
 class Lens(ABC):
     """Generic lens class for analysing model activations."""
 
+    _lens_type: str
     _registry: Dict[str, Type["Lens"]] = {}
 
     @classmethod
@@ -34,7 +38,8 @@ class Lens(ABC):
         if name in cls._registry:
             raise ValueError(f"Lens {name} already registered.")
 
-        def decorator(subclass):
+        def decorator(subclass: Type["Lens"]):
+            subclass._lens_type = name
             cls._registry[name] = subclass
             return subclass
 
@@ -63,7 +68,6 @@ class Lens(ABC):
             raise KeyError(f"Lens {name} not found.")
         return cls._registry[name](*args, **kwargs)
 
-    @abstractmethod
     def is_compatible(self, model: LczeroModel) -> bool:
         """Returns whether the lens is compatible with the model.
 
@@ -77,51 +81,100 @@ class Lens(ABC):
         bool
             Whether the lens is compatible with the model.
         """
-        pass
+        return isinstance(model, LczeroModel)
+
+    def prepare(self, model: LczeroModel, **kwargs) -> LczeroModel:
+        """Prepare the model for the lens.
+
+        Parameters
+        ----------
+        model : LczeroModel
+            The NNsight model.
+
+        Returns
+        -------
+        LczeroModel
+            The prepared model.
+        """
+        return model
 
     @abstractmethod
+    def _intervene(self, model: LczeroModel, **kwargs) -> dict:
+        """Intervene on the model.
+
+        Parameters
+        ----------
+        model : LczeroModel
+            The NNsight model.
+
+        Returns
+        -------
+        dict
+            The intervention results.
+        """
+        pass
+
     def analyse(
         self,
-        *inputs: Any,
         model: LczeroModel,
+        *inputs: Union[LczeroBoard, torch.Tensor],
         **kwargs,
-    ) -> Any:
+    ) -> dict:
         """Analyse the input.
 
         Parameters
         ----------
-        inputs : Any
-            The inputs.
         model : LczeroModel
             The NNsight model.
+        inputs : Union[LczeroBoard, torch.Tensor]
+            The inputs.
 
         Returns
         -------
-        Any
-            The output.
+        dict
+            The analysis results.
+
+        Raises
+        ------
+        ValueError
+            If the lens is not compatible with the model.
         """
-        pass
+        if not self.is_compatible(model):
+            raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
+        model_kwargs = kwargs.get("model_kwargs", {})
+        prepared_model = self.prepare(model, **kwargs)
+        with prepared_model.trace(*inputs, **model_kwargs):
+            return self.intervene(prepared_model, **kwargs)
 
     def analyse_batched(
         self,
-        iter_inputs: Iterable,
         model: LczeroModel,
+        iter_inputs: Iterable[Union[LczeroBoard, torch.Tensor]],
         **kwargs,
-    ) -> Generator[Any, None, None]:
+    ) -> Generator[dict, None, None]:
         """Analyse a batches of inputs.
 
         Parameters
         ----------
-        iter_inputs : Iterator
-            The iterator over the inputs.
         model : LczeroModel
             The NNsight model.
+        iter_inputs : Iterable[Union[LczeroBoard, torch.Tensor]]
+            The iterator over the inputs.
 
         Returns
         -------
-        Generator
+        Generator[dict, None, None]
             The iterator over the statistics.
-        """
 
+        Raises
+        ------
+        ValueError
+            If the lens is not compatible with the model.
+        """
+        if not self.is_compatible(model):
+            raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
+        model_kwargs = kwargs.get("model_kwargs", {})
+        prepared_model = self.prepare(model, **kwargs)
         for inputs in iter_inputs:
-            yield self.analyse(*inputs, model=model, **kwargs)
+            with prepared_model.trace(*inputs, **model_kwargs):
+                yield self.intervene(prepared_model, **kwargs)

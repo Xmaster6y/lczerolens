@@ -1,20 +1,21 @@
 """
-Lenses implementation for XAI
+Lenses module.
 """
 
-from .activation import ActivationLens, ActivationBuffer
-from .crp import CrpLens
+from .activation import ActivationLens
+from .composite import CompositeLens
+from .gradient import GradientLens
 from .lrp import LrpLens
+from .output import OutputLens
 from .patching import PatchingLens
 from .probing import ProbingLens
-from .policy import PolicyLens
 
 __all__ = [
     "ActivationLens",
-    "ActivationBuffer",
-    "CrpLens",
+    "CompositeLens",
+    "GradientLens",
     "LrpLens",
+    "OutputLens",
     "PatchingLens",
-    "PolicyLens",
     "ProbingLens",
 ]

@@ -19,7 +19,7 @@ class InputEncoding(int, Enum):
 
 
 class LczeroBoard(chess.Board):
-    """A class for wrapping the chess.Board class."""
+    """A class for wrapping the LczeroBoard class."""
 
     @staticmethod
     def get_plane_order(us: bool):
@@ -65,7 +65,7 @@ class LczeroBoard(chess.Board):
         us: Optional[bool] = None,
         input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
     ):
-        """Converts a chess.Board to a tensor based on the pieces configuration.
+        """Converts a LczeroBoard to a tensor based on the pieces configuration.
 
         Parameters
         ----------

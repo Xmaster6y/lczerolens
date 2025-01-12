@@ -22,8 +22,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class LrpLens(Lens):
     """Class for wrapping the LCZero models."""
 
-    def is_compatible(self, model: LczeroModel) -> bool:
-        return isinstance(model, LczeroModel)
+    def _intervene(
+        self,
+        model: LczeroModel,
+        **kwargs,
+    ) -> Any:
+        # TODO: Refactor this logic
+        pass
 
     def analyse(
         self,

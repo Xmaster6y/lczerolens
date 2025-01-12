@@ -1,18 +1,18 @@
-"""Patching lens."""
+"""Probing lens."""
 
 from typing import Callable, Optional
 
-import re
 import torch
+import re
 
 from lczerolens.model import LczeroModel
 from lczerolens.lens import Lens
 
 
-@Lens.register("patching")
-class PatchingLens(Lens):
+@Lens.register("probing")
+class ProbingLens(Lens):
     """
-    Class for activation-based XAI methods.
+    Class for probing-based XAI methods.
 
     Examples
     --------
@@ -20,14 +20,13 @@ class PatchingLens(Lens):
         .. code-block:: python
 
             model = LczeroModel.from_path(model_path)
-            lens = PatchingLens()
+            lens = ProbingLens(probe)
             board = LczeroBoard()
-            patch_fn = lambda n, m, *kwargs: pass
             results = lens.analyse(board, model=model)
     """
 
-    def __init__(self, patch_fn: Callable, pattern: Optional[str] = None):
-        self._patch_fn = patch_fn
+    def __init__(self, probe_fn: Callable, pattern: Optional[str] = None):
+        self._probe_fn = probe_fn
         if pattern is None:
             pattern = r".*\d+$"
         self._reg_exp = re.compile(pattern)
@@ -43,6 +42,4 @@ class PatchingLens(Lens):
         model: LczeroModel,
         **kwargs,
     ) -> dict:
-        for name, module in self._get_modules(model):
-            self._patch_fn(name, module, **kwargs)
-        return {}
+        return {name: self._probe_fn(module.output.save()) for name, module in self._get_modules(model)}
