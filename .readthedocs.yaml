@@ -4,11 +4,11 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
-  commands:
-    - asdf plugin add uv
-    - asdf install uv latest
-    - asdf global uv latest
-    - uv sync
-    - uv pip install -e .
+  jobs:
+    pre_create_environment:
+      - pip install uv
+    post_install:
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv sync
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install -e .
 sphinx:
   configuration: docs/source/conf.py
