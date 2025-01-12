@@ -16,7 +16,7 @@ from lczerolens.board import LczeroBoard
 try:
     from lczero.backends import Backend, GameState
 except ImportError as e:
-    raise ImportError("LCZero bindings are not installed." "See https://github.com/LeelaChessZero/lc0.git.") from e
+    raise ImportError("LCZero bindings are not installed.See https://github.com/LeelaChessZero/lc0.git.") from e
 
 
 def generic_command(args, verbose=False):
@@ -31,7 +31,7 @@ def generic_command(args, verbose=False):
     popen.wait()
     if popen.returncode != 0:
         if verbose:
-            stderr = f'\n[DEBUG] stderr:\n{popen.stderr.read().decode("utf-8")}'
+            stderr = f"\n[DEBUG] stderr:\n{popen.stderr.read().decode('utf-8')}"
         else:
             stderr = ""
         raise RuntimeError(f"Could not run `lc0 {' '.join(args)}`." + stderr)

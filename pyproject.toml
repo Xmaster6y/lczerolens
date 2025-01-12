@@ -29,6 +29,7 @@ viz = [
 dev = [
     "gdown>=5.2.0",
     "ipykernel>=6.29.5",
+    "lczero-bindings",
     "nbconvert>=7.16.5",
     "onnxruntime>=1.20.1",
     "pre-commit>=4.0.1",
@@ -62,6 +63,9 @@ target-dir = "build/dist"
 
 [tool.uv]
 default-groups = ["dev", "docs"]
+
+[tool.uv.sources]
+lczero-bindings = { git = "https://github.com/LeelaChessZero/lc0.git", rev = "7fce117" }
 
 [tool.ruff]
 line-length = 119
