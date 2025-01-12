@@ -2,7 +2,7 @@
 
 Run with:
 ```
-poetry run python -m scripts.lrp.plane_analysis
+uv run python -m scripts.lrp.plane_analysis
 ```
 """
 

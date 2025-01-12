@@ -2,7 +2,7 @@
 
 Run with:
 ```bash
-poetry run python -m scripts.datasets.make_lichess_dataset
+uv run python -m scripts.datasets.make_lichess_dataset
 ```
 """
 

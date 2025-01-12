@@ -15,7 +15,7 @@ NOTEBOOKS = [
 
 def run_notebook(notebook):
     result = subprocess.run(
-        ["poetry", "run", "jupyter", "nbconvert", "--to", "notebook", "--execute", notebook],
+        ["uv", "run", "jupyter", "nbconvert", "--to", "notebook", "--execute", notebook],
         stderr=subprocess.PIPE,
     )
     if result.returncode != 0:
