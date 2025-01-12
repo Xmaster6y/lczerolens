@@ -51,7 +51,6 @@ Additionally, you can run the gradio demo locally. First you'll need gradio, whi
 git clone https://github.com/Xmaster6y/lczerolens.git
 cd lczerolens
 uv sync --group demo
-uv pip install -e .
 ```
 
 And then launch the demo (running on port `8000`):

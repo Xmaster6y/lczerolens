@@ -9,8 +9,7 @@ build:
     - asdf install uv latest
     - asdf global uv latest
     - uv sync
-    - uv pip install -e .
     - make docs
-    - mv build/html/* $READTHEDOCS_OUTPUT/html
+    - mv docs/build/html/* $READTHEDOCS_OUTPUT/html
 sphinx:
   configuration: docs/source/conf.py

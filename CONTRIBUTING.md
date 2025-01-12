@@ -12,7 +12,6 @@ To install the dependencies:
 
 ```bash
 uv sync
-uv pip install -e .
 ```
 
 Before committing, install `pre-commit`:
