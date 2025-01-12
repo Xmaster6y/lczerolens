@@ -10,9 +10,9 @@ build:
     - asdf global uv latest
     - uv sync
     - make docs
-    - cp -r docs/build/html $READTHEDOCS_OUTPUT
+    - cp -r docs/build/* $READTHEDOCS_OUTPUT
     - ls -la $READTHEDOCS_OUTPUT
-    - ls -la $(READTHEDOCS_OUTPUT)html
+    - ls -la $READTHEDOCS_OUTPUT/html
 
 sphinx:
   configuration: docs/source/conf.py
