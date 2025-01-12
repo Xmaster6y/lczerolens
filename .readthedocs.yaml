@@ -11,6 +11,8 @@ build:
     - uv sync
     - make docs
     - mv docs/build/html $READTHEDOCS_OUTPUT
+    - ls -la $READTHEDOCS_OUTPUT
+    - ls -la $READTHEDOCS_OUTPUThtml
 
 sphinx:
   configuration: docs/source/conf.py
