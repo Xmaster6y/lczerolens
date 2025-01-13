@@ -50,7 +50,7 @@ Additionally, you can run the gradio demo locally. First you'll need gradio, whi
 ```bash
 git clone https://github.com/Xmaster6y/lczerolens.git
 cd lczerolens
-poetry install --with demo
+uv sync --group demo
 ```
 
 And then launch the demo (running on port `8000`):
