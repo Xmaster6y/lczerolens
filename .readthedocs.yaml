@@ -12,7 +12,6 @@ build:
     - make docs
     - mkdir -p $READTHEDOCS_OUTPUT
     - mv docs/build/html $READTHEDOCS_OUTPUT
-    - ls -la $READTHEDOCS_OUTPUT
 
 sphinx:
   configuration: docs/source/conf.py
