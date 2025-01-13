@@ -65,7 +65,7 @@ target-dir = "build/dist"
 default-groups = ["dev", "docs"]
 
 [tool.uv.sources]
-lczero-bindings = { git = "https://github.com/LeelaChessZero/lc0.git", rev = "51f93b7c49720ee100d24aac54193a88ba98219a" }
+lczero-bindings = { git = "https://github.com/LeelaChessZero/lc0.git", rev = "dfcd1c314150b93125697491bef1221841443c18" }
 
 [tool.ruff]
 line-length = 119

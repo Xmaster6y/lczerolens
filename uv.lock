@@ -1498,7 +1498,7 @@ wheels = [
 [[package]]
 name = "lczero-bindings"
 version = "0.1.0"
-source = { git = "https://github.com/LeelaChessZero/lc0.git?rev=51f93b7c49720ee100d24aac54193a88ba98219a#51f93b7c49720ee100d24aac54193a88ba98219a" }
+source = { git = "https://github.com/LeelaChessZero/lc0.git?rev=dfcd1c314150b93125697491bef1221841443c18#dfcd1c314150b93125697491bef1221841443c18" }
 
 [[package]]
 name = "lczerolens"
@@ -1576,7 +1576,7 @@ demo = [
 dev = [
     { name = "gdown", specifier = ">=5.2.0" },
     { name = "ipykernel", specifier = ">=6.29.5" },
-    { name = "lczero-bindings", git = "https://github.com/LeelaChessZero/lc0.git?rev=51f93b7c49720ee100d24aac54193a88ba98219a" },
+    { name = "lczero-bindings", git = "https://github.com/LeelaChessZero/lc0.git?rev=dfcd1c314150b93125697491bef1221841443c18" },
     { name = "nbconvert", specifier = ">=7.16.5" },
     { name = "onnxruntime", specifier = ">=1.20.1" },
     { name = "pre-commit", specifier = ">=4.0.1" },
