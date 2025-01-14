@@ -216,6 +216,7 @@ class Flow(LczeroModel):
         if not self.is_compatible(model_key):
             raise ValueError(f"The model does not have a {self._flow_type} head.")
         super().__init__(model_key, *args, **kwargs)
+        self._write_flow_forward_()
 
     @classmethod
     def register(cls, name: str):
@@ -320,22 +321,15 @@ class Flow(LczeroModel):
         """
         return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
 
-    def __call__(self, *inputs, **kwargs):
-        """Calls the flow on the given inputs.
+    def _write_flow_forward_(self):
+        """Rewrites the forward function to return the flow output."""
+        old_forward = getattr(self._model, "forward")
 
-        Parameters
-        ----------
-        *inputs
-            The inputs to pass to the model.
-        **kwargs
-            Additional keyword arguments to pass to the model.
+        def new_forward(*inputs, **kwargs):
+            out = old_forward(*inputs, **kwargs)
+            return out[self._flow_type]
 
-        Returns
-        -------
-        Any
-            The output of the flow.
-        """
-        return super().__call__(*inputs, **kwargs)[self._flow_type]
+        setattr(self._model, "forward", new_forward)
 
 
 @Flow.register("policy")
@@ -366,8 +360,13 @@ class ForceValueFlow(Flow):
     def is_compatible(cls, model: nn.Module):
         return ValueFlow.is_compatible(model) or WdlFlow.is_compatible(model)
 
-    def __call__(self, *inputs, **kwargs):
-        out = super().__call__(*inputs, **kwargs)
-        if "value" in out.keys():
-            return out["value"]
-        return out["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=out.device)
+    def _write_flow_forward_(self):
+        old_forward = getattr(self._model, "forward")
+
+        def new_forward(*inputs, **kwargs):
+            out = old_forward(*inputs, **kwargs)
+            if "value" in out.keys():
+                return out["value"]
+            return out["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=out.device)
+
+        setattr(self._model, "forward", new_forward)
