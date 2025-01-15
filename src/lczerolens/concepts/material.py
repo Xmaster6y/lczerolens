@@ -4,6 +4,7 @@ from typing import Dict, Optional
 
 import chess
 
+from lczerolens.board import LczeroBoard
 from lczerolens.concept import BinaryConcept
 
 
@@ -21,7 +22,7 @@ class HasPiece(BinaryConcept):
 
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
     ) -> int:
         """Compute the label for a given model and input."""
         if self.relative:
@@ -61,7 +62,7 @@ class HasMaterialAdvantage(BinaryConcept):
 
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
         piece_values: Optional[Dict[int, int]] = None,
     ) -> int:
         """

@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
-import chess
 from datasets import Features, Value, Sequence
 
+from lczerolens.board import LczeroBoard
 
 GAME_DATASET_FEATURES = Features(
     {
@@ -58,8 +58,8 @@ class Game:
         skip_book_exit: bool = False,
         skip_first_n: int = 0,
         output_dict=True,
-    ) -> List[Union[Dict[str, Any], chess.Board]]:
-        working_board = chess.Board()
+    ) -> List[Union[Dict[str, Any], LczeroBoard]]:
+        working_board = LczeroBoard()
         if skip_first_n > 0 or (skip_book_exit and (self.book_exit is not None)):
             boards = []
         else:
@@ -95,7 +95,7 @@ class Game:
     def board_collate_fn(batch):
         boards = []
         for element in batch:
-            board = chess.Board(element["fen"])
+            board = LczeroBoard(element["fen"])
             for move in element["moves"]:
                 board.push_san(move)
             boards.append(board)
