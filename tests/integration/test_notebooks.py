@@ -6,7 +6,7 @@ import subprocess
 import pytest
 
 NOTEBOOKS = [
-    "docs/source/notebooks/features/visualise-heatmaps.ipynb",
+    "docs/source/notebooks/features/render-saliency-heatmaps.ipynb",
     "docs/source/notebooks/features/probe-concepts.ipynb",
     "docs/source/notebooks/features/convert-official-weights.ipynb",
     "docs/source/notebooks/features/move-prediction.ipynb",

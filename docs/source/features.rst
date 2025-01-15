@@ -21,7 +21,7 @@ Features
    :gutter: 3
 
    .. grid-item-card::
-      :link: notebooks/features/visualise-heatmaps.ipynb
+      :link: notebooks/features/render-saliency-heatmaps.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -32,8 +32,8 @@ Features
                <i class="fa-solid fa-map fa-2x"></i>
             </div>
             <div>
-               <h5 class="card-title">Visualise Heatmaps</h5>
-               <p class="card-text">Visualise the heatmaps for a given chess board.</p>
+               <h5 class="card-title">Render Saliency Heatmaps</h5>
+               <p class="card-text">Render the saliency heatmaps for a given chess board.</p>
             </div>
          </div>
 
@@ -126,7 +126,7 @@ Features
    :hidden:
    :maxdepth: 2
 
-   notebooks/features/visualise-heatmaps.ipynb
+   notebooks/features/render-saliency-heatmaps.ipynb
    notebooks/features/probe-concepts.ipynb
    notebooks/features/move-prediction.ipynb
    notebooks/features/run-models-on-gpu.ipynb
