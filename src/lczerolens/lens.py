@@ -145,6 +145,34 @@ class Lens(ABC):
         """
         pass
 
+    def _trace(
+        self,
+        model: LczeroModel,
+        *inputs: Union[LczeroBoard, torch.Tensor],
+        model_kwargs: dict,
+        intervention_kwargs: dict,
+    ):
+        """Trace the model and intervene on it.
+
+        Parameters
+        ----------
+        model : LczeroModel
+            The NNsight model.
+        inputs : Union[LczeroBoard, torch.Tensor]
+            The inputs.
+        model_kwargs : dict
+            The model kwargs.
+        intervention_kwargs : dict
+            The intervention kwargs.
+
+        Returns
+        -------
+        dict
+            The intervention results.
+        """
+        with model.trace(*inputs, **model_kwargs):
+            return self._intervene(model, **intervention_kwargs)
+
     def analyse(
         self,
         model: LczeroModel,
@@ -174,8 +202,7 @@ class Lens(ABC):
             raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
-        with prepared_model.trace(*inputs, **model_kwargs):
-            return self._intervene(prepared_model, **kwargs)
+        return self._trace(prepared_model, *inputs, model_kwargs=model_kwargs, intervention_kwargs=kwargs)
 
     def analyse_batched(
         self,
@@ -189,7 +216,7 @@ class Lens(ABC):
         ----------
         model : LczeroModel
             The NNsight model.
-        iter_inputs : Iterable[Union[LczeroBoard, torch.Tensor]]
+        iter_inputs : Iterable[Tuple[Union[LczeroBoard, torch.Tensor], dict]]
             The iterator over the inputs.
 
         Returns
@@ -206,6 +233,6 @@ class Lens(ABC):
             raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
-        for inputs in iter_inputs:
-            with prepared_model.trace(*inputs, **model_kwargs):
-                yield self._intervene(prepared_model, **kwargs)
+        for inputs, dynamic_intervention_kwargs in iter_inputs:
+            kwargs.update(dynamic_intervention_kwargs)
+            yield self._trace(prepared_model, *inputs, model_kwargs=model_kwargs, intervention_kwargs=kwargs)

@@ -99,4 +99,4 @@ class Game:
             for move in element["moves"]:
                 board.push_san(move)
             boards.append(board)
-        return boards, batch
+        return boards, {}
