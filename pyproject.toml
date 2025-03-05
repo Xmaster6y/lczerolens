@@ -1,6 +1,6 @@
 [project]
 name = "lczerolens"
-version = "0.2.0-dev"
+version = "0.3.0"
 description = "Interpretability for LeelaChessZero networks."
 readme = "README.md"
 license = {file = "LICENSE"}
