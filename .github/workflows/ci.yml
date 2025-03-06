@@ -4,7 +4,7 @@ on:
   pull_request:
 
 jobs:
-  ci-python-3.9:
+  ci-python-3_9:
     runs-on: ubuntu-latest
     environment: ci
     timeout-minutes: 10
@@ -31,7 +31,7 @@ jobs:
       run: |
         make tests
 
-  ci-python-3.10:
+  ci-python-3_10:
     runs-on: ubuntu-latest
     environment: ci
     timeout-minutes: 10
@@ -58,7 +58,7 @@ jobs:
       run: |
         make tests
 
-  ci-python-3.11:
+  ci-python-3_11:
     runs-on: ubuntu-latest
     environment: ci
     timeout-minutes: 10
