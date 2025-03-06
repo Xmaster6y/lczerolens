@@ -72,7 +72,7 @@ class TestFlows:
         policy_flow = Flow.from_model("policy", tiny_model)
         board = LczeroBoard()
         (policy,) = policy_flow(board)
-        model_policy = tiny_model(board)[0]
+        model_policy = tiny_model(board)["policy"][0]
         assert torch.allclose(policy, model_policy)
 
     def test_value_flow(self, tiny_model):
@@ -80,7 +80,7 @@ class TestFlows:
         value_flow = Flow.from_model("value", tiny_model)
         board = LczeroBoard()
         (value,) = value_flow(board)
-        model_value = tiny_model(board)[0]
+        model_value = tiny_model(board)["value"][0]
         assert torch.allclose(value, model_value)
 
     def test_wdl_flow(self, winner_model):
@@ -88,7 +88,7 @@ class TestFlows:
         wdl_flow = Flow.from_model("wdl", winner_model)
         board = LczeroBoard()
         (wdl,) = wdl_flow(board)
-        model_wdl = winner_model(board)[0]
+        model_wdl = winner_model(board)["wdl"][0]
         assert torch.allclose(wdl, model_wdl)
 
     def test_mlh_flow(self, winner_model):
@@ -96,8 +96,25 @@ class TestFlows:
         mlh_flow = Flow.from_model("mlh", winner_model)
         board = LczeroBoard()
         (mlh,) = mlh_flow(board)
-        model_mlh = winner_model(board)[0]
+        model_mlh = winner_model(board)["mlh"][0]
         assert torch.allclose(mlh, model_mlh)
+
+    def test_force_value_flow_value(self, tiny_model):
+        """Test that the force value flow works."""
+        force_value_flow = Flow.from_model("force_value", tiny_model)
+        board = LczeroBoard()
+        (value,) = force_value_flow(board)
+        model_value = tiny_model(board)["value"][0]
+        assert torch.allclose(value, model_value)
+
+    def test_force_value_flow_wdl(self, winner_model):
+        """Test that the force value flow works."""
+        force_value_flow = Flow.from_model("force_value", winner_model)
+        board = LczeroBoard()
+        (wdl,) = force_value_flow(board)
+        model_wdl = winner_model(board)["wdl"][0]
+        model_value = model_wdl @ torch.tensor([1.0, 0.0, -1.0], device=model_wdl.device)
+        assert torch.allclose(wdl, model_value)
 
     def test_incompatible_flows(self, tiny_model, winner_model):
         """Test that the flows raise an error *

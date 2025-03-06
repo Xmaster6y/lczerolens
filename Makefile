@@ -12,20 +12,20 @@ demo-assets:
 
 .PHONY: tests
 tests:
-	uv pip install .
+	uv pip install -e .
 	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyfast
 
 .PHONY: tests-slow
 tests-slow:
-	uv pip install .
+	uv pip install -e .
 	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyslow
 
 .PHONY: docs
 docs:
-	uv pip install .
+	uv pip install -e .
 	cd docs && uv run make html
 
 .PHONY: demo
 demo:
-	uv pip install .
+	uv pip install -e .
 	uv run python spaces/lczerolens-demo/app/main.py
