@@ -20,7 +20,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v3
       with:
-        python-version: 3.9.18
+        python-version: 3.11
     - name: Run Python commands
       run: |
         pip install --upgrade pip
