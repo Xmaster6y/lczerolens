@@ -2,7 +2,9 @@
 LCZero utils tests.
 """
 
+import sys
 import torch
+import pytest
 from lczero.backends import GameState
 
 from lczerolens import backends as lczero_utils
@@ -33,6 +35,7 @@ class TestExecution:
         assert isinstance(generic_command, str)
         assert "Usage: lc0" in generic_command
 
+    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
     def test_board_from_backend(self, tiny_lczero_backend):
         """
         Test that the board from backend function works.
@@ -41,6 +44,7 @@ class TestExecution:
         lczero_board_tensor = lczero_utils.board_from_backend(tiny_lczero_backend, lczero_game)
         assert lczero_board_tensor.shape == (112, 8, 8)
 
+    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
     def test_prediction_from_backend(self, tiny_lczero_backend):
         """
         Test that the prediction from backend function works.

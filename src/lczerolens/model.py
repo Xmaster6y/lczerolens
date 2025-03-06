@@ -132,37 +132,12 @@ class LczeroModel(NNsight):
             if check:
                 onnx_model = safe_shape_inference(onnx_model_path)
             onnx_torch_model = convert(onnx_model)
-            onnx_torch_model.forward = cls.make_onnx_td_forward(onnx_torch_model)
+            td_forward = cls._make_onnx_td_forward(onnx_torch_model)
+            onnx_torch_model.forward = td_forward
+            onnx_torch_model._td_forward = td_forward
             return cls(onnx_torch_model)
         except Exception:
             raise ValueError(f"Could not load model at {onnx_model_path}.")
-
-    @staticmethod
-    def make_onnx_td_forward(onnx_model: nn.Module) -> Callable:
-        """Creates a forward function that returns a TensorDict for ONNX models.
-
-        Parameters
-        ----------
-        onnx_model : nn.Module
-            The ONNX model
-
-        Returns
-        -------
-        Callable
-            The forward function that returns a TensorDict
-        """
-        old_forward = onnx_model.forward
-        output_node = list(onnx_model.graph.nodes)[-1]
-        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
-
-        def td_forward(x):
-            old_out = old_forward(x)
-            return TensorDict(
-                {name: old_out[i] for i, name in enumerate(output_names)},
-                batch_size=x.shape[0],
-            )
-
-        return td_forward
 
     @classmethod
     def from_torch_path(cls, torch_model_path: str) -> "LczeroModel":
@@ -198,6 +173,33 @@ class LczeroModel(NNsight):
         else:
             raise ValueError(f"Could not load model at {torch_model_path}.")
 
+    @staticmethod
+    def _make_onnx_td_forward(onnx_model: nn.Module) -> Callable:
+        """Creates a forward function that returns a TensorDict for ONNX models.
+
+        Parameters
+        ----------
+        onnx_model : nn.Module
+            The ONNX model
+
+        Returns
+        -------
+        Callable
+            The forward function that returns a TensorDict
+        """
+        old_forward = onnx_model.forward
+        output_node = list(onnx_model.graph.nodes)[-1]
+        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
+
+        def td_forward(x):
+            old_out = old_forward(x)
+            return TensorDict(
+                {name: old_out[i] for i, name in enumerate(output_names)},
+                batch_size=x.shape[0],
+            )
+
+        return td_forward
+
 
 class Flow(LczeroModel):
     """Base class for isolating a flow."""
@@ -216,7 +218,7 @@ class Flow(LczeroModel):
         if not self.is_compatible(model_key):
             raise ValueError(f"The model does not have a {self._flow_type} head.")
         super().__init__(model_key, *args, **kwargs)
-        self._write_flow_forward_()
+        self._ensure_flow_forward_()
 
     @classmethod
     def register(cls, name: str):
@@ -321,15 +323,17 @@ class Flow(LczeroModel):
         """
         return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
 
-    def _write_flow_forward_(self):
+    def _ensure_flow_forward_(self) -> Callable:
         """Rewrites the forward function to return the flow output."""
-        old_forward = getattr(self._model, "forward")
+        flow_type = getattr(self, "_flow_type", None)
+        if flow_type is None:
+            return
 
-        def new_forward(*inputs, **kwargs):
-            out = old_forward(*inputs, **kwargs)
-            return out[self._flow_type]
+        def flow_forward(*inputs, **kwargs):
+            out = self._model._td_forward(*inputs, **kwargs)
+            return out[flow_type]
 
-        setattr(self._model, "forward", new_forward)
+        setattr(self._model, "forward", flow_forward)
 
 
 @Flow.register("policy")
@@ -360,13 +364,15 @@ class ForceValueFlow(Flow):
     def is_compatible(cls, model: nn.Module):
         return ValueFlow.is_compatible(model) or WdlFlow.is_compatible(model)
 
-    def _write_flow_forward_(self):
-        old_forward = getattr(self._model, "forward")
+    def _ensure_flow_forward_(self):
+        flow_type = getattr(self, "_flow_type", None)
+        if flow_type is None:
+            return
 
-        def new_forward(*inputs, **kwargs):
-            out = old_forward(*inputs, **kwargs)
+        def flow_forward(*inputs, **kwargs):
+            out = self._model._td_forward(*inputs, **kwargs)
             if "value" in out.keys():
                 return out["value"]
             return out["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=out.device)
 
-        setattr(self._model, "forward", new_forward)
+        setattr(self._model, "forward", flow_forward)
