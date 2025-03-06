@@ -1,10 +1,5 @@
 """Activation lens."""
 
-from typing import Optional
-import re
-
-import torch
-
 from lczerolens.model import LczeroModel
 from lczerolens.lens import Lens
 
@@ -25,20 +20,15 @@ class ActivationLens(Lens):
             results = lens.analyse(board, model=model)
     """
 
-    def __init__(self, pattern: Optional[str] = None):
-        if pattern is None:
-            pattern = r".*\d+$"
-        self._reg_exp = re.compile(pattern)
-
-    def _get_modules(self, model: torch.nn.Module):
-        """Get the modules to intervene on."""
-        for name, module in model.named_modules():
-            if self._reg_exp.match(name):
-                yield name, module
-
     def _intervene(
         self,
         model: LczeroModel,
         **kwargs,
     ) -> dict:
-        return {name: module.output.save() for name, module in self._get_modules(model)}
+        save_inputs = kwargs.get("save_inputs", False)
+        results = {}
+        for name, module in self._get_modules(model):
+            if save_inputs:
+                results[f"{name}_input"] = module.input.save()
+            results[f"{name}_output"] = module.output.save()
+        return results

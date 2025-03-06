@@ -9,6 +9,7 @@ from onnx2torch.utils.safe_shape_inference import safe_shape_inference
 from tensordict import TensorDict
 from torch import nn
 from nnsight import NNsight
+from contextlib import contextmanager
 
 from lczerolens.board import InputEncoding, LczeroBoard
 
@@ -28,7 +29,8 @@ class LczeroModel(NNsight):
     def _execute(self, *prepared_inputs: torch.Tensor, **kwargs) -> Any:
         kwargs.pop("input_encoding", None)
         kwargs.pop("input_requires_grad", None)
-        return super()._execute(*prepared_inputs, **kwargs)
+        with self._ensure_proper_forward():
+            return super()._execute(*prepared_inputs, **kwargs)
 
     def _prepare_inputs(self, *inputs: Union[LczeroBoard, torch.Tensor], **kwargs) -> Tuple[Tuple[Any], int]:
         input_encoding = kwargs.pop("input_encoding", InputEncoding.INPUT_CLASSICAL_112_PLANE)
@@ -132,37 +134,9 @@ class LczeroModel(NNsight):
             if check:
                 onnx_model = safe_shape_inference(onnx_model_path)
             onnx_torch_model = convert(onnx_model)
-            onnx_torch_model.forward = cls.make_onnx_td_forward(onnx_torch_model)
             return cls(onnx_torch_model)
         except Exception:
             raise ValueError(f"Could not load model at {onnx_model_path}.")
-
-    @staticmethod
-    def make_onnx_td_forward(onnx_model: nn.Module) -> Callable:
-        """Creates a forward function that returns a TensorDict for ONNX models.
-
-        Parameters
-        ----------
-        onnx_model : nn.Module
-            The ONNX model
-
-        Returns
-        -------
-        Callable
-            The forward function that returns a TensorDict
-        """
-        old_forward = onnx_model.forward
-        output_node = list(onnx_model.graph.nodes)[-1]
-        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
-
-        def td_forward(x):
-            old_out = old_forward(x)
-            return TensorDict(
-                {name: old_out[i] for i, name in enumerate(output_names)},
-                batch_size=x.shape[0],
-            )
-
-        return td_forward
 
     @classmethod
     def from_torch_path(cls, torch_model_path: str) -> "LczeroModel":
@@ -197,6 +171,51 @@ class LczeroModel(NNsight):
             return cls(torch_model)
         else:
             raise ValueError(f"Could not load model at {torch_model_path}.")
+
+    @staticmethod
+    def _make_onnx_td_forward(onnx_model: nn.Module) -> Callable:
+        """Creates a forward function that returns a TensorDict for ONNX models.
+
+        Parameters
+        ----------
+        onnx_model : nn.Module
+            The ONNX model
+
+        Returns
+        -------
+        Callable
+            The forward function that returns a TensorDict
+        """
+        old_forward = onnx_model.forward
+        output_node = list(onnx_model.graph.nodes)[-1]
+        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
+
+        def td_forward(x):
+            old_out = old_forward(x)
+            return TensorDict(
+                {name: old_out[i] for i, name in enumerate(output_names)},
+                batch_size=x.shape[0],
+            )
+
+        return td_forward
+
+    @contextmanager
+    def _ensure_proper_forward(self):
+        old_forward = self._model.forward
+
+        output_node = list(self._model.graph.nodes)[-1]
+        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
+
+        def td_forward(x):
+            old_out = old_forward(x)
+            return TensorDict(
+                {name: old_out[i] for i, name in enumerate(output_names)},
+                batch_size=x.shape[0],
+            )
+
+        self._model.forward = td_forward
+        yield
+        self._model.forward = old_forward
 
 
 class Flow(LczeroModel):
@@ -320,22 +339,23 @@ class Flow(LczeroModel):
         """
         return hasattr(model, cls._flow_type) or hasattr(model, f"output/{cls._flow_type}")
 
-    def __call__(self, *inputs, **kwargs):
-        """Calls the flow on the given inputs.
+    @contextmanager
+    def _ensure_proper_forward(self):
+        """Rewrites the forward function to return the flow output."""
+        flow_type = getattr(self, "_flow_type", None)
+        if flow_type is None:
+            return
 
-        Parameters
-        ----------
-        *inputs
-            The inputs to pass to the model.
-        **kwargs
-            Additional keyword arguments to pass to the model.
+        with super()._ensure_proper_forward():
+            old_forward = self._model.forward
 
-        Returns
-        -------
-        Any
-            The output of the flow.
-        """
-        return super().__call__(*inputs, **kwargs)[self._flow_type]
+            def flow_forward(*inputs, **kwargs):
+                out = old_forward(*inputs, **kwargs)
+                return out[flow_type]
+
+            self._model.forward = flow_forward
+            yield
+            self._model.forward = old_forward
 
 
 @Flow.register("policy")
@@ -366,8 +386,21 @@ class ForceValueFlow(Flow):
     def is_compatible(cls, model: nn.Module):
         return ValueFlow.is_compatible(model) or WdlFlow.is_compatible(model)
 
-    def __call__(self, *inputs, **kwargs):
-        out = super().__call__(*inputs, **kwargs)
-        if "value" in out.keys():
-            return out["value"]
-        return out["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=out.device)
+    @contextmanager
+    def _ensure_proper_forward(self):
+        flow_type = getattr(self, "_flow_type", None)
+        if flow_type is None:
+            return
+
+        with LczeroModel._ensure_proper_forward(self):
+            old_forward = self._model.forward
+
+            def flow_forward(*inputs, **kwargs):
+                out = old_forward(*inputs, **kwargs)
+                if "value" in out.keys():
+                    return out["value"]
+                return out["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=out.device)
+
+            self._model.forward = flow_forward
+            yield
+            self._model.forward = old_forward

@@ -2,6 +2,7 @@
 
 import chess
 
+from lczerolens.board import LczeroBoard
 from lczerolens.concept import BinaryConcept
 
 
@@ -23,7 +24,7 @@ class HasThreat(BinaryConcept):
 
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
     ) -> int:
         """
         Compute the label for a given model and input.
@@ -46,7 +47,7 @@ class HasMateThreat(BinaryConcept):
 
     def compute_label(
         self,
-        board: chess.Board,
+        board: LczeroBoard,
     ) -> int:
         """
         Compute the label for a given model and input.

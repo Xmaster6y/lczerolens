@@ -21,6 +21,40 @@ Features
    :gutter: 3
 
    .. grid-item-card::
+      :link: notebooks/features/render-saliency-heatmaps.ipynb
+      :class-card: surface
+      :class-body: surface
+
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-map fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Render Saliency Heatmaps</h5>
+               <p class="card-text">Render the saliency heatmaps for a given chess board.</p>
+            </div>
+         </div>
+
+   .. grid-item-card::
+      :link: notebooks/features/probe-concepts.ipynb
+      :class-card: surface
+      :class-body: surface
+
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-database fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Probe Concepts</h5>
+               <p class="card-text">Probe the concepts with a dataset.</p>
+            </div>
+         </div>
+
+   .. grid-item-card::
       :link: notebooks/features/move-prediction.ipynb
       :class-card: surface
       :class-body: surface
@@ -92,6 +126,8 @@ Features
    :hidden:
    :maxdepth: 2
 
+   notebooks/features/render-saliency-heatmaps.ipynb
+   notebooks/features/probe-concepts.ipynb
    notebooks/features/move-prediction.ipynb
    notebooks/features/run-models-on-gpu.ipynb
    notebooks/features/evaluate-models-on-puzzles.ipynb

@@ -1,9 +1,10 @@
 """Generic lens class."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Iterable, Generator, Callable, Type, Union
+from typing import Dict, Iterable, Generator, Callable, Type, Union, Optional, Any
 
 import torch
+import re
 
 from lczerolens.model import LczeroModel
 from lczerolens.board import LczeroBoard
@@ -68,6 +69,36 @@ class Lens(ABC):
             raise KeyError(f"Lens {name} not found.")
         return cls._registry[name](*args, **kwargs)
 
+    def __init__(self, pattern: Optional[str] = None):
+        """Initialise the lens.
+
+        Parameters
+        ----------
+        pattern : Optional[str], default=None
+            The pattern to match the modules.
+        """
+        if pattern is None:
+            pattern = r"a^"  # match nothing by default
+        self._pattern = pattern
+        self._reg_exp = re.compile(pattern)
+
+    @property
+    def pattern(self) -> str:
+        """The pattern to match the modules."""
+        return self._pattern
+
+    @pattern.setter
+    def pattern(self, pattern: str):
+        self._pattern = pattern
+        self._reg_exp = re.compile(pattern)
+
+    def _get_modules(self, model: LczeroModel) -> Generator[tuple[str, Any], None, None]:
+        """Get the modules to intervene on."""
+        for name, module in model.named_modules():
+            fixed_name = name.lstrip(". ")  # nnsight outputs names with a dot
+            if self._reg_exp.match(fixed_name):
+                yield fixed_name, module
+
     def is_compatible(self, model: LczeroModel) -> bool:
         """Returns whether the lens is compatible with the model.
 
@@ -114,6 +145,34 @@ class Lens(ABC):
         """
         pass
 
+    def _trace(
+        self,
+        model: LczeroModel,
+        *inputs: Union[LczeroBoard, torch.Tensor],
+        model_kwargs: dict,
+        intervention_kwargs: dict,
+    ):
+        """Trace the model and intervene on it.
+
+        Parameters
+        ----------
+        model : LczeroModel
+            The NNsight model.
+        inputs : Union[LczeroBoard, torch.Tensor]
+            The inputs.
+        model_kwargs : dict
+            The model kwargs.
+        intervention_kwargs : dict
+            The intervention kwargs.
+
+        Returns
+        -------
+        dict
+            The intervention results.
+        """
+        with model.trace(*inputs, **model_kwargs):
+            return self._intervene(model, **intervention_kwargs)
+
     def analyse(
         self,
         model: LczeroModel,
@@ -143,8 +202,7 @@ class Lens(ABC):
             raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
-        with prepared_model.trace(*inputs, **model_kwargs):
-            return self.intervene(prepared_model, **kwargs)
+        return self._trace(prepared_model, *inputs, model_kwargs=model_kwargs, intervention_kwargs=kwargs)
 
     def analyse_batched(
         self,
@@ -158,7 +216,7 @@ class Lens(ABC):
         ----------
         model : LczeroModel
             The NNsight model.
-        iter_inputs : Iterable[Union[LczeroBoard, torch.Tensor]]
+        iter_inputs : Iterable[Tuple[Union[LczeroBoard, torch.Tensor], dict]]
             The iterator over the inputs.
 
         Returns
@@ -175,6 +233,6 @@ class Lens(ABC):
             raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
-        for inputs in iter_inputs:
-            with prepared_model.trace(*inputs, **model_kwargs):
-                yield self.intervene(prepared_model, **kwargs)
+        for inputs, dynamic_intervention_kwargs in iter_inputs:
+            kwargs.update(dynamic_intervention_kwargs)
+            yield self._trace(prepared_model, *inputs, model_kwargs=model_kwargs, intervention_kwargs=kwargs)

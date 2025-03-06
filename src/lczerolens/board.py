@@ -5,8 +5,11 @@ from enum import Enum
 from typing import Optional, Generator, Tuple, List, Union, Any
 
 import chess
+import chess.svg
 import torch
+import io
 import numpy as np
+
 from .constants import INVERTED_POLICY_INDEX, POLICY_INDEX
 
 
@@ -324,6 +327,11 @@ class LczeroBoard(chess.Board):
         Union[Tuple[str, matplotlib.figure.Figure], None]
             If save_to is None, returns (SVG string, matplotlib figure).
             If save_to is provided, saves files and returns None.
+
+        Raises
+        ------
+        ValueError
+            If save_to is provided and does not end with `.svg`.
         """
         try:
             import matplotlib
@@ -352,7 +360,7 @@ class LczeroBoard(chess.Board):
             color = cmap(norm(heatmap[square_index]))
             color = (*color[:3], alpha)
             color_dict[square_index] = matplotlib.colors.to_hex(color, keep_alpha=True)
-        fig = plt.figure(figsize=(1, 6))
+        fig = plt.figure(figsize=(1, 4.1))
         ax = plt.gca()
         ax.axis("off")
         fig.colorbar(
@@ -375,13 +383,20 @@ class LczeroBoard(chess.Board):
             self,
             check=check,
             fill=color_dict,
-            size=350,
+            size=400,
             arrows=arrows,
         )
-        if save_to is None:
-            return svg_board, fig
-
-        plt.savefig(save_to)
-        with open(save_to.replace(".png", ".svg"), "w") as f:
-            f.write(svg_board)
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format="svg")
+        svg_colorbar = buffer.getvalue().decode("utf-8")
         plt.close()
+
+        if save_to is None:
+            return svg_board, svg_colorbar
+        elif not save_to.endswith(".svg"):
+            raise ValueError("only saving to `svg` is supported")
+
+        with open(save_to.replace(".svg", "_board.svg"), "w") as f:
+            f.write(svg_board)
+        with open(save_to.replace(".svg", "_colorbar.svg"), "w") as f:
+            f.write(svg_colorbar)

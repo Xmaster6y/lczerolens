@@ -1,9 +1,6 @@
 """Probing lens."""
 
-from typing import Callable, Optional
-
-import torch
-import re
+from typing import Callable
 
 from lczerolens.model import LczeroModel
 from lczerolens.lens import Lens
@@ -25,17 +22,9 @@ class ProbingLens(Lens):
             results = lens.analyse(board, model=model)
     """
 
-    def __init__(self, probe_fn: Callable, pattern: Optional[str] = None):
+    def __init__(self, probe_fn: Callable, **kwargs):
         self._probe_fn = probe_fn
-        if pattern is None:
-            pattern = r".*\d+$"
-        self._reg_exp = re.compile(pattern)
-
-    def _get_modules(self, model: torch.nn.Module):
-        """Get the modules to intervene on."""
-        for name, module in model.named_modules():
-            if self._reg_exp.match(name):
-                yield name, module
+        super().__init__(**kwargs)
 
     def _intervene(
         self,
