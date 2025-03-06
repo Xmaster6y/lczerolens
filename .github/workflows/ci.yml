@@ -13,7 +13,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v3
       with:
-        python-version: 3.9
+        python-version: "3.9"
     - name: Run Python commands
       run: |
         pip install --upgrade pip
@@ -40,7 +40,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v3
       with:
-        python-version: 3.10
+        python-version: "3.10"
     - name: Run Python commands
       run: |
         pip install --upgrade pip
@@ -67,7 +67,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v3
       with:
-        python-version: 3.11
+        python-version: "3.11"
     - name: Run Python commands
       run: |
         pip install --upgrade pip
