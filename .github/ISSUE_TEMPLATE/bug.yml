@@ -25,7 +25,7 @@ body:
       label: Version
       description: What version of the software are you running?
       options:
-        - 0.2.0-dev
+        - 0.3.0
         - 0.2.0
         - 0.1.2
       default: 0
