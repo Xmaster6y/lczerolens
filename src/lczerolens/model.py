@@ -32,7 +32,7 @@ class LczeroModel(NNsight):
         with self._ensure_proper_forward():
             return super()._execute(*prepared_inputs, **kwargs)
 
-    def _prepare_input(self, *inputs: Union[LczeroBoard, torch.Tensor], **kwargs) -> Tuple[Tuple[Any], int]:
+    def _prepare_inputs(self, *inputs: Union[LczeroBoard, torch.Tensor], **kwargs) -> Tuple[Tuple[Any], int]:
         input_encoding = kwargs.pop("input_encoding", InputEncoding.INPUT_CLASSICAL_112_PLANE)
         input_requires_grad = kwargs.pop("input_requires_grad", False)
 
@@ -48,10 +48,10 @@ class LczeroModel(NNsight):
             batched_tensor.requires_grad = True
         batched_tensor = batched_tensor.to(self.device)
 
-        return (batched_tensor, kwargs), len(inputs)
+        return (batched_tensor,), len(inputs)
 
     def __call__(self, *inputs, **kwargs):
-        prepared_inputs, _ = self._prepare_input(*inputs, **kwargs)
+        prepared_inputs, _ = self._prepare_inputs(*inputs, **kwargs)
         return self._execute(*prepared_inputs, **kwargs)
 
     def __getattr__(self, key):
