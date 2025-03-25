@@ -1425,7 +1425,7 @@ source = { git = "https://github.com/LeelaChessZero/lc0.git?rev=dfcd1c314150b931
 
 [[package]]
 name = "lczerolens"
-version = "0.3.0.dev0"
+version = "0.3.1"
 source = { virtual = "." }
 dependencies = [
     { name = "datasets" },
