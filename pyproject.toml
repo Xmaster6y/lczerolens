@@ -1,6 +1,6 @@
 [project]
 name = "lczerolens"
-version = "0.3.0"
+version = "0.3.0-dev"
 description = "Interpretability for LeelaChessZero networks."
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -12,7 +12,7 @@ dependencies = [
     "datasets>=3.2.0",
     "einops>=0.8.0",
     "jsonlines>=4.0.0",
-    "nnsight>=0.3.7",
+    "nnsight>=0.3.7,<0.4.0",
     "onnx2torch>=1.5.15",
     "python-chess>=1.999",
     "scikit-learn>=1.6.1",
