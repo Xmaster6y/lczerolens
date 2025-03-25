@@ -1,12 +1,16 @@
 """Main module for the lczerolens package."""
 
-__version__ = "0.3.0"
-
+from importlib.metadata import PackageNotFoundError, version
 
 from .board import LczeroBoard, InputEncoding
 from .model import LczeroModel, Flow
 from .lens import Lens
 from . import lenses, concepts, play
+
+try:
+    __version__ = version("lczerolens")
+except PackageNotFoundError:
+    __version__ = "unknown version"
 
 __all__ = [
     "LczeroBoard",
