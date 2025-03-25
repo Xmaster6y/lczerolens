@@ -298,8 +298,7 @@ class LczeroBoard(chess.Board):
         save_to: Optional[str] = None,
         cmap_name: str = "RdYlBu_r",
         alpha: float = 1.0,
-        relative_board_flip: bool = True,
-        relative_heatmap_flip: bool = False,
+        flip_mode: str = "board",
     ) -> Tuple[Optional[str], Any]:
         """Render a heatmap on the board.
 
@@ -323,10 +322,8 @@ class LczeroBoard(chess.Board):
             Name of matplotlib colormap to use.
         alpha : float, default=1.0
             Opacity of the heatmap overlay.
-        relative_board_flip : bool, default=True
-            Whether to flip the board relative to the heatmap.
-        relative_heatmap_flip : bool, default=False
-            Whether to flip the heatmap relative to the board.
+        flip_mode : str, default="board"
+            Flip mode for black's perspective. Use "board" to flip the board, "heatmap" to flip the heatmap.
 
         Returns
         -------
@@ -347,14 +344,12 @@ class LczeroBoard(chess.Board):
                 "matplotlib is required to render heatmaps, install it with `pip install lczerolens[viz]`."
             ) from e
 
-        if relative_board_flip and relative_heatmap_flip:
-            raise ValueError("Only one of relative_board_flip or relative_heatmap_flip can be True.")
-        elif not relative_board_flip and not relative_heatmap_flip:
-            raise ValueError("At least one of relative_board_flip or relative_heatmap_flip must be True.")
+        if flip_mode not in ["board", "heatmap"]:
+            raise ValueError(f"Got unexpected flip_mode {flip_mode}")
 
         if heatmap.ndim == 2:
             heatmap = heatmap.view(64)
-        if relative_heatmap_flip:
+        if flip_mode == "heatmap":
             heatmap = heatmap.view(8, 8).flip(0).view(64)
 
         cmap = matplotlib.colormaps[cmap_name].resampled(1000)
@@ -397,7 +392,7 @@ class LczeroBoard(chess.Board):
 
         svg_board = chess.svg.board(
             self,
-            orientation=self.turn if relative_board_flip else chess.WHITE,
+            orientation=self.turn if flip_mode == "board" else chess.WHITE,
             check=check,
             fill=color_dict,
             size=400,
