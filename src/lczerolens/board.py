@@ -298,13 +298,14 @@ class LczeroBoard(chess.Board):
         save_to: Optional[str] = None,
         cmap_name: str = "RdYlBu_r",
         alpha: float = 1.0,
+        flip_mode: str = "board",
     ) -> Tuple[Optional[str], Any]:
         """Render a heatmap on the board.
 
         Parameters
         ----------
         heatmap : torch.Tensor or numpy.ndarray
-            The heatmap values to visualize on the board (64,).
+            The heatmap values to visualize on the board (64,) or (8, 8).
         square : Optional[str], default=None
             Chess square to highlight (e.g. 'e4').
         vmin : Optional[float], default=None
@@ -321,6 +322,8 @@ class LczeroBoard(chess.Board):
             Name of matplotlib colormap to use.
         alpha : float, default=1.0
             Opacity of the heatmap overlay.
+        flip_mode : str, default="board"
+            Flip mode for black's perspective. Use "board" to flip the board, "heatmap" to flip the heatmap.
 
         Returns
         -------
@@ -340,6 +343,14 @@ class LczeroBoard(chess.Board):
             raise ImportError(
                 "matplotlib is required to render heatmaps, install it with `pip install lczerolens[viz]`."
             ) from e
+
+        if flip_mode not in ["board", "heatmap"]:
+            raise ValueError(f"Got unexpected flip_mode {flip_mode}")
+
+        if heatmap.ndim == 2:
+            heatmap = heatmap.view(64)
+        if flip_mode == "heatmap":
+            heatmap = heatmap.view(8, 8).flip(0).view(64)
 
         cmap = matplotlib.colormaps[cmap_name].resampled(1000)
 
@@ -381,6 +392,7 @@ class LczeroBoard(chess.Board):
 
         svg_board = chess.svg.board(
             self,
+            orientation=self.turn if flip_mode == "board" else chess.WHITE,
             check=check,
             fill=color_dict,
             size=400,
