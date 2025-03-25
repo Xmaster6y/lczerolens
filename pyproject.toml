@@ -7,7 +7,7 @@ license = {file = "LICENSE"}
 authors = [
     {name = "Yoann Poupart", email = "yoann.poupart@ens-lyon.org"},
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "datasets>=3.2.0",
     "einops>=0.8.0",
