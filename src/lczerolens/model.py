@@ -1,7 +1,7 @@
 """Class for wrapping the LCZero models."""
 
 import os
-from typing import Dict, Type, Any, Tuple, Union, Callable
+from typing import Dict, Type, Any, Tuple, Union
 
 import torch
 from onnx2torch import convert
@@ -135,8 +135,8 @@ class LczeroModel(NNsight):
                 onnx_model = safe_shape_inference(onnx_model_path)
             onnx_torch_model = convert(onnx_model)
             return cls(onnx_torch_model)
-        except Exception:
-            raise ValueError(f"Could not load model at {onnx_model_path}.")
+        except Exception as e:
+            raise ValueError(f"Could not load model at {onnx_model_path}.") from e
 
     @classmethod
     def from_torch_path(cls, torch_model_path: str) -> "LczeroModel":
@@ -163,41 +163,14 @@ class LczeroModel(NNsight):
             raise FileNotFoundError(f"Model path {torch_model_path} does not exist.")
         try:
             torch_model = torch.load(torch_model_path)
-        except Exception:
-            raise ValueError(f"Could not load model at {torch_model_path}.")
+        except Exception as e:
+            raise ValueError(f"Could not load model at {torch_model_path}.") from e
         if isinstance(torch_model, LczeroModel):
             return torch_model
         elif isinstance(torch_model, nn.Module):
             return cls(torch_model)
         else:
             raise ValueError(f"Could not load model at {torch_model_path}.")
-
-    @staticmethod
-    def _make_onnx_td_forward(onnx_model: nn.Module) -> Callable:
-        """Creates a forward function that returns a TensorDict for ONNX models.
-
-        Parameters
-        ----------
-        onnx_model : nn.Module
-            The ONNX model
-
-        Returns
-        -------
-        Callable
-            The forward function that returns a TensorDict
-        """
-        old_forward = onnx_model.forward
-        output_node = list(onnx_model.graph.nodes)[-1]
-        output_names = [n.name.replace("output_", "") for n in output_node.all_input_nodes]
-
-        def td_forward(x):
-            old_out = old_forward(x)
-            return TensorDict(
-                {name: old_out[i] for i, name in enumerate(output_names)},
-                batch_size=x.shape[0],
-            )
-
-        return td_forward
 
     @contextmanager
     def _ensure_proper_forward(self):
