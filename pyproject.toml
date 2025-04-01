@@ -19,6 +19,13 @@ dependencies = [
     "tensordict>=0.6.2",
     "typing-extensions>=4.12.2",
 ]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Researchers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
 
 [project.optional-dependencies]
 viz = [
