@@ -27,6 +27,13 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
 ]
 
+[project.urls]
+homepage = "https://lczerolens.readthedocs.io/"
+documentation = "https://lczerolens.readthedocs.io/"
+source = "https://github.com/Xmaster6y/lczerolens"
+issues = "https://github.com/Xmaster6y/lczerolens/issues"
+releasenotes = "https://github.com/Xmaster6y/lczerolens/releases"
+
 [project.optional-dependencies]
 viz = [
     "matplotlib>=3.10.0",
