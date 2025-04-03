@@ -103,11 +103,12 @@ class ModelSampler(Sampler):
             return board.decode_move(legal_indices[idx])
         return super().choose_move(board, utility, legal_indices)
 
-    @torch.no_grad
+    @torch.no_grad()
     def get_utilities(
         self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.pop("batch_size", -1)
+        callback = kwargs.pop("callback", None)
 
         for legal_indices, batch_stats in self._get_batched_stats(boards, batch_size, **kwargs):
             to_log = {}
@@ -117,6 +118,9 @@ class ModelSampler(Sampler):
             utility += self.beta * self._get_m_values(batch_stats, q_values, to_log)
             utility += self.gamma * self._get_p_values(batch_stats, legal_indices, to_log)
             to_log["max_utility"] = utility.max().item()
+
+            self._use_callback(callback, batch_stats, to_log)
+
             yield utility, legal_indices, to_log
 
     def _get_batched_stats(self, boards, batch_size, use_next_boards=True, **kwargs):
@@ -178,16 +182,24 @@ class ModelSampler(Sampler):
             return legal_policy
         return torch.zeros_like(legal_indices)
 
+    def _use_callback(self, callback, batch_stats, to_log):
+        if callback is not None:
+            to_log_update = callback(batch_stats, to_log)
+            if not isinstance(to_log_update, dict):
+                raise ValueError("Callback must return a dictionary.")
+            to_log |= to_log_update
+
 
 @dataclass
 class PolicySampler(ModelSampler):
     use_suboptimal: bool = False
 
-    @torch.no_grad
+    @torch.no_grad()
     def get_utilities(
         self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.pop("batch_size", -1)
+        callback = kwargs.pop("callback", None)
 
         to_log = {}
         for legal_indices, batch_stats in self._get_batched_stats(boards, batch_size, use_next_boards=False, **kwargs):
@@ -195,6 +207,9 @@ class PolicySampler(ModelSampler):
             if self.use_suboptimal:
                 idx = legal_policy.argmax()
                 legal_policy[idx] = torch.tensor(-1e3)
+
+            self._use_callback(callback, batch_stats, to_log)
+
             yield legal_policy, legal_indices, to_log
 
 
