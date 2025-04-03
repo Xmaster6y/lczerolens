@@ -119,11 +119,7 @@ class ModelSampler(Sampler):
             utility += self.gamma * self._get_p_values(batch_stats, legal_indices, to_log)
             to_log["max_utility"] = utility.max().item()
 
-            if callback is not None:
-                to_log_update = callback(batch_stats, to_log)
-                if not isinstance(to_log_update, dict):
-                    raise ValueError("Callback must return a dictionary.")
-                to_log.update(to_log_update)
+            self._use_callback(callback, batch_stats, to_log)
 
             yield utility, legal_indices, to_log
 
@@ -186,6 +182,13 @@ class ModelSampler(Sampler):
             return legal_policy
         return torch.zeros_like(legal_indices)
 
+    def _use_callback(self, callback, batch_stats, to_log):
+        if callback is not None:
+            to_log_update = callback(batch_stats, to_log)
+            if not isinstance(to_log_update, dict):
+                raise ValueError("Callback must return a dictionary.")
+            to_log |= to_log_update
+
 
 @dataclass
 class PolicySampler(ModelSampler):
@@ -205,11 +208,7 @@ class PolicySampler(ModelSampler):
                 idx = legal_policy.argmax()
                 legal_policy[idx] = torch.tensor(-1e3)
 
-            if callback is not None:
-                to_log_update = callback(batch_stats, to_log)
-                if not isinstance(to_log_update, dict):
-                    raise ValueError("Callback must return a dictionary.")
-                to_log.update(to_log_update)
+            self._use_callback(callback, batch_stats, to_log)
 
             yield legal_policy, legal_indices, to_log
 
