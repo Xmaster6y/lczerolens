@@ -33,7 +33,7 @@ class ActivationBuffer:
             DataLoader(self.dataset, batch_size=self.compute_batch_size, **self.dataloader_kwargs)
         )
 
-    @torch.no_grad
+    @torch.no_grad()
     def _fill_buffer(self):
         if self.logger is not None:
             self.logger.info("Computing activations...")

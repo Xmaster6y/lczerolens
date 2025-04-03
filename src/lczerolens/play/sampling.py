@@ -103,7 +103,7 @@ class ModelSampler(Sampler):
             return board.decode_move(legal_indices[idx])
         return super().choose_move(board, utility, legal_indices)
 
-    @torch.no_grad
+    @torch.no_grad()
     def get_utilities(
         self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
@@ -183,7 +183,7 @@ class ModelSampler(Sampler):
 class PolicySampler(ModelSampler):
     use_suboptimal: bool = False
 
-    @torch.no_grad
+    @torch.no_grad()
     def get_utilities(
         self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
