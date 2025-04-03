@@ -2,9 +2,10 @@
 
 # lczerolens 🔍
 
-[![Python version](https://img.shields.io/pypi/pyversions/lczerolens.svg)](https://www.python.org/downloads/)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Xmaster6y/lczerolens/blob/main/LICENSE)
-<a href="https://pypi.org/project/lczerolens/"><img src="https://img.shields.io/pypi/v/lczerolens?color=purple"></img></a>
+[![lczerolens](https://img.shields.io/pypi/v/lczerolens?color=purple)](https://pypi.org/project/lczerolens/)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://github.com/Xmaster6y/lczerolens/blob/main/LICENSE)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![python versions](https://img.shields.io/pypi/pyversions/lczerolens.svg)](https://www.python.org/downloads/)
 ![ci](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci.yml/badge.svg)
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 [![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
