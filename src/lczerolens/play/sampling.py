@@ -108,6 +108,7 @@ class ModelSampler(Sampler):
         self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.pop("batch_size", -1)
+        callback = kwargs.pop("callback", None)
 
         for legal_indices, batch_stats in self._get_batched_stats(boards, batch_size, **kwargs):
             to_log = {}
@@ -117,6 +118,13 @@ class ModelSampler(Sampler):
             utility += self.beta * self._get_m_values(batch_stats, q_values, to_log)
             utility += self.gamma * self._get_p_values(batch_stats, legal_indices, to_log)
             to_log["max_utility"] = utility.max().item()
+
+            if callback is not None:
+                to_log_update = callback(batch_stats, to_log)
+                if not isinstance(to_log_update, dict):
+                    raise ValueError("Callback must return a dictionary.")
+                to_log.update(to_log_update)
+
             yield utility, legal_indices, to_log
 
     def _get_batched_stats(self, boards, batch_size, use_next_boards=True, **kwargs):
@@ -188,6 +196,7 @@ class PolicySampler(ModelSampler):
         self, boards: Iterable[LczeroBoard], **kwargs
     ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
         batch_size = kwargs.pop("batch_size", -1)
+        callback = kwargs.pop("callback", None)
 
         to_log = {}
         for legal_indices, batch_stats in self._get_batched_stats(boards, batch_size, use_next_boards=False, **kwargs):
@@ -195,6 +204,13 @@ class PolicySampler(ModelSampler):
             if self.use_suboptimal:
                 idx = legal_policy.argmax()
                 legal_policy[idx] = torch.tensor(-1e3)
+
+            if callback is not None:
+                to_log_update = callback(batch_stats, to_log)
+                if not isinstance(to_log_update, dict):
+                    raise ValueError("Callback must return a dictionary.")
+                to_log.update(to_log_update)
+
             yield legal_policy, legal_indices, to_log
 
 
