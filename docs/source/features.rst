@@ -32,8 +32,8 @@ Features
                <i class="fa-solid fa-map fa-2x"></i>
             </div>
             <div>
-               <h5 class="card-title">Render Saliency Heatmaps</h5>
-               <p class="card-text">Render the saliency heatmaps for a given chess board.</p>
+               <h5 class="card-title">Visualise Heatmaps</h5>
+               <p class="card-text">Visualise saliency heatmaps or encodings for a given chess board.</p>
             </div>
          </div>
 
