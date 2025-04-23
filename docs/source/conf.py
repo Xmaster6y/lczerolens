@@ -95,4 +95,8 @@ html_context = {"default_mode": "auto"}
 
 html_css_files = [
     "css/custom.css",
+    "css/nbsphinx.css",
 ]
+
+# Nbsphinx
+nbsphinx_execute = "auto"

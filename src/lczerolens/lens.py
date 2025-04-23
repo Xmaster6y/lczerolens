@@ -114,6 +114,22 @@ class Lens(ABC):
         """
         return isinstance(model, LczeroModel)
 
+    def _ensure_compatible(self, model: LczeroModel):
+        """Ensure the lens is compatible with the model.
+
+        Parameters
+        ----------
+        model : LczeroModel
+            The NNsight model.
+
+        Raises
+        ------
+        ValueError
+            If the lens is not compatible with the model.
+        """
+        if not self.is_compatible(model):
+            raise ValueError(f"Lens {self._lens_type} is not compatible with model of type {type(model)}.")
+
     def prepare(self, model: LczeroModel, **kwargs) -> LczeroModel:
         """Prepare the model for the lens.
 
@@ -198,8 +214,7 @@ class Lens(ABC):
         ValueError
             If the lens is not compatible with the model.
         """
-        if not self.is_compatible(model):
-            raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
+        self._ensure_compatible(model)
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
         return self._trace(prepared_model, *inputs, model_kwargs=model_kwargs, intervention_kwargs=kwargs)
@@ -229,8 +244,7 @@ class Lens(ABC):
         ValueError
             If the lens is not compatible with the model.
         """
-        if not self.is_compatible(model):
-            raise ValueError(f"Lens {self._lens_type} is not compatible with the model.")
+        self._ensure_compatible(model)
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
         for inputs, dynamic_intervention_kwargs in iter_inputs:
