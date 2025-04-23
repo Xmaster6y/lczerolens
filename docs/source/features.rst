@@ -21,7 +21,7 @@ Features
    :gutter: 3
 
    .. grid-item-card::
-      :link: notebooks/features/render-saliency-heatmaps.ipynb
+      :link: notebooks/features/visualise-heatmaps.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -126,7 +126,7 @@ Features
    :hidden:
    :maxdepth: 2
 
-   notebooks/features/render-saliency-heatmaps.ipynb
+   notebooks/features/visualise-heatmaps.ipynb
    notebooks/features/probe-concepts.ipynb
    notebooks/features/move-prediction.ipynb
    notebooks/features/run-models-on-gpu.ipynb
