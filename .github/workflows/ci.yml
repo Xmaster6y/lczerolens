@@ -4,50 +4,22 @@ on:
   pull_request:
 
 jobs:
-  ci-python-3_10:
+  ci:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
     environment: ci
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup Python
-      uses: actions/setup-python@v3
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.11"
-    - name: Run Python commands
-      run: |
-        pip install --upgrade pip
-        pip install uv
+        python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        uv sync --python 3.10 --locked
-    - name: Run checks
-      run: |
-        make checks
-    - name: Download assets
-      run: |
-        make test-assets
-    - name: Run tests
-      run: |
-        make tests
-
-  ci-python-3_11:
-    runs-on: ubuntu-latest
-    environment: ci
-    timeout-minutes: 10
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.11"
-    - name: Run Python commands
-      run: |
-        pip install --upgrade pip
-        pip install uv
-    - name: Install dependencies
-      run: |
-        uv sync --python 3.11 --locked
+        uv sync --locked
     - name: Run checks
       run: |
         make checks

@@ -8,7 +8,7 @@ build:
     - asdf plugin add uv
     - asdf install uv latest
     - asdf global uv latest
-    - uv sync
+    - uv sync --locked
     - make docs
     - mkdir -p $READTHEDOCS_OUTPUT
     - mv docs/build/html $READTHEDOCS_OUTPUT
