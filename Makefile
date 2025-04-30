@@ -20,8 +20,8 @@ tests-slow:
 
 .PHONY: docs
 docs:
-	cd docs && uv run make html
+	cd docs && uv run --group docs make html
 
 .PHONY: demo
 demo:
-	uv run python spaces/lczerolens-demo/app/main.py
+	uv run --group demo python spaces/lczerolens-demo/app/main.py

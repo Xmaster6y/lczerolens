@@ -44,8 +44,6 @@ pip install lczerolens
 
 ## Demo
 
-🔴 Not up to date.
-
 ### Spaces
 
 - [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/lczerolens-demo)
@@ -53,12 +51,11 @@ pip install lczerolens
 
 ### Local Demo
 
-Additionally, you can run the gradio demo locally. First you'll need gradio, which is packaged in the `demo` group:
+Additionally, you can run the gradio demo locally. First you'll need the space, which is packaged in a submodule:
 
 ```bash
-git clone https://github.com/Xmaster6y/lczerolens.git
+git clone --recurse-submodules https://github.com/Xmaster6y/lczerolens.git
 cd lczerolens
-uv sync --group demo
 ```
 
 And then launch the demo (running on port `8000`):
@@ -68,8 +65,6 @@ make demo
 ```
 
 ## Full Documentation
-
-🔴 Not up to date.
 
 See the full [documentation](https://lczerolens.readthedocs.io).
 
