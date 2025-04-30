@@ -1,7 +1,7 @@
 name: CI (slow)
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   ci:
