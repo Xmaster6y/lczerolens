@@ -30,7 +30,12 @@ jobs:
       run: |
         make tests
     - name: Upload coverage reports to Codecov
+      if: matrix.python-version == '3.10'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-      if: matrix.python-version == '3.10'
+    - name: Upload test results to Codecov
+      if: matrix.python-version == '3.10' && ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
