@@ -24,7 +24,7 @@ jobs:
       with:
         output-dir: dist
       env:
-        CIBW_BUILD: cp{310,311,312}*
+        CIBW_BUILD: cp{310,311,312}-{macosx_arm64,manylinux_x86_64}
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       if: ${{ matrix.os == 'ubuntu-latest' }}
