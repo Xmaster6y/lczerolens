@@ -19,6 +19,7 @@ extensions = [
     "sphinx_copybutton",  # Copy button for code blocks
     "sphinx_design",  # Boostrap design components
     "nbsphinx",  # Jupyter notebook support
+    "autoapi.extension",
 ]
 
 templates_path = ["_templates"]
@@ -101,3 +102,8 @@ html_css_files = [
 
 # Nbsphinx
 nbsphinx_execute = "auto"
+
+# Autoapi
+autoapi_dirs = ["../../src"]
+autoapi_root = "api"
+autoapi_keep_files = False
