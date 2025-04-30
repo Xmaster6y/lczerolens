@@ -15,6 +15,7 @@ extensions = [
     # 'sphinx.ext.autosectionlabel',
     "sphinx.ext.autodoc",  # Auto documentation from docstrings
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
+    "sphinx.ext.viewcode",  # View code in the browser
     "sphinx_copybutton",  # Copy button for code blocks
     "sphinx_design",  # Boostrap design components
     "nbsphinx",  # Jupyter notebook support
