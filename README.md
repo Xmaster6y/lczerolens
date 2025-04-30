@@ -6,6 +6,7 @@
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://github.com/Xmaster6y/lczerolens/blob/main/LICENSE)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![python versions](https://img.shields.io/pypi/pyversions/lczerolens.svg)](https://www.python.org/downloads/)
+
 [![codecov](https://codecov.io/gh/Xmaster6y/lczerolens/graph/badge.svg?token=JKJAWB451A)](https://codecov.io/gh/Xmaster6y/lczerolens)
 ![ci-fast](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-fast.yml/badge.svg)
 ![ci-slow](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-slow.yml/badge.svg)
