@@ -2,16 +2,16 @@
 checks:
 	uv run pre-commit run --all-files
 
-.PHONY: test-assets
-test-assets:
-	bash assets/resolve-test-assets.sh
+.PHONY: tests-assets
+tests-assets:
+	bash assets/resolve-tests-assets.sh
 
 .PHONY: demo-assets
 demo-assets:
 	bash assets/resolve-demo-assets.sh
 
-.PHONY: tests
-tests:
+.PHONY: tests-fast
+tests-fast:
 	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyfast --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
 .PHONY: tests-slow
