@@ -24,4 +24,4 @@ docs:
 
 .PHONY: demo
 demo:
-	uv run --group demo python spaces/lczerolens-demo/app/main.py
+	uv run --group demo gradio spaces/lczerolens-demo/app.py
