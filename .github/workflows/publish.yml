@@ -40,20 +40,20 @@ jobs:
         name: package-${{ inputs.version }}-${{ strategy.job-index }}
         path: dist
 
-  # publish:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   environment: publish
-  #   permissions:
-  #     id-token: write
-  #   steps:
-  #   - name: Download all the dists
-  #     uses: actions/download-artifact@v4
-  #     with:
-  #       pattern: package-${{ inputs.version }}-*
-  #       merge-multiple: true
-  #       path: dist
-  #   - name: Publish package
-  #     uses: pypa/gh-action-pypi-publish@release/v1
-  #     with:
-  #       packages-dir: dist
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      id-token: write
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        pattern: package-${{ inputs.version }}-*
+        merge-multiple: true
+        path: dist
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist
