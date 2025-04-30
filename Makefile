@@ -12,11 +12,11 @@ demo-assets:
 
 .PHONY: tests
 tests:
-	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyfast
+	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyfast --cov-branch --cov-report=xml
 
 .PHONY: tests-slow
 tests-slow:
-	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyslow
+	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyslow --cov-branch --cov-report=xml
 
 .PHONY: docs
 docs:
