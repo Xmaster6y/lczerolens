@@ -27,7 +27,7 @@ jobs:
         make checks
     - name: Download assets
       run: |
-        make test-assets
+        make tests-assets
     - name: Run tests
       run: |
         make ${{ inputs.tests-type }}
