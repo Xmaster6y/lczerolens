@@ -11,7 +11,7 @@ lczerolens
     start
     features
     tutorials
-    api
+    api/index
     About <about>
 
 .. grid:: 1 1 2 2
@@ -51,7 +51,7 @@ lczerolens
 
                 Tutorials
 
-          .. button-ref:: api
+          .. button-ref:: api/index
             :color: primary
             :outline:
 
