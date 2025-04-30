@@ -15,9 +15,11 @@ extensions = [
     # 'sphinx.ext.autosectionlabel',
     "sphinx.ext.autodoc",  # Auto documentation from docstrings
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings
+    "sphinx.ext.viewcode",  # View code in the browser
     "sphinx_copybutton",  # Copy button for code blocks
     "sphinx_design",  # Boostrap design components
     "nbsphinx",  # Jupyter notebook support
+    "autoapi.extension",
 ]
 
 templates_path = ["_templates"]
@@ -100,3 +102,9 @@ html_css_files = [
 
 # Nbsphinx
 nbsphinx_execute = "auto"
+
+# Autoapi
+autoapi_dirs = ["../../src"]
+autoapi_root = "api"
+autoapi_keep_files = False
+autodoc_typehints = "description"

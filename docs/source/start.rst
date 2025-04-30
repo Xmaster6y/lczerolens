@@ -59,7 +59,7 @@ Advanced Features
       See implementations of :bdg-primary:`lczerolens` through common interpretability techniques.
 
    .. grid-item-card:: API Reference
-      :link: api
+      :link: api/index
       :link-type: doc
 
       See the full API reference for :bdg-primary:`lczerolens` to extend its functionality.
