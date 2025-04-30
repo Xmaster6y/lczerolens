@@ -1,6 +1,6 @@
 [submodule "spaces/lichess-puzzles-leaderboard"]
 	path = spaces/lichess-puzzles-leaderboard
-	url = git@hf.co:spaces/lczerolens/lichess-puzzles-leaderboard
+	url = https://huggingface.co/spaces/lczerolens/lichess-puzzles-leaderboard
 [submodule "spaces/lczerolens-demo"]
 	path = spaces/lczerolens-demo
-	url = git@hf.co:spaces/lczerolens/lczerolens-demo
+	url = https://huggingface.co/spaces/lczerolens/lczerolens-demo

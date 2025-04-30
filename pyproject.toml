@@ -82,7 +82,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-default-groups = ["dev", "docs"]
+default-groups = ["dev"]
 
 [tool.uv.sources]
 lczero-bindings = { git = "https://github.com/LeelaChessZero/lc0.git", rev = "dfcd1c314150b93125697491bef1221841443c18" }
