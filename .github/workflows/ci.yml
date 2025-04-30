@@ -1,7 +1,9 @@
-name: CI
-
 on:
-  pull_request:
+  workflow_call:
+    inputs:
+      tests-type:
+        required: true
+        type: string
 
 jobs:
   ci:
@@ -25,7 +27,17 @@ jobs:
         make checks
     - name: Download assets
       run: |
-        make test-assets
+        make tests-assets
     - name: Run tests
       run: |
-        make tests
+        make ${{ inputs.tests-type }}
+    - name: Upload coverage reports to Codecov
+      if: matrix.python-version == '3.10'
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+    - name: Upload test results to Codecov
+      if: matrix.python-version == '3.10' && ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}

@@ -1,0 +1,10 @@
+name: CI (fast)
+
+on:
+  pull_request:
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    with:
+      tests-type: tests-fast
