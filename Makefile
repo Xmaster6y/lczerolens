@@ -25,3 +25,7 @@ docs:
 .PHONY: demo
 demo:
 	uv run --group demo gradio spaces/lczerolens-demo/app.py
+
+.PHONY: demo-backends
+demo-backends:
+	uv run --group demo gradio spaces/lczerolens-backends-demo/app.py

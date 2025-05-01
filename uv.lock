@@ -1458,6 +1458,7 @@ viz = [
 demo = [
     { name = "gradio" },
     { name = "matplotlib" },
+    { name = "v-lczero-bindings" },
 ]
 dev = [
     { name = "gdown" },
@@ -1507,6 +1508,7 @@ requires-dist = [
 demo = [
     { name = "gradio", specifier = ">=5.12.0" },
     { name = "matplotlib", specifier = ">=3.10.0" },
+    { name = "v-lczero-bindings", specifier = ">=0.31.2" },
 ]
 dev = [
     { name = "gdown", specifier = ">=5.2.0" },
