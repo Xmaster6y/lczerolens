@@ -1431,11 +1431,6 @@ wheels = [
 ]
 
 [[package]]
-name = "lczero-bindings"
-version = "0.1.0"
-source = { git = "https://github.com/LeelaChessZero/lc0.git?rev=dfcd1c314150b93125697491bef1221841443c18#dfcd1c314150b93125697491bef1221841443c18" }
-
-[[package]]
 name = "lczerolens"
 version = "0.3.2.dev0"
 source = { editable = "." }
@@ -1452,6 +1447,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+backends = [
+    { name = "v-lczero-bindings" },
+]
 viz = [
     { name = "matplotlib" },
 ]
@@ -1464,12 +1462,12 @@ demo = [
 dev = [
     { name = "gdown" },
     { name = "ipykernel" },
-    { name = "lczero-bindings" },
     { name = "nbconvert" },
     { name = "onnxruntime" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "v-lczero-bindings" },
 ]
 docs = [
     { name = "nbsphinx" },
@@ -1502,6 +1500,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "tensordict", specifier = ">=0.6.2" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
+    { name = "v-lczero-bindings", marker = "extra == 'backends'", specifier = ">=0.31.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -1512,12 +1511,12 @@ demo = [
 dev = [
     { name = "gdown", specifier = ">=5.2.0" },
     { name = "ipykernel", specifier = ">=6.29.5" },
-    { name = "lczero-bindings", git = "https://github.com/LeelaChessZero/lc0.git?rev=dfcd1c314150b93125697491bef1221841443c18" },
     { name = "nbconvert", specifier = ">=7.16.5" },
     { name = "onnxruntime", specifier = ">=1.20.1" },
     { name = "pre-commit", specifier = ">=4.0.1" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
+    { name = "v-lczero-bindings", specifier = ">=0.31.2" },
 ]
 docs = [
     { name = "nbsphinx", specifier = ">=0.9.6" },
@@ -4066,6 +4065,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/4d/938bd85e5bf2edeec766267a5015ad969730bb91e31b44021dfe8b22df6c/uvicorn-0.34.0.tar.gz", hash = "sha256:404051050cd7e905de2c9a7e61790943440b3416f49cb409f965d9dcd0fa73e9", size = 76568 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/14/33a3a1352cfa71812a3a21e8c9bfb83f60b0011f5e36f2b1399d51928209/uvicorn-0.34.0-py3-none-any.whl", hash = "sha256:023dc038422502fa28a09c7a30bf2b6991512da7dcdb8fd35fe57cfc154126f4", size = 62315 },
+]
+
+[[package]]
+name = "v-lczero-bindings"
+version = "0.31.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/6f/e9f713a35959ec2e931a0651933ef0b431fbceff952d7e3207eaa8c9faae/v_lczero_bindings-0.31.2.tar.gz", hash = "sha256:cca35d3df155b7a11993d24f5ba8800e9262ce6fc11efab4987fc4a10f4ffb10", size = 712343 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/06/a4/4109483502ffb745fc80a31cfd2c71e8eea039ec541f2e8a96e213c62432/v_lczero_bindings-0.31.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:96436dd32ee708dc7753bff55a9b147a616d9911b7d323c35ac3bb45ca7e1960", size = 3305656 },
+    { url = "https://files.pythonhosted.org/packages/7e/5f/8515c419dcac6047a6334072af75bbff9377c375c06ed4289be8978075d7/v_lczero_bindings-0.31.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6ac680c093a7377de0c4762bf33d75325c4c946f84c98537c654147b3debbfd6", size = 3262084 },
+    { url = "https://files.pythonhosted.org/packages/23/2d/d31d71a3e263278feebd8da78010d8adc0973016b3298bb241a520cef625/v_lczero_bindings-0.31.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:edd5ba4b4df39ed2c992c7fa892acd7877fd8b5a3107ec3220b2bf05f9074810", size = 3305655 },
+    { url = "https://files.pythonhosted.org/packages/d7/56/5f76ba836a1964afd831669bf041ce7418aee0221f4e6626054b08402b2f/v_lczero_bindings-0.31.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ae63c6bea9132ddc8cbecff0ecb5a39817dd073e89442c3baba303a46b65cb10", size = 3262083 },
+    { url = "https://files.pythonhosted.org/packages/dd/8f/90bd7f329a5b3c1c3c293ae5a46dc2e39c7f97cbc058f45d84102f2a84aa/v_lczero_bindings-0.31.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ddae9aa8cf9a20cc062702d77b01bc9f5c01071e6335fd7072677b296914b33e", size = 3305656 },
+    { url = "https://files.pythonhosted.org/packages/7c/e1/567402d644beaea472bbb09237b9e55cca3f337e2499e4f25464128619e6/v_lczero_bindings-0.31.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a0a820d8b05c63abd019cc3ca032d1405644fdf973c72b65bbb3fe234206bf2d", size = 3262235 },
 ]
 
 [[package]]
