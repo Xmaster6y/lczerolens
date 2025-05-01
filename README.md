@@ -64,6 +64,12 @@ And then launch the demo (running on port `8000`):
 make demo
 ```
 
+To test the backends use:
+
+```bash
+make demo-backends
+```
+
 ## Full Documentation
 
 See the full [documentation](https://lczerolens.readthedocs.io).
