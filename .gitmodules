@@ -4,3 +4,6 @@
 [submodule "spaces/lczerolens-demo"]
 	path = spaces/lczerolens-demo
 	url = https://huggingface.co/spaces/lczerolens/lczerolens-demo
+[submodule "spaces/lczerolens-backends-demo"]
+	path = spaces/lczerolens-backends-demo
+	url = https://huggingface.co/spaces/lczerolens/lczerolens-backends-demo
