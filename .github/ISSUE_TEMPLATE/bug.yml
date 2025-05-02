@@ -26,6 +26,7 @@ body:
       description: What version of the software are you running?
       options:
         - "latest"
+        - "0.3.3"
         - "0.3.2"
         - "0.3.1"
         - "0.3.0"

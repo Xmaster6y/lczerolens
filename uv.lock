@@ -1432,7 +1432,7 @@ wheels = [
 
 [[package]]
 name = "lczerolens"
-version = "0.3.2.dev0"
+version = "0.3.3"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
