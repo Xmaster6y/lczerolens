@@ -47,6 +47,7 @@ pip install lczerolens
 ### Spaces
 
 - [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/lczerolens-demo)
+- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/lczerolens-backends-demo)
 - [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/lichess-puzzles-leaderboard)
 
 ### Local Demo
@@ -62,6 +63,12 @@ And then launch the demo (running on port `8000`):
 
 ```bash
 make demo
+```
+
+To test the backends use:
+
+```bash
+make demo-backends
 ```
 
 ## Full Documentation
