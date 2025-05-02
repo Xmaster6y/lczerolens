@@ -3,7 +3,8 @@ name = "lczerolens"
 version = "0.3.3"
 description = "Interpretability for LeelaChessZero networks."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Yoann Poupart", email = "yoann.poupart@ens-lyon.org"},
 ]
@@ -82,8 +83,8 @@ scripts = [
 target-dir = "build/dist"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [tool.uv]
 default-groups = ["dev"]
