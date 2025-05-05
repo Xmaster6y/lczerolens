@@ -26,6 +26,52 @@ Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make the analy
 pip install lczerolens
 ```
 
+Take the `viz` extra to render heatmaps and the `backends` extra to use the `lc0` backends.
+
+### Run Models
+
+Get the best move predicted by a model:
+
+```python
+from lczerolens import LczeroBoard, LczeroModel
+
+model = LczeroModel.from_onnx_path("demo/onnx-models/lc0-10-4238.onnx")
+board = LczeroBoard()
+output = model(board)
+legal_indices = board.get_legal_indices()
+best_move_idx = output["policy"].gather(
+    dim=1,
+    index=legal_indices.unsqueeze(0)
+).argmax(dim=1).item()
+print(board.decode_move(legal_indices[best_move_idx]))
+```
+
+### Intervene
+
+In addition to the built-in lenses, you can easily create your own lenses by subclassing the `Lens` class and overriding the `_intervene` method. E.g. compute an neuron ablation effect:
+
+```python
+from lczerolens import LczeroBoard, LczeroModel, Lens
+
+class CustomLens(Lens):
+    _grad_enabled: bool = False
+
+    def _intervene(self, model: LczeroModel, **kwargs) -> dict:
+        ablate = kwargs.get("ablate", False)
+        if ablate:
+            l5_module = getattr(model, "block5/conv2/relu")
+            l5_module.output[0, :, 0, 0] = 0 # relative a1
+        return getattr(model, "output/wdl").output[0,0].save() # win probability
+
+model = LczeroModel.from_onnx_path("path/to/model.onnx")
+lens = CustomLens()
+board = LczeroBoard()
+
+clean_results = lens.analyse(model, board)
+corrupted_results = lens.analyse(model, board, ablate=True)
+print((corrupted_results - clean_results) / clean_results)
+```
+
 ### Features
 
 - [Visualise Heatmaps](https://lczerolens.readthedocs.io/en/latest/notebooks/features/visualise-heatmaps.html): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/visualise-heatmaps.ipynb)

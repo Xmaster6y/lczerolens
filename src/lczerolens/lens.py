@@ -15,6 +15,7 @@ class Lens(ABC):
 
     _lens_type: str
     _registry: Dict[str, Type["Lens"]] = {}
+    _grad_enabled: bool = False
 
     @classmethod
     def register(cls, name: str) -> Callable:
@@ -214,10 +215,13 @@ class Lens(ABC):
         ValueError
             If the lens is not compatible with the model.
         """
+        if not isinstance(model, LczeroModel):
+            raise ValueError(f"Model is not a LczeroModel. Got {type(model)}.")
         self._ensure_compatible(model)
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
-        return self._trace(prepared_model, *inputs, model_kwargs=model_kwargs, intervention_kwargs=kwargs)
+        with torch.set_grad_enabled(self._grad_enabled):
+            return self._trace(prepared_model, *inputs, model_kwargs=model_kwargs, intervention_kwargs=kwargs)
 
     def analyse_batched(
         self,
