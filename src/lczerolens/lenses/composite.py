@@ -6,6 +6,7 @@ from lczerolens.lens import Lens
 from lczerolens.model import LczeroModel
 
 
+@Lens.register("composite")
 class CompositeLens(Lens):
     """Composite lens for XAI.
 
