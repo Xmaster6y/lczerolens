@@ -214,6 +214,8 @@ class Lens(ABC):
         ValueError
             If the lens is not compatible with the model.
         """
+        if not isinstance(model, LczeroModel):
+            raise ValueError(f"Model is not a LczeroModel. Got {type(model)}.")
         self._ensure_compatible(model)
         model_kwargs = kwargs.get("model_kwargs", {})
         prepared_model = self.prepare(model, **kwargs)
