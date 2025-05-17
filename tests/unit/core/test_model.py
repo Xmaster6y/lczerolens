@@ -2,7 +2,6 @@
 
 import pytest
 import torch
-import sys
 from lczero.backends import GameState
 
 from lczerolens import Flow, LczeroBoard
@@ -14,7 +13,7 @@ class TestModel:
         """Test that the model loads."""
         tiny_model
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_model_prediction(self, tiny_lczero_backend, tiny_model):
         """Test that the model prediction works."""
         board = LczeroBoard()
@@ -26,7 +25,7 @@ class TestModel:
         assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_model_prediction_random(self, tiny_lczero_backend, tiny_model, random_move_board_list):
         """Test that the model prediction works."""
         move_list, board_list = random_move_board_list
@@ -39,7 +38,7 @@ class TestModel:
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_model_prediction_repetition(self, tiny_lczero_backend, tiny_model, repetition_move_board_list):
         """Test that the model prediction works."""
         move_list, board_list = repetition_move_board_list
@@ -52,7 +51,7 @@ class TestModel:
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_model_prediction_long(self, tiny_lczero_backend, tiny_model, long_move_board_list):
         """Test that the model prediction works."""
         move_list, board_list = long_move_board_list

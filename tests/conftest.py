@@ -72,6 +72,7 @@ def winner_senet_ort(winner_ensure_network):
 def pytest_addoption(parser):
     parser.addoption("--onlyslow", action="store_true", default=False, help="run slow tests only")
     parser.addoption("--onlyfast", action="store_true", default=False, help="run fast tests only")
+    parser.addoption("--onlybackends", action="store_true", default=False, help="run backends tests only")
 
 
 def pytest_configure(config):
@@ -89,3 +90,8 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
+    elif config.getoption("--onlybackends"):
+        skip_backends = pytest.mark.skip(reason="--onlybackends given in cli: skipping non-backends tests")
+        for item in items:
+            if "backends" not in item.keywords:
+                item.add_marker(skip_backends)

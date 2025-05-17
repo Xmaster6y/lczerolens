@@ -2,7 +2,6 @@
 Tests for the board utils.
 """
 
-import sys
 from typing import List, Tuple
 import pytest
 import chess
@@ -13,7 +12,7 @@ from lczerolens import LczeroBoard
 
 
 class TestWithBackend:
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_board_to_config_tensor(
         self, random_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -28,7 +27,7 @@ class TestWithBackend:
             lczero_input_tensor = lczero_utils.board_from_backend(tiny_lczero_backend, lczero_game, planes=13)
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_board_to_input_tensor(
         self, random_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -47,7 +46,7 @@ class TestWithBackend:
 
 
 class TestRepetition:
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_board_to_config_tensor(
         self, repetition_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -62,7 +61,7 @@ class TestRepetition:
             lczero_input_tensor = lczero_utils.board_from_backend(tiny_lczero_backend, lczero_game, planes=13)
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_board_to_input_tensor(
         self, repetition_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -79,7 +78,7 @@ class TestRepetition:
 
 
 class TestLong:
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_board_to_config_tensor(
         self, long_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -94,7 +93,7 @@ class TestLong:
             lczero_input_tensor = lczero_utils.board_from_backend(tiny_lczero_backend, lczero_game, planes=13)
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_board_to_input_tensor(
         self, long_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -124,7 +123,7 @@ class TestStability:
 
 
 class TestBackend:
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_encode_decode_random(self, random_move_board_list):
         """
         Test that encoding and decoding a move corresponds to the backend.
@@ -143,7 +142,7 @@ class TestBackend:
             assert len(lczero_policy_indices) == len(policy_indices)
             assert set(lczero_policy_indices) == set(policy_indices)
 
-    @pytest.mark.skipif(sys.version_info >= (3, 9), reason="lczero.backends is only supported on Python 3.9")
+    @pytest.mark.backends
     def test_encode_decode_long(self, long_move_board_list):
         """
         Test that encoding and decoding a move corresponds to the backend.

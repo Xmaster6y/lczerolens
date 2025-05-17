@@ -1,0 +1,10 @@
+name: CI (backends)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    with:
+      tests-type: tests-backends
