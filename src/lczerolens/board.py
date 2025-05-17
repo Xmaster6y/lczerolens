@@ -298,7 +298,8 @@ class LczeroBoard(chess.Board):
         save_to: Optional[str] = None,
         cmap_name: str = "RdYlBu_r",
         alpha: float = 1.0,
-        flip_mode: str = "board",
+        relative_board_view: bool = True,
+        heatmap_mode: str = "relative_flip",
     ) -> Tuple[Optional[str], Any]:
         """Render a heatmap on the board.
 
@@ -322,8 +323,12 @@ class LczeroBoard(chess.Board):
             Name of matplotlib colormap to use.
         alpha : float, default=1.0
             Opacity of the heatmap overlay.
-        flip_mode : str, default="board"
-            Flip mode for black's perspective. Use "board" to flip the board, "heatmap" to flip the heatmap.
+        relative_board_view : bool, default=True
+            Whether to use the relative board view.
+        heatmap_mode : str, default="relative_flip"
+            Use "relative_flip" if the heatmap corresponds to a relative flip of the board,
+            "relative_rotation" if it corresponds to a relative rotation of the board,
+            or "absolute" if it is already in the correct orientation.
 
         Returns
         -------
@@ -344,13 +349,19 @@ class LczeroBoard(chess.Board):
                 "matplotlib is required to render heatmaps, install it with `pip install lczerolens[viz]`."
             ) from e
 
-        if flip_mode not in ["board", "heatmap"]:
-            raise ValueError(f"Got unexpected flip_mode {flip_mode}")
-
-        if heatmap.ndim == 2:
+        if heatmap.ndim > 1:
             heatmap = heatmap.view(64)
-        if flip_mode == "heatmap":
-            heatmap = heatmap.view(8, 8).flip(0).view(64)
+
+        if heatmap_mode == "relative_flip":
+            if not self.turn:
+                heatmap = heatmap.view(8, 8).flip(0).view(64)
+        elif heatmap_mode == "relative_rotation":
+            if not self.turn:
+                heatmap = heatmap.view(8, 8).flip(1).flip(0).view(64)
+        elif heatmap_mode == "absolute":
+            pass
+        else:
+            raise ValueError(f"Got unexpected heatmap_mode {heatmap_mode}")
 
         cmap = matplotlib.colormaps[cmap_name].resampled(1000)
 
@@ -392,7 +403,7 @@ class LczeroBoard(chess.Board):
 
         svg_board = chess.svg.board(
             self,
-            orientation=self.turn if flip_mode == "board" else chess.WHITE,
+            orientation=self.turn if relative_board_view else chess.WHITE,
             check=check,
             fill=color_dict,
             size=400,
