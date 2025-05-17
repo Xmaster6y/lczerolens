@@ -18,6 +18,10 @@ tests-fast:
 tests-slow:
 	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyslow --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
+.PHONY: tests-backends
+tests-backends:
+	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlybackends --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+
 .PHONY: docs
 docs:
 	cd docs && uv run --group docs make html
