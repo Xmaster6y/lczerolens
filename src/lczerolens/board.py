@@ -361,7 +361,10 @@ class LczeroBoard(chess.Board):
         elif heatmap_mode == "absolute":
             pass
         else:
-            raise ValueError(f"Got unexpected heatmap_mode {heatmap_mode}")
+            raise ValueError(
+                f"Got unexpected heatmap_mode {heatmap_mode!r}. "
+                "Valid options are ['relative_flip', 'relative_rotation', 'absolute']"
+            )
 
         cmap = matplotlib.colormaps[cmap_name].resampled(1000)
 
