@@ -8,6 +8,8 @@ from lczerolens.lens import Lens
 class GradientLens(Lens):
     """Class for gradient-based XAI methods."""
 
+    _grad_enabled: bool = True
+
     def __init__(self, *, input_requires_grad: bool = True, **kwargs):
         self.input_requires_grad = input_requires_grad
         super().__init__(**kwargs)
