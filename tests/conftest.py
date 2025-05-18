@@ -70,9 +70,9 @@ def winner_senet_ort(winner_ensure_network):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--onlyslow", action="store_true", default=False, help="run slow tests only")
-    parser.addoption("--onlyfast", action="store_true", default=False, help="run fast tests only")
-    parser.addoption("--onlybackends", action="store_true", default=False, help="run backends tests only")
+    parser.addoption("--run-slow", action="store_true", default=False, help="run slow tests")
+    parser.addoption("--run-fast", action="store_true", default=False, help="run fast tests")
+    parser.addoption("--run-backends", action="store_true", default=False, help="run backends tests")
 
 
 def pytest_configure(config):
@@ -81,18 +81,18 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--onlyslow"):
-        skip_not_slow = pytest.mark.skip(reason="--onlyslow given in cli: skipping non-slow tests")
-        for item in items:
-            if "slow" not in item.keywords:
-                item.add_marker(skip_not_slow)
-    elif config.getoption("--onlyfast"):
-        skip_slow = pytest.mark.skip(reason="--onlyfast given in cli: skipping slow tests")
-        for item in items:
-            if "slow" in item.keywords:
-                item.add_marker(skip_slow)
-    elif config.getoption("--onlybackends"):
-        skip_backends = pytest.mark.skip(reason="--onlybackends given in cli: skipping non-backends tests")
-        for item in items:
-            if "backends" not in item.keywords:
-                item.add_marker(skip_backends)
+    run_slow = config.getoption("--run-slow")
+    run_fast = config.getoption("--run-fast")
+    run_backends = config.getoption("--run-backends")
+
+    skip_slow = pytest.mark.skip(reason="--run-slow not given in cli: skipping slow tests")
+    skip_fast = pytest.mark.skip(reason="--run-fast not given in cli: skipping fast tests")
+    skip_backends = pytest.mark.skip(reason="--run-backends not given in cli: skipping backends tests")
+
+    for item in items:
+        if "slow" in item.keywords and not run_slow:
+            item.add_marker(skip_slow)
+        if "fast" in item.keywords and not run_fast:
+            item.add_marker(skip_fast)
+        if "backends" in item.keywords and not run_backends:
+            item.add_marker(skip_backends)

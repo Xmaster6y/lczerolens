@@ -8,8 +8,8 @@
 [![python versions](https://img.shields.io/pypi/pyversions/lczerolens.svg)](https://www.python.org/downloads/)
 
 [![codecov](https://codecov.io/gh/Xmaster6y/lczerolens/graph/badge.svg?token=JKJAWB451A)](https://codecov.io/gh/Xmaster6y/lczerolens)
-![ci-fast](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-fast.yml/badge.svg)
-![ci-slow](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-slow.yml/badge.svg)
+![ci-tests](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-tests.yml/badge.svg)
+![ci-tests-slow](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-tests-slow.yml/badge.svg)
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 [![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
 
