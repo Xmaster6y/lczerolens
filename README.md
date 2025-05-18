@@ -98,11 +98,16 @@ print((corrupted_results - clean_results) / clean_results)
 
 ### Local Demo
 
-Additionally, you can run the gradio demo locally. First you'll need the space, which is packaged in a submodule:
+Additionally, you can run the gradio demos locally. First you'll need to clone the spaces (after cloning the repo):
 
 ```bash
-git clone --recurse-submodules https://github.com/Xmaster6y/lczerolens.git
-cd lczerolens
+git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-demo spaces/lczerolens-demo
+```
+
+And optionally the backends demo:
+
+```bash
+git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-backends-demo spaces/lczerolens-backends-demo
 ```
 
 And then launch the demo (running on port `8000`):
