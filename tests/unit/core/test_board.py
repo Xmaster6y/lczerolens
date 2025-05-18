@@ -11,8 +11,8 @@ from lczerolens import backends as lczero_utils
 from lczerolens import LczeroBoard
 
 
+@pytest.mark.backends
 class TestWithBackend:
-    @pytest.mark.backends
     def test_board_to_config_tensor(
         self, random_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -27,7 +27,6 @@ class TestWithBackend:
             lczero_input_tensor = lczero_utils.board_from_backend(tiny_lczero_backend, lczero_game, planes=13)
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
-    @pytest.mark.backends
     def test_board_to_input_tensor(
         self, random_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -45,8 +44,8 @@ class TestWithBackend:
                 assert (board_tensor[plane] == lczero_input_tensor[plane]).all()
 
 
+@pytest.mark.backends
 class TestRepetition:
-    @pytest.mark.backends
     def test_board_to_config_tensor(
         self, repetition_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -61,7 +60,6 @@ class TestRepetition:
             lczero_input_tensor = lczero_utils.board_from_backend(tiny_lczero_backend, lczero_game, planes=13)
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
-    @pytest.mark.backends
     def test_board_to_input_tensor(
         self, repetition_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -77,8 +75,8 @@ class TestRepetition:
             assert (board_tensor == lczero_input_tensor).all()
 
 
+@pytest.mark.backends
 class TestLong:
-    @pytest.mark.backends
     def test_board_to_config_tensor(
         self, long_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -93,7 +91,6 @@ class TestLong:
             lczero_input_tensor = lczero_utils.board_from_backend(tiny_lczero_backend, lczero_game, planes=13)
             assert (board_tensor == lczero_input_tensor[:13]).all()
 
-    @pytest.mark.backends
     def test_board_to_input_tensor(
         self, long_move_board_list: Tuple[List[chess.Move], List[LczeroBoard]], tiny_lczero_backend
     ):
@@ -122,8 +119,8 @@ class TestStability:
             us, them = them, us
 
 
+@pytest.mark.backends
 class TestBackend:
-    @pytest.mark.backends
     def test_encode_decode_random(self, random_move_board_list):
         """
         Test that encoding and decoding a move corresponds to the backend.
@@ -142,7 +139,6 @@ class TestBackend:
             assert len(lczero_policy_indices) == len(policy_indices)
             assert set(lczero_policy_indices) == set(policy_indices)
 
-    @pytest.mark.backends
     def test_encode_decode_long(self, long_move_board_list):
         """
         Test that encoding and decoding a move corresponds to the backend.

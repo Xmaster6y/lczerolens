@@ -8,12 +8,8 @@ from lczerolens import Flow, LczeroBoard
 from lczerolens import backends as lczero_utils
 
 
+@pytest.mark.backends
 class TestModel:
-    def test_load_model(self, tiny_model):
-        """Test that the model loads."""
-        tiny_model
-
-    @pytest.mark.backends
     def test_model_prediction(self, tiny_lczero_backend, tiny_model):
         """Test that the model prediction works."""
         board = LczeroBoard()
@@ -25,7 +21,6 @@ class TestModel:
         assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    @pytest.mark.backends
     def test_model_prediction_random(self, tiny_lczero_backend, tiny_model, random_move_board_list):
         """Test that the model prediction works."""
         move_list, board_list = random_move_board_list
@@ -38,7 +33,6 @@ class TestModel:
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    @pytest.mark.backends
     def test_model_prediction_repetition(self, tiny_lczero_backend, tiny_model, repetition_move_board_list):
         """Test that the model prediction works."""
         move_list, board_list = repetition_move_board_list
@@ -51,7 +45,6 @@ class TestModel:
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
-    @pytest.mark.backends
     def test_model_prediction_long(self, tiny_lczero_backend, tiny_model, long_move_board_list):
         """Test that the model prediction works."""
         move_list, board_list = long_move_board_list
