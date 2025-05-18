@@ -18,7 +18,8 @@ class InputEncoding(int, Enum):
 
     INPUT_CLASSICAL_112_PLANE = 0
     INPUT_CLASSICAL_112_PLANE_REPEATED = 1
-    INPUT_CLASSICAL_112_PLANE_NO_HISTORY = 2
+    INPUT_CLASSICAL_112_PLANE_NO_HISTORY_REPEATED = 2
+    INPUT_CLASSICAL_112_PLANE_NO_HISTORY_ZEROS = 3
 
 
 class LczeroBoard(chess.Board):
@@ -149,9 +150,11 @@ class LczeroBoard(chess.Board):
                             input_tensor[(i + 1) * 13 : 104] = config_tensor.repeat(7 - i, 1, 1)
                         break
 
-            elif input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_NO_HISTORY:
+            elif input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_NO_HISTORY_REPEATED:
                 config_tensor = self.to_config_tensor(us)
                 input_tensor[:104] = config_tensor.repeat(8, 1, 1)
+            elif input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_NO_HISTORY_ZEROS:
+                input_tensor[:13] = self.to_config_tensor(us)
             else:
                 raise ValueError(f"Got unexpected input encoding {input_encoding}")
 
