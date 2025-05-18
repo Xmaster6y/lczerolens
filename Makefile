@@ -10,17 +10,21 @@ tests-assets:
 demo-assets:
 	bash assets/resolve-demo-assets.sh
 
+.PHONY: tests
+tests:
+	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --run-fast --run-backends --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+
 .PHONY: tests-fast
 tests-fast:
-	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --onlyfast --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+	uv run pytest tests --cov=src --cov-report=term-missing -s -v --run-fast
 
 .PHONY: tests-slow
 tests-slow:
-	uv run pytest tests --cov=src --cov-report=term-missing -s -v --onlyslow
+	uv run pytest tests --cov=src --cov-report=term-missing -s -v --run-slow
 
 .PHONY: tests-backends
 tests-backends:
-	uv run pytest tests --cov=src --cov-report=term-missing -s -v --onlybackends
+	uv run pytest tests --cov=src --cov-report=term-missing -s -v --run-backends
 
 .PHONY: docs
 docs:

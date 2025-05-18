@@ -8,8 +8,8 @@
 [![python versions](https://img.shields.io/pypi/pyversions/lczerolens.svg)](https://www.python.org/downloads/)
 
 [![codecov](https://codecov.io/gh/Xmaster6y/lczerolens/graph/badge.svg?token=JKJAWB451A)](https://codecov.io/gh/Xmaster6y/lczerolens)
-![ci-fast](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-fast.yml/badge.svg)
-![ci-slow](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-slow.yml/badge.svg)
+![ci-tests](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-tests.yml/badge.svg)
+![ci-tests-slow](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-tests-slow.yml/badge.svg)
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 [![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
 
@@ -98,11 +98,16 @@ print((corrupted_results - clean_results) / clean_results)
 
 ### Local Demo
 
-Additionally, you can run the gradio demo locally. First you'll need the space, which is packaged in a submodule:
+Additionally, you can run the gradio demos locally. First you'll need to clone the spaces (after cloning the repo):
 
 ```bash
-git clone --recurse-submodules https://github.com/Xmaster6y/lczerolens.git
-cd lczerolens
+git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-demo spaces/lczerolens-demo
+```
+
+And optionally the backends demo:
+
+```bash
+git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-backends-demo spaces/lczerolens-backends-demo
 ```
 
 And then launch the demo (running on port `8000`):

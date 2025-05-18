@@ -18,7 +18,8 @@ class InputEncoding(int, Enum):
 
     INPUT_CLASSICAL_112_PLANE = 0
     INPUT_CLASSICAL_112_PLANE_REPEATED = 1
-    INPUT_CLASSICAL_112_PLANE_NO_HISTORY = 2
+    INPUT_CLASSICAL_112_PLANE_NO_HISTORY_REPEATED = 2
+    INPUT_CLASSICAL_112_PLANE_NO_HISTORY_ZEROS = 3
 
 
 class LczeroBoard(chess.Board):
@@ -66,7 +67,6 @@ class LczeroBoard(chess.Board):
     def to_config_tensor(
         self,
         us: Optional[bool] = None,
-        input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
     ):
         """Converts a LczeroBoard to a tensor based on the pieces configuration.
 
@@ -74,16 +74,12 @@ class LczeroBoard(chess.Board):
         ----------
         us : Optional[bool]
             The us_them tuple.
-        input_encoding : InputEncoding
-            The input encoding method.
 
         Returns
         -------
         torch.Tensor
             The 13x8x8 tensor.
         """
-        if not isinstance(input_encoding, InputEncoding):
-            raise NotImplementedError(f"Input encoding {input_encoding} not implemented.")
         if us is None:
             us = self.turn
         plane_order = LczeroBoard.get_plane_order(us)
@@ -109,15 +105,13 @@ class LczeroBoard(chess.Board):
 
     def to_input_tensor(
         self,
-        with_history: bool = True,
+        *,
         input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
     ):
         """Create the lc0 input tensor from the history of a game.
 
         Parameters
         ----------
-        with_history : bool
-            Whether to include the history of the game.
         input_encoding : InputEncoding
             The input encoding method.
 
@@ -126,34 +120,33 @@ class LczeroBoard(chess.Board):
         torch.Tensor
             The 112x8x8 tensor.
         """
-        if not isinstance(input_encoding, InputEncoding):
-            raise NotImplementedError(f"Input encoding {input_encoding} not implemented.")
 
         input_tensor = torch.zeros((112, 8, 8), dtype=torch.float)
         us = self.turn
         them = not us
         moves = []
 
-        if with_history:
-            if (
-                input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE
-                or input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED
-            ):
-                for i in range(8):
-                    config_tensor = self.to_config_tensor(us)
-                    input_tensor[i * 13 : (i + 1) * 13] = config_tensor
-                    try:
-                        moves.append(self.pop())
-                    except IndexError:
-                        if input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED:
-                            input_tensor[(i + 1) * 13 : 104] = config_tensor.repeat(7 - i, 1, 1)
-                        break
-
-            elif input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_NO_HISTORY:
+        if (
+            input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE
+            or input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED
+        ):
+            for i in range(8):
                 config_tensor = self.to_config_tensor(us)
-                input_tensor[:104] = config_tensor.repeat(8, 1, 1)
-            else:
-                raise ValueError(f"Got unexpected input encoding {input_encoding}")
+                input_tensor[i * 13 : (i + 1) * 13] = config_tensor
+                try:
+                    moves.append(self.pop())
+                except IndexError:
+                    if input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED:
+                        input_tensor[(i + 1) * 13 : 104] = config_tensor.repeat(7 - i, 1, 1)
+                    break
+
+        elif input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_NO_HISTORY_REPEATED:
+            config_tensor = self.to_config_tensor(us)
+            input_tensor[:104] = config_tensor.repeat(8, 1, 1)
+        elif input_encoding == InputEncoding.INPUT_CLASSICAL_112_PLANE_NO_HISTORY_ZEROS:
+            input_tensor[:13] = self.to_config_tensor(us)
+        else:
+            raise ValueError(f"Got unexpected input encoding {input_encoding}")
 
         # Restore the moves
         for move in reversed(moves):
