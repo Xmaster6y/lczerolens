@@ -5,9 +5,10 @@ It loads a dataset (local or Hugging Face), simulates the puzzle moves, and filt
 puzzles that are checkmate in the given number of moves (mate in N).
 
 Example usage:
-uv run python -m scripts.datasets.make_lichess_dataset2 --source_dataset lczerolens/lichess-puzzles --mate 2
+uv run python -m scripts.datasets.make_lichess_dataset_matein --source_dataset lczerolens/lichess-puzzles --mate 3
 """
 
+from typing import Optional
 import argparse
 import math
 import chess
@@ -46,7 +47,7 @@ def compute_mate_length(fen: str, moves_str: str) -> int | None:
 def main(args: argparse.Namespace):
     # Load dataset (local CSV or Hugging Face dataset)
     logger.info(f"Loading dataset `{args.source_dataset}`...")
-    dataset = load_dataset("csv", data_files=args.source_dataset, split="train")
+    dataset = load_dataset(args.source_dataset, split="train")
     logger.info(f"Loaded dataset with {len(dataset)} entries")
 
     # Filter by requested mate length
@@ -60,43 +61,33 @@ def main(args: argparse.Namespace):
     if args.push_to_hub:
         logger.info(f"Pushing dataset `{target_name}` to Hugging Face Hub...")
         dataset.push_to_hub(repo_id=target_name, token=HF_TOKEN)
-    else:
-        logger.info(f"Saving dataset locally as `{target_name}`")
-        dataset.save_to_disk(target_name)
-
-    print(dataset[10])
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser("filter-lichess-dataset-by-mate")
 
     parser.add_argument(
-            "--source_dataset",
-            type=str,
-            required=True,
-            help="Dataset path or Hugging Face dataset ID to load."
-        )
+        "--source_dataset",
+        type=str,
+        default="lczerolens/lichess-puzzles",
+        help="Dataset path or Hugging Face dataset ID to load.",
+    )
 
     parser.add_argument(
         "--target_dataset",
-        type=str,
+        type=Optional[str],
         default=None,
-        help="Name of the output dataset. If None, source_dataset + suffix is used."
+        help="Name of the output dataset. If None, source_dataset + suffix is used.",
     )
 
     parser.add_argument(
         "--push_to_hub",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Whether to push the filtered dataset to Hugging Face Hub."
+        help="Whether to push the filtered dataset to Hugging Face Hub.",
     )
 
-    parser.add_argument(
-        "--mate",
-        type=int,
-        required=True,
-        help="Number of moves until mate (first move ignored)."
-    )
+    parser.add_argument("--mate", type=int, required=True, help="Number of moves until mate (first move ignored).")
 
     return parser.parse_args()
 
