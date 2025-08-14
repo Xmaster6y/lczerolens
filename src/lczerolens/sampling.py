@@ -128,7 +128,7 @@ class ModelSampler(Sampler):
         next_legal_indices = []
 
         def generator(next_batch, next_legal_indices):
-            all_stats = self.model(*next_batch, **kwargs)
+            all_stats = self.model(next_batch, **kwargs)
             offset = 0
             for legal_indices in next_legal_indices:
                 n_boards = legal_indices.shape[0] + 1 if use_next_boards else 1
