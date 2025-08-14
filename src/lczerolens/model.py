@@ -35,7 +35,7 @@ class LczeroModel(TensorDictModule):
             If the module is not a valid model type
         """
         if not isinstance(module, nn.Module):
-            raise NotImplementedError(f"Got invalid module type {type(module)}.")
+            raise TypeError(f"Got invalid module type {type(module)}. Expected nn.Module.")
         super().__init__(module, ["boards"], out_keys, **kwargs)
 
     def prepare_boards(
