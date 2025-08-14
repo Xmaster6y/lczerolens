@@ -48,7 +48,7 @@ print(board.decode_move(legal_indices[best_move_idx]))
 
 ### Framework-Agnostic Interpretability
 
-Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook`, `captum`, `zennit`, `nnsight`). More exemples in the [framework-agnostic interpretability notebook](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html).
+Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook`, `captum`, `zennit`, `nnsight`). More examples in the [framework-agnostic interpretability notebook](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html).
 
 ```python
 from lczerolens import LczeroBoard, LczeroModel
