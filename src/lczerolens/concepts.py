@@ -328,9 +328,7 @@ class PieceBestLegalMove(BinaryConcept):
         legal_move_indices = [LczeroBoard.encode_move(move, board.turn) for move in legal_moves]
         sub_index = policy[legal_move_indices].argmax().item()
         best_legal_move = legal_moves[sub_index]
-        if board.piece_at(best_legal_move.from_square) == self.piece:
-            return 1
-        return 0
+        return 1 if board.piece_at(best_legal_move.from_square) == self.piece else 0
 
 
 # Threat concepts
