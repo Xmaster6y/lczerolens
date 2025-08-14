@@ -90,6 +90,19 @@ class TestWithBackend:
                 assert (board_tensor[plane] == lczero_input_tensor[plane]).all()
 
 
+def test_render_heatmap_random_tensor():
+    """Render heatmap should work headlessly on a random tensor and return SVG strings."""
+    torch = __import__("torch")
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+
+    board = LczeroBoard()
+    heatmap = torch.randn(64)
+    svg_board, svg_colorbar = board.render_heatmap(heatmap)
+    assert isinstance(svg_board, str) and "<svg" in svg_board
+    assert isinstance(svg_colorbar, str) and "<svg" in svg_colorbar
+
+
 @pytest.mark.backends
 class TestRepetition:
     def test_board_to_config_tensor(

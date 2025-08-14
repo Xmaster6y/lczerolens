@@ -23,9 +23,9 @@ class GameData:
     @classmethod
     def from_dict(cls, obj: Dict[str, str]) -> "GameData":
         if "moves" not in obj:
-            ValueError("The dict should contain `moves`.")
+            raise ValueError("The dict should contain `moves`.")
         if "gameid" not in obj:
-            ValueError("The dict should contain `gameid`.")
+            raise ValueError("The dict should contain `gameid`.")
         *pre, post = obj["moves"].split("{ Book exit }")
         if pre:
             if len(pre) > 1:
