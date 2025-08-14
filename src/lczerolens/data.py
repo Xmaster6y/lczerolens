@@ -53,17 +53,16 @@ class GameData:
         working_board = LczeroBoard()
         if skip_first_n > 0 or (skip_book_exit and (self.book_exit is not None)):
             boards = []
+        elif output_dict:
+            boards = [
+                {
+                    "fen": working_board.fen(),
+                    "moves": [],
+                    "gameid": self.gameid,
+                }
+            ]
         else:
-            if output_dict:
-                boards = [
-                    {
-                        "fen": working_board.fen(),
-                        "moves": [],
-                        "gameid": self.gameid,
-                    }
-                ]
-            else:
-                boards = [working_board.copy(stack=n_history)]
+            boards = [working_board.copy(stack=n_history)]
 
         for i, move in enumerate(self.moves[:-1]):  # skip the last move as it can be over
             working_board.push_san(move)
