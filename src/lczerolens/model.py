@@ -94,6 +94,10 @@ class LczeroModel(TensorDictModule):
         if not isinstance(inputs, TensorDict) and not isinstance(inputs, torch.Tensor):
             inputs = self.prepare_boards(*inputs, **prepare_kwargs)
         if not isinstance(inputs, TensorDict):
+            if len(inputs.shape) == 3:
+                inputs = inputs.unsqueeze(0)
+            elif len(inputs.shape) != 4:
+                raise ValueError(f"Expected 3D or 4D tensor, got {inputs.shape}.")
             inputs = TensorDict({"boards": inputs}, batch_size=inputs.shape[0])
         return super().forward(inputs, **kwargs)
 
