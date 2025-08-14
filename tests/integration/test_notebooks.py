@@ -6,6 +6,7 @@ import subprocess
 import pytest
 
 NOTEBOOKS = [
+    "docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb",
     "docs/source/notebooks/features/visualise-heatmaps.ipynb",
     "docs/source/notebooks/features/probe-concepts.ipynb",
     "docs/source/notebooks/features/convert-official-weights.ipynb",

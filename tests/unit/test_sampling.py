@@ -1,6 +1,6 @@
 """Sampling tests."""
 
-from lczerolens.play.sampling import ModelSampler, SelfPlay, PolicySampler, RandomSampler
+from lczerolens.sampling import ModelSampler, SelfPlay, PolicySampler, RandomSampler
 from lczerolens.board import LczeroBoard
 
 
@@ -41,7 +41,7 @@ class TestSelfPlay:
         """Test play method."""
         board = LczeroBoard()
         white = ModelSampler(tiny_model, use_argmax=False)
-        black = ModelSampler(winner_model, use_argmax=False)
+        black = ModelSampler(tiny_model, use_argmax=False)
         self_play = SelfPlay(white=white, black=black)
         logs = []
 
