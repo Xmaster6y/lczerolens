@@ -364,10 +364,9 @@ class HasThreat(BinaryConcept):
         else:
             color = self.piece.color
         squares = board.pieces(self.piece.piece_type, color)
-        for square in squares:
-            if board.is_attacked_by(not color, square):
-                return 1
-        return 0
+        return next(
+            (1 for square in squares if board.is_attacked_by(not color, square)), 0
+        )
 
 
 class HasMateThreat(BinaryConcept):
