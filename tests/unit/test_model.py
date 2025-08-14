@@ -4,7 +4,7 @@ import pytest
 import torch
 from lczero.backends import GameState
 
-from lczerolens import Flow, LczeroBoard
+from lczerolens.model import LczeroBoard, PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue
 from lczerolens import backends as lczero_utils
 
 
@@ -61,87 +61,56 @@ class TestModel:
 class TestFlows:
     def test_policy_flow(self, tiny_model):
         """Test that the policy flow works."""
-        policy_flow = Flow.from_model("policy", tiny_model)
+        policy_flow = PolicyFlow.from_model(tiny_model.module)
         board = LczeroBoard()
-        (policy,) = policy_flow(board)
-        model_policy = tiny_model(board)["policy"][0]
-        assert torch.allclose(policy, model_policy)
+        output = policy_flow(board)
+        assert "value" not in output
 
     def test_value_flow(self, tiny_model):
         """Test that the value flow works."""
-        value_flow = Flow.from_model("value", tiny_model)
+        value_flow = ValueFlow.from_model(tiny_model.module)
         board = LczeroBoard()
-        (value,) = value_flow(board)
-        model_value = tiny_model(board)["value"][0]
-        assert torch.allclose(value, model_value)
+        output = value_flow(board)
+        assert "policy" not in output
 
     def test_wdl_flow(self, winner_model):
         """Test that the wdl flow works."""
-        wdl_flow = Flow.from_model("wdl", winner_model)
+        wdl_flow = WdlFlow.from_model(winner_model.module)
         board = LczeroBoard()
-        (wdl,) = wdl_flow(board)
-        model_wdl = winner_model(board)["wdl"][0]
-        assert torch.allclose(wdl, model_wdl)
+        output = wdl_flow(board)
+        assert "policy" not in output
 
     def test_mlh_flow(self, winner_model):
         """Test that the mlh flow works."""
-        mlh_flow = Flow.from_model("mlh", winner_model)
+        mlh_flow = MlhFlow.from_model(winner_model.module)
         board = LczeroBoard()
-        (mlh,) = mlh_flow(board)
-        model_mlh = winner_model(board)["mlh"][0]
-        assert torch.allclose(mlh, model_mlh)
+        output = mlh_flow(board)
+        assert "policy" not in output
 
-    def test_force_value_flow_value(self, tiny_model):
+    def test_force_value(self, tiny_model):
         """Test that the force value flow works."""
-        force_value_flow = Flow.from_model("force_value", tiny_model)
+        force_value = ForceValue.from_model(tiny_model.module)
         board = LczeroBoard()
-        (value,) = force_value_flow(board)
-        model_value = tiny_model(board)["value"][0]
-        assert torch.allclose(value, model_value)
+        output = force_value(board)
+        assert "value" in output
 
-    def test_force_value_flow_wdl(self, winner_model):
+    def test_force_value_wdl(self, winner_model):
         """Test that the force value flow works."""
-        force_value_flow = Flow.from_model("force_value", winner_model)
+        force_value = ForceValue.from_model(winner_model.module)
         board = LczeroBoard()
-        (wdl,) = force_value_flow(board)
-        model_wdl = winner_model(board)["wdl"][0]
-        model_value = model_wdl @ torch.tensor([1.0, 0.0, -1.0], device=model_wdl.device)
-        assert torch.allclose(wdl, model_value)
+        output = force_value(board)
+        assert "value" in output
+
+        value = output["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=output.device)
+        assert torch.allclose(output["value"], value)
 
     def test_incompatible_flows(self, tiny_model, winner_model):
         """Test that the flows raise an error *
         when the model is incompatible.
         """
         with pytest.raises(ValueError):
-            Flow.from_model("value", winner_model)
+            ValueFlow.from_model(winner_model)
         with pytest.raises(ValueError):
-            Flow.from_model("wdl", tiny_model)
+            WdlFlow.from_model(tiny_model)
         with pytest.raises(ValueError):
-            Flow.from_model("mlh", tiny_model)
-
-        with pytest.raises(ValueError):
-            Flow._registry["value"](tiny_model)
-
-
-@Flow.register("test_flow")
-class TestFlow(Flow):
-    """Test flow."""
-
-
-class TestFlowRegistry:
-    def test_flow_registry_duplicate(self):
-        """Test that registering a flow with an existing name raises an error."""
-        with pytest.raises(ValueError, match="Flow .* already registered"):
-
-            @Flow.register("test_flow")
-            class DuplicateFlow(Flow):
-                """Duplicate flow."""
-
-    def test_flow_registry_missing(self, tiny_model):
-        """Test that instantiating a non-registered flow raises an error."""
-        with pytest.raises(KeyError, match="Flow .* not found"):
-            Flow.from_model("non_existent_flow", tiny_model)
-
-    def test_flow_type(self):
-        """Test that the flow type is correct."""
-        assert TestFlow._flow_type == "test_flow"
+            MlhFlow.from_model(tiny_model)

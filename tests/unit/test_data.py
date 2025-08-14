@@ -3,8 +3,8 @@
 import pytest
 
 
-from lczerolens.play.puzzle import Puzzle
-from lczerolens.play.sampling import RandomSampler, PolicySampler
+from lczerolens.data import PuzzleData
+from lczerolens.sampling import RandomSampler, PolicySampler
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def easy_puzzle():
 class TestPuzzle:
     def test_puzzle_creation(self, opening_puzzle):
         """Test puzzle creation."""
-        puzzle = Puzzle.from_dict(opening_puzzle)
+        puzzle = PuzzleData.from_dict(opening_puzzle)
         assert len(puzzle) == 3
         assert puzzle.rating == 1000
         assert puzzle.rating_deviation == 100
@@ -54,7 +54,7 @@ class TestPuzzle:
 
     def test_puzzle_use(self, opening_puzzle):
         """Test puzzle use."""
-        puzzle = Puzzle.from_dict(opening_puzzle)
+        puzzle = PuzzleData.from_dict(opening_puzzle)
         assert len(list(puzzle.board_move_generator())) == 2
         assert len(list(puzzle.board_move_generator(all_moves=True))) == 3
 
@@ -62,7 +62,7 @@ class TestPuzzle:
 class TestRandomSampler:
     def test_puzzle_evaluation(self, opening_puzzle):
         """Test puzzle evaluation."""
-        puzzle = Puzzle.from_dict(opening_puzzle)
+        puzzle = PuzzleData.from_dict(opening_puzzle)
         sampler = RandomSampler()
         metrics = puzzle.evaluate(sampler)
         assert metrics["score"] != 1.0
@@ -70,36 +70,36 @@ class TestRandomSampler:
 
     def test_puzzle_multiple_evaluation_len(self, easy_puzzle):
         """Test puzzle evaluation."""
-        puzzles = [Puzzle.from_dict(easy_puzzle) for _ in range(10)]
+        puzzles = [PuzzleData.from_dict(easy_puzzle) for _ in range(10)]
         sampler = RandomSampler()
-        all_results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=True, compute_metrics=False)
+        all_results = PuzzleData.evaluate_multiple(puzzles, sampler, all_moves=True, compute_metrics=False)
         assert len(list(all_results)) == 10 * 5
-        results = Puzzle.evaluate_multiple(puzzles, sampler, compute_metrics=False)
+        results = PuzzleData.evaluate_multiple(puzzles, sampler, compute_metrics=False)
         assert len(list(results)) == 10 * 3
 
     def test_puzzle_multiple_evaluation(self, easy_puzzle):
         """Test puzzle evaluation."""
-        puzzles = [Puzzle.from_dict(easy_puzzle) for _ in range(10)]
+        puzzles = [PuzzleData.from_dict(easy_puzzle) for _ in range(10)]
         sampler = RandomSampler()
-        all_results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=True)
+        all_results = PuzzleData.evaluate_multiple(puzzles, sampler, all_moves=True)
         assert len(list(all_results)) == 10
-        results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=False)
+        results = PuzzleData.evaluate_multiple(puzzles, sampler, all_moves=False)
         assert len(list(results)) == 10
 
     def test_puzzle_multiple_evaluation_batch_size(self, easy_puzzle):
         """Test puzzle evaluation."""
-        puzzles = [Puzzle.from_dict(easy_puzzle) for _ in range(10)]
+        puzzles = [PuzzleData.from_dict(easy_puzzle) for _ in range(10)]
         sampler = RandomSampler()
-        all_results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=True, batch_size=5)
+        all_results = PuzzleData.evaluate_multiple(puzzles, sampler, all_moves=True, batch_size=5)
         assert len(list(all_results)) == 10
-        results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=False, batch_size=5)
+        results = PuzzleData.evaluate_multiple(puzzles, sampler, all_moves=False, batch_size=5)
         assert len(list(results)) == 10
 
 
 class TestPolicySampler:
     def test_puzzle_evaluation(self, easy_puzzle, winner_model):
         """Test puzzle evaluation."""
-        puzzle = Puzzle.from_dict(easy_puzzle)
+        puzzle = PuzzleData.from_dict(easy_puzzle)
         sampler = PolicySampler(model=winner_model, use_argmax=True)
         metrics = puzzle.evaluate(sampler, all_moves=True)
         assert metrics["score"] > 0.0
@@ -107,9 +107,9 @@ class TestPolicySampler:
 
     def test_puzzle_multiple_evaluation(self, easy_puzzle, tiny_model):
         """Test puzzle evaluation."""
-        puzzles = [Puzzle.from_dict(easy_puzzle) for _ in range(10)]
+        puzzles = [PuzzleData.from_dict(easy_puzzle) for _ in range(10)]
         sampler = PolicySampler(model=tiny_model, use_argmax=False)
-        all_results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=True)
+        all_results = PuzzleData.evaluate_multiple(puzzles, sampler, all_moves=True)
         assert len(list(all_results)) == 10
-        results = Puzzle.evaluate_multiple(puzzles, sampler, all_moves=False)
+        results = PuzzleData.evaluate_multiple(puzzles, sampler, all_moves=False)
         assert len(list(results)) == 10

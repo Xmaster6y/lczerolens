@@ -33,24 +33,24 @@ def tiny_senet_ort(tiny_ensure_network):
     yield senet_ort
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def maia_ensure_network():
     lczero_utils.convert_to_onnx("assets/maia-1100.pb.gz", "assets/maia-1100.onnx")
     yield
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def maia_model(maia_ensure_network):
     yield LczeroModel.from_path("assets/maia-1100.onnx")
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def maia_senet_ort(maia_ensure_network):
     senet_ort = ort.InferenceSession("assets/maia-1100.onnx")
     yield senet_ort
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def winner_ensure_network():
     lczero_utils.convert_to_onnx(
         "assets/384x30-2022_0108_1903_17_608.pb.gz",
@@ -59,12 +59,12 @@ def winner_ensure_network():
     yield
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def winner_model(winner_ensure_network):
     yield LczeroModel.from_path("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def winner_senet_ort(winner_ensure_network):
     yield ort.InferenceSession("assets/384x30-2022_0108_1903_17_608.onnx")
 

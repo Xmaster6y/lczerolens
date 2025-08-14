@@ -2,8 +2,9 @@
 Test cases for the concept module.
 """
 
-from lczerolens.concept import BinaryConcept, AndBinaryConcept
 from lczerolens.concepts import (
+    BinaryConcept,
+    AndBinaryConcept,
     HasPiece,
     HasThreat,
 )
