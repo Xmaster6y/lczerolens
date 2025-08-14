@@ -3,7 +3,7 @@ Getting Started
 
 **lczerolens** is a package for running interpretability methods on lc0 models.
 It is designed to be easy to use and to work with the most common interpretability
-techniques.
+techniques. It is framework-agnostic (as long as you use PyTorch): you can pair it with ``tdhook``, ``captum``, ``zennit``, or ``nnsight``.
 
 .. _installation:
 
@@ -18,8 +18,7 @@ To get started with lczerolens, install it with ``pip``.
 
 .. note::
 
-   The dependencies for lczerolens are currently substantial.
-   It mainly depends on ``torch``, ``nnsight``, ``zennit`` and ``datasets``.
+   Core dependencies are light: mainly ``torch`` and ``onnx2torch``. Optional extras include ``matplotlib`` (``viz``) and lc0 bindings (``backends``).
 
 First Steps
 -----------

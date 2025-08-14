@@ -9,8 +9,8 @@ Tutorials
 
       :bdg-primary:`Main Features`
 
-   .. grid-item-card:: Evidence of Learned Look-Ahead
-      :link: notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
+   .. grid-item-card:: Framework-Agnostic Interpretability
+      :link: notebooks/tutorials/framework-agnostic-interpretability.ipynb
 
       :bdg-primary:`Main Features`
 
@@ -27,6 +27,7 @@ Tutorials
    :maxdepth: 2
 
    notebooks/walkthrough.ipynb
+   notebooks/tutorials/framework-agnostic-interpretability.ipynb
    notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
    notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
    notebooks/tutorials/train-saes.ipynb

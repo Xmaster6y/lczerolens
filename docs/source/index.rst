@@ -35,7 +35,8 @@ lczerolens
 
             Interpretability for lc0 networks
 
-        **lczerolens** is a package for interpreting and manipulating the neural networks produce by lc0
+        **lczerolens** focuses on interpretability for lc0 networks, with utilities to load/run models and render heatmaps.
+        It is framework-agnostic (PyTorch), so you can use it with `tdhook`, `captum`, `zennit`, or `nnsight`.
 
         .. div:: button-group
 
@@ -87,6 +88,6 @@ lczerolens
 
         .. div::
 
-          **Interpretability**
+          **Interpretability utilities**
 
-          Easily compute saliency maps or aggregated statistics using the pre-built Interpretability methods.
+          Load ONNX networks, run inference, and produce board-aligned heatmaps for analysis with your preferred framework.

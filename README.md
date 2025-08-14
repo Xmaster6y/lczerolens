@@ -16,7 +16,7 @@
 <a href="https://lczerolens.readthedocs.io"><img src="https://img.shields.io/badge/-Read%20the%20Docs%20Here-blue?style=for-the-badge&logo=Read-the-Docs&logoColor=white"></img></a>
 
 
-Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make the analysis of Leela Chess Zero networks easy.
+Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make interpretability easy and framework-agnostic (PyTorch): use it with `tdhook`, `captum`, `zennit`, or `nnsight`.
 
 ## Getting Started
 
@@ -46,30 +46,16 @@ best_move_idx = output["policy"].gather(
 print(board.decode_move(legal_indices[best_move_idx]))
 ```
 
-### Intervene
+### Framework-Agnostic Interpretability
 
-In addition to the built-in lenses, you can easily create your own lenses by subclassing the `Lens` class and overriding the `_intervene` method. E.g. compute an neuron ablation effect:
+Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook`, `captum`, `zennit`, `nnsight`). More exemples in the [framework-agnostic interpretability notebook](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html).
 
 ```python
-from lczerolens import LczeroBoard, LczeroModel, Lens
-
-class CustomLens(Lens):
-    _grad_enabled: bool = False
-
-    def _intervene(self, model: LczeroModel, **kwargs) -> dict:
-        ablate = kwargs.get("ablate", False)
-        if ablate:
-            l5_module = getattr(model, "block5/conv2/relu")
-            l5_module.output[0, :, 0, 0] = 0 # relative a1
-        return getattr(model, "output/wdl").output[0,0].save() # win probability
-
+from lczerolens import LczeroBoard, LczeroModel
 model = LczeroModel.from_onnx_path("path/to/model.onnx")
-lens = CustomLens()
 board = LczeroBoard()
 
-clean_results = lens.analyse(model, board)
-corrupted_results = lens.analyse(model, board, ablate=True)
-print((corrupted_results - clean_results) / clean_results)
+# TODO: complete this example
 ```
 
 ### Features

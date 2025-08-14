@@ -13,7 +13,7 @@ dependencies = [
     "onnx2torch>=1.5.15",
     "python-chess>=1.999",
     "tensordict>=0.6.2",
-    "torch<2.5.1",
+    "torch>=2.5.0",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -50,6 +50,7 @@ dev = [
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
     "scikit-learn>=1.7.1",
+    "tdhook",
     "v-lczero-bindings>=0.31.2",
 ]
 demo = [
@@ -85,6 +86,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.uv]
 default-groups = ["dev"]
+
+[tool.uv.sources]
+tdhook = { git = "https://github.com/Xmaster6y/tdhook" }
 
 [tool.ruff]
 line-length = 119
