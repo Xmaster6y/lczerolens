@@ -49,8 +49,11 @@ class GameData:
         skip_book_exit: bool = False,
         skip_first_n: int = 0,
         output_dict=True,
+        concept: Optional[Concept] = None,
     ) -> List[Union[Dict[str, Any], LczeroBoard]]:
         working_board = LczeroBoard()
+        label = concept.compute_label(working_board) if concept is not None else None
+
         if skip_first_n > 0 or (skip_book_exit and (self.book_exit is not None)):
             boards = []
         elif output_dict:
@@ -59,6 +62,7 @@ class GameData:
                     "fen": working_board.fen(),
                     "moves": [],
                     "gameid": self.gameid,
+                    "label": label,
                 }
             ]
         else:
@@ -66,6 +70,7 @@ class GameData:
 
         for i, move in enumerate(self.moves[:-1]):  # skip the last move as it can be over
             working_board.push_san(move)
+            label = concept.compute_label(working_board) if concept is not None else None
             if (i < skip_first_n) or (skip_book_exit and (self.book_exit is not None) and (i < self.book_exit)):
                 continue
             if output_dict:
@@ -75,6 +80,7 @@ class GameData:
                         "fen": save_board.root().fen(),
                         "moves": [move.uci() for move in save_board.move_stack],
                         "gameid": self.gameid,
+                        "label": label,
                     }
                 )
             else:
@@ -82,14 +88,11 @@ class GameData:
         return boards
 
     @staticmethod
-    def board_collate_fn(batch):
-        boards = []
+    def collate_fn(batch):
+        games = []
         for element in batch:
-            board = LczeroBoard(element["fen"])
-            for move in element["moves"]:
-                board.push_san(move)
-            boards.append(board)
-        return boards, {}
+            games.append(GameData.from_dict(element))
+        return games
 
     @staticmethod
     def get_dataset_features():
@@ -120,20 +123,25 @@ class BoardData:
             from datasets import Features, Value, Sequence
         except ImportError as e:
             raise ImportError("datasets is required to get the dataset features.") from e
-        if concept is None:
-            concept_features = {}
-        else:
-            concept_features = {
-                "label": concept.get_dataset_feature(),
-            }
+        concept_feature = concept.get_dataset_feature() if concept is not None else Value("null")
         return Features(
             {
                 "gameid": Value("string"),
                 "moves": Sequence(Value("string")),
                 "fen": Value("string"),
-                **concept_features,
+                "label": concept_feature,
             }
         )
+
+    @staticmethod
+    def board_collate_fn(batch):
+        boards = []
+        for element in batch:
+            board = LczeroBoard(element["fen"])
+            for move in element["moves"]:
+                board.push_san(move)
+            boards.append(board)
+        return boards
 
     @staticmethod
     def concept_collate_fn(batch):
