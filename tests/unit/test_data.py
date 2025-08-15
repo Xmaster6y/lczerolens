@@ -181,17 +181,67 @@ class TestGameData:
         # After skipping: there should be 2 entries (for i=1 and i=2)
         assert len(boards_skip_first) == 2
 
+    def test_to_boards_with_n_history(self):
+        from lczerolens.data import GameData
+
+        gd = GameData.from_dict({"gameid": "g6", "moves": "1. e4 e5 2. Nf3 Nc6"})
+
+        # Test with n_history=1 (keep 1 move in stack)
+        boards = gd.to_boards(n_history=1, output_dict=True)
+        assert len(boards) == 4
+        # Check that moves list has at most 1 move when n_history=1
+        for board_dict in boards[1:]:  # Skip initial position
+            assert len(board_dict["moves"]) <= 1
+
+    def test_to_boards_with_concept(self):
+        from lczerolens.data import GameData
+        from lczerolens.concepts import HasPiece
+
+        gd = GameData.from_dict({"gameid": "g7", "moves": "1. e4 e5"})
+        concept = HasPiece("P")
+
+        # Test with concept - should include labels
+        boards = gd.to_boards(output_dict=True, concept=concept)
+        # The new logic returns: initial board + board after e4 (but not after e5 since it's the last move)
+        assert len(boards) == 2  # initial + 1 move (e4)
+        assert all("label" in board for board in boards)
+        # Labels should be computed values, not None
+        assert all(board["label"] is not None for board in boards)
+
+    def test_to_boards_skip_book_exit_with_concept(self):
+        from lczerolens.data import GameData
+        from lczerolens.concepts import HasPiece
+
+        gd = GameData.from_dict({"gameid": "g8", "moves": "1. e4 e5 { Book exit } 2. Nf3 Nc6"})
+        concept = HasPiece("P")
+
+        # Test skip_book_exit with concept
+        boards = gd.to_boards(output_dict=True, skip_book_exit=True, concept=concept)
+        assert len(boards) == 1  # Only after book exit
+        assert "label" in boards[0]
+        assert boards[0]["label"] is not None
+
     def test_to_boards_return_boards(self):
         from lczerolens.data import GameData
         from lczerolens.board import LczeroBoard
 
         gd = GameData.from_dict({"gameid": "g6", "moves": "1. e4 e5 2. Nf3 Nc6"})
+
+        # Test default (n_history=0)
         boards = gd.to_boards(output_dict=False)
         assert isinstance(boards, list) and len(boards) == 4
         assert all(isinstance(b, LczeroBoard) for b in boards)
 
+        # Test with n_history=2
+        boards_with_history = gd.to_boards(output_dict=False, n_history=2)
+        assert isinstance(boards_with_history, list) and len(boards_with_history) == 4
+        assert all(isinstance(b, LczeroBoard) for b in boards_with_history)
+        # Check that boards have move stack with at most 2 moves
+        for board in boards_with_history[1:]:  # Skip initial position
+            assert len(board.move_stack) <= 2
+
     def test_board_collate_fn(self):
-        from lczerolens.data import GameData
+        from lczerolens.data import BoardData
         from lczerolens.board import LczeroBoard
 
         # Use SAN moves, as expected by collate
@@ -201,11 +251,26 @@ class TestGameData:
                 "moves": ["e4", "e5", "Nf3"],
             }
         ]
-        boards, meta = GameData.board_collate_fn(batch)
+        boards = BoardData.board_collate_fn(batch)
         assert isinstance(boards, list) and len(boards) == 1
         assert isinstance(boards[0], LczeroBoard)
         assert len(list(boards[0].move_stack)) == 3
-        assert isinstance(meta, dict)
+
+    def test_board_collate_fn_with_concept(self):
+        from lczerolens.data import BoardData
+        from lczerolens.board import LczeroBoard
+
+        # Test BoardData.board_collate_fn (concept parameter not supported)
+        batch = [
+            {
+                "fen": LczeroBoard().fen(),
+                "moves": ["e4", "e5"],
+            }
+        ]
+        boards = BoardData.board_collate_fn(batch)
+        assert isinstance(boards, list) and len(boards) == 1
+        assert isinstance(boards[0], LczeroBoard)
+        assert len(list(boards[0].move_stack)) == 2
 
     def test_get_dataset_features(self):
         datasets = pytest.importorskip("datasets")
@@ -220,16 +285,40 @@ class TestGameData:
 
 
 class TestBoardData:
+    def test_board_data_creation_with_label(self):
+        from lczerolens.data import BoardData
+
+        # Test creation with label
+        board_data = BoardData(
+            gameid="test_game",
+            moves=["e4", "e5"],
+            fen="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+            label=1,
+        )
+        assert board_data.gameid == "test_game"
+        assert board_data.moves == ["e4", "e5"]
+        assert board_data.fen == "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        assert board_data.label == 1
+
+    def test_board_data_creation_without_label(self):
+        from lczerolens.data import BoardData
+
+        # Test creation without label
+        board_data = BoardData(
+            gameid="test_game", moves=["e4", "e5"], fen="rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        )
+        assert board_data.label is None
+
     def test_get_dataset_features_with_and_without_concept(self):
         datasets = pytest.importorskip("datasets")
         from lczerolens.data import BoardData
         from lczerolens.concepts import HasPiece
 
-        # Without concept
+        # Without concept - still need to provide label field (will be null)
         features = BoardData.get_dataset_features()
-        data = [{"gameid": "g8", "moves": ["e4"], "fen": LczeroBoard().fen()}]
+        data = [{"gameid": "g8", "moves": ["e4"], "fen": LczeroBoard().fen(), "label": None}]
         ds = datasets.Dataset.from_list(data, features=features)
-        assert set(ds.features.keys()) == {"gameid", "moves", "fen"}
+        assert set(ds.features.keys()) == {"gameid", "moves", "fen", "label"}
 
         # With a binary concept → label feature added
         concept = HasPiece("P")
