@@ -137,5 +137,7 @@ lc0
 wandb
 **/.DS_Store
 junit*
+.vscode
+.cursor
 
 *secret*
