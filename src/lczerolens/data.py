@@ -258,13 +258,15 @@ class BoardData:
         return boards
 
     @staticmethod
-    def concept_collate_fn(batch):
+    def concept_collate_fn(batch, concept: Optional[Concept] = None):
         """Collate function for concept-based analysis with labels.
 
         Parameters
         ----------
         batch : List[Dict[str, Any]]
             List of dictionaries containing board data and labels.
+        concept : Optional[Concept], default=None
+            Concept to determine the label feature type.
 
         Returns
         -------
@@ -278,8 +280,11 @@ class BoardData:
             for move in element["moves"]:
                 board.push_san(move)
             boards.append(board)
-            labels.append(element["label"])
-        return boards, labels, batch
+            if concept is not None:
+                labels.append(concept.compute_label(board))
+            else:
+                labels.append(element["label"])
+        return boards, labels
 
     @staticmethod
     def concept_init_grad(output, infos):
