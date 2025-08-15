@@ -14,6 +14,40 @@ from lczerolens.concepts import Concept
 from lczerolens.board import LczeroBoard
 
 
+def columns_to_rows(columns: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
+    """Convert a dictionary of columns to a list of dictionaries.
+
+    Parameters
+    ----------
+    columns : Dict[str, List[Any]]
+        Dictionary containing columns of data.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        List of dictionaries, where each dictionary contains the values from one row.
+    """
+    return [dict(zip(columns, t)) for t in zip(*columns.values())]
+
+
+def rows_to_columns(rows: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
+    """Convert a list of dictionaries to a dictionary of columns.
+
+    Parameters
+    ----------
+    rows : List[Dict[str, Any]]
+        List of dictionaries, where each dictionary contains the values from one row.
+
+    Returns
+    -------
+    Dict[str, List[Any]]
+        Dictionary containing columns of data.
+    """
+    if len(rows) == 0:
+        return {}
+    return {k: [dic[k] for dic in rows] for k in rows[0]}
+
+
 @dataclass
 class GameData:
     """Data class representing a chess game with moves and metadata.

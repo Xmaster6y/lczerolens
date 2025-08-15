@@ -11,7 +11,7 @@ import argparse
 from datasets import load_dataset
 from loguru import logger
 
-from lczerolens.data import GameData, BoardData
+from lczerolens.data import GameData, BoardData, columns_to_rows, rows_to_columns
 from scripts.constants import HF_TOKEN
 
 
@@ -22,7 +22,7 @@ def main(args: argparse.Namespace):
 
     def game_to_boards(columns):
         all_boards = []
-        rows = [dict(zip(columns, t)) for t in zip(*columns.values())]
+        rows = columns_to_rows(columns)
         for row in rows:
             game = GameData.from_dict(row)
             all_boards.extend(
@@ -34,7 +34,7 @@ def main(args: argparse.Namespace):
                     concept=None,
                 )
             )
-        return {k: [dic[k] for dic in all_boards] for k in all_boards[0]}
+        return rows_to_columns(all_boards)
 
     boards_dataset = dataset.map(
         game_to_boards,
