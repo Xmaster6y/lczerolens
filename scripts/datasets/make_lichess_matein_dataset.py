@@ -1,11 +1,9 @@
-"""
-Script to filter a Lichess puzzle dataset by mate in N moves using python-chess.
+"""Script to filter a Lichess puzzle dataset by mate in N moves.
 
-It loads a dataset (local or Hugging Face), simulates the puzzle moves, and filters
-puzzles that are checkmate in the given number of moves (mate in N).
-
-Example usage:
-uv run python -m scripts.datasets.make_lichess_dataset_matein --source_dataset lczerolens/lichess-puzzles --mate 3
+Run with:
+```bash
+uv run python -m scripts.datasets.make_lichess_matein_dataset --mate_in 3 --push_to_hub
+```
 """
 
 from typing import Optional
@@ -18,17 +16,7 @@ from scripts.constants import HF_TOKEN
 
 
 def compute_mate_length(fen: str, moves_str: str) -> int | None:
-    """
-    Simulate the puzzle from FEN and compute mate length (in full moves),
-    ignoring the first move of the puzzle.
-
-    Args:
-        fen: starting board position in FEN
-        moves_str: space-separated UCI moves
-
-    Returns:
-        Mate length in full moves (int) or None if no mate
-    """
+    """Simulate the puzzle from FEN and compute mate length (in full moves), ignoring the first move of the puzzle."""
     board = chess.Board(fen)
     moves = moves_str.split()
 
@@ -45,19 +33,15 @@ def compute_mate_length(fen: str, moves_str: str) -> int | None:
 
 
 def main(args: argparse.Namespace):
-    # Load dataset (local CSV or Hugging Face dataset)
     logger.info(f"Loading dataset `{args.source_dataset}`...")
     dataset = load_dataset(args.source_dataset, split="train")
     logger.info(f"Loaded dataset with {len(dataset)} entries")
 
-    # Filter by requested mate length
-    dataset = dataset.filter(lambda row: compute_mate_length(row["FEN"], row["Moves"]) == args.mate)
-    logger.info(f"Filtered dataset to mate in {args.mate} => {len(dataset)} entries")
+    dataset = dataset.filter(lambda row: compute_mate_length(row["FEN"], row["Moves"]) == args.mate_in)
+    logger.info(f"Filtered dataset to mate in {args.mate_in} => {len(dataset)} entries")
 
-    # Determine target dataset name
-    target_name = args.target_dataset or f"{args.source_dataset}-M{args.mate}"
+    target_name = args.dataset_name or f"{args.source_dataset}-mate-in-{args.mate_in}"
 
-    # Push to Hub or save locally
     if args.push_to_hub:
         logger.info(f"Pushing dataset `{target_name}` to Hugging Face Hub...")
         dataset.push_to_hub(repo_id=target_name, token=HF_TOKEN)
@@ -70,24 +54,21 @@ def parse_args() -> argparse.Namespace:
         "--source_dataset",
         type=str,
         default="lczerolens/lichess-puzzles",
-        help="Dataset path or Hugging Face dataset ID to load.",
     )
 
     parser.add_argument(
-        "--target_dataset",
+        "--dataset_name",
         type=Optional[str],
         default=None,
-        help="Name of the output dataset. If None, source_dataset + suffix is used.",
     )
 
     parser.add_argument(
         "--push_to_hub",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Whether to push the filtered dataset to Hugging Face Hub.",
     )
 
-    parser.add_argument("--mate", type=int, required=True, help="Number of moves until mate (first move ignored).")
+    parser.add_argument("--mate_in", type=int, required=True)
 
     return parser.parse_args()
 

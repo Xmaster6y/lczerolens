@@ -9,7 +9,7 @@ build:
     - asdf install uv latest
     - asdf global uv latest
     - uv sync --locked
-    - make docs
+    - cd docs && uv run --group docs make html
     - mkdir -p $READTHEDOCS_OUTPUT
     - mv docs/build/html $READTHEDOCS_OUTPUT
 
