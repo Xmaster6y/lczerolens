@@ -1,5 +1,4 @@
-"""
-Convert a dataset of games into a dataset of boards.
+"""Script to convert a dataset of games into a dataset of boards.
 
 Run with:
 ```bash
