@@ -99,13 +99,13 @@ git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-backends-demo space
 And then launch the demo (running on port `8000`):
 
 ```bash
-make demo
+just demo
 ```
 
 To test the backends use:
 
 ```bash
-make demo-backends
+just demo-backends
 ```
 
 ## Full Documentation
