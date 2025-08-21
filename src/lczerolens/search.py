@@ -145,6 +145,9 @@ class MCTS:
             best_move : str
                 Best move as a string in UCI format.
         """
+        if root.board.is_game_over():
+            raise RuntimeError("Game already over.")
+
         if not root.initialized:
             root.set_evaluation(heuristic.evaluate(root))
 
