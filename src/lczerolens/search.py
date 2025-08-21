@@ -50,7 +50,7 @@ class DummyHeuristic:
         TensorDict
             Dictionary with fileds value and policy.
         """
-        n = len(board.legal_moves)
+        n = board.legal_moves.count()
         return TensorDict(value=torch.Tensor([0.0]), policy=torch.full((n,), 1 / n))
 
 
@@ -123,7 +123,7 @@ class MCTS:
         self.c_puct = c_puct
         self.n_parallel_rollouts = n_parallel_rollouts
 
-    def search(
+    def search_(
         self,
         root: Node,
         heuristic: Heuristic,
@@ -149,7 +149,7 @@ class MCTS:
             raise RuntimeError("Game already over.")
 
         if not root.initialized:
-            root.set_evaluation(heuristic.evaluate(root))
+            root.set_evaluation(heuristic.evaluate(root.board))
 
         for _ in range(iterations):
             node = root
@@ -174,9 +174,6 @@ class MCTS:
 
             # Backpropagation
             self._backpropagate_(node, value)
-
-        best_move = np.argmax(root.visits)
-        return root.legal_moves[best_move]
 
     def _select_(
         self,
@@ -231,10 +228,10 @@ class MCTS:
                 value = torch.Tensor([-1.0])
             else:
                 value = torch.Tensor([0.0])
-            td = TensorDict(value, None)
+            td = TensorDict(value=value, policy=None)
             node.set_evaluation(td)
         else:
-            node.set_evaluation(heuristic.evaluate(node))
+            node.set_evaluation(heuristic.evaluate(node.board))
         return node.value
 
     @staticmethod
@@ -259,67 +256,122 @@ class MCTS:
             parent.q_values[idx] = (parent.q_values[idx] * parent.visits[idx] + value) / (parent.visits[idx] + 1)
             node = parent
 
-    @staticmethod
-    def plot(
+    # @staticmethod
+    # def plot(
+    #     root: Node,
+    #     max_depth: int = 3,
+    #     filename: str = "mcts_tree",
+    # ) -> None:
+    #     """Draw the MCTS tree using Graphviz and save it as a PNG.
+
+    #     Parameters
+    #     ----------
+    #     root : Node
+    #         Root node of the tree.
+    #     max_depth : int
+    #         Maximum depth to draw.
+    #     filename : str
+    #         Output PNG filename.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     try:
+    #         from graphviz import Digraph
+    #     except ImportError as e:
+    #         raise ImportError(
+    #             "graphviz is required to render trees, install it with `pip install lczerolens[viz]`."
+    #         ) from e
+
+    #     dot = Digraph(comment="MCTS Tree")
+    #     dot.attr("node", shape="circle")
+    #     dot.node(str(id(root)), label=f"Root\nN={int(root.visits.sum().item())}")
+
+    #     def add_nodes(
+    #         node: Node,
+    #         depth: int = 0,
+    #     ) -> None:
+    #         """Recursively add nodes to the graph.
+
+    #         Parameters
+    #         ----------
+    #         node : Node
+    #             Current node to add.
+    #         depth : int
+    #             Current depth in the tree.
+
+    #         Returns
+    #         -------
+    #         None
+    #         """
+
+    #         if depth > max_depth:
+    #             return
+
+    #         for move, child in node.children.items():
+    #             idx = node.legal_moves.index(move)
+    #             n_visits = int(node.visits[idx].item())
+    #             child_node = node.children[move]
+    #             label = f"{move}\nN={n_visits}\nV={child_node.value[0]}"
+    #             dot.node(str(id(child)), label=label)
+    #             dot.edge(str(id(node)), str(id(child)))
+    #             add_nodes(child, depth + 1)
+
+    #     add_nodes(root, 0)
+    #     dot.render(filename, format="png", cleanup=True)
+
+    def render_tree(
         root: Node,
         max_depth: int = 3,
-        filename: str = "mcts_tree",
-    ) -> None:
-        """Draw the MCTS tree using Graphviz and save it as a PNG.
+        save_to: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Render the MCTS tree as an SVG.
 
         Parameters
         ----------
         root : Node
             Root node of the tree.
-        max_depth : int
-            Maximum depth to draw.
-        filename : str
-            Output PNG filename.
+        max_depth : int, default=3
+            Maximum depth to render.
+        save_to : Optional[str], default=None
+            Path to save the SVG. If None, returns the SVG string.
 
         Returns
         -------
-        None
+        Optional[str]
+            SVG string of the tree, or None if saved to file.
         """
         try:
             from graphviz import Digraph
         except ImportError as e:
-            raise ImportError(
-                "graphviz is required to render trees, install it with `pip install lczerolens[viz]`."
-            ) from e
+            raise ImportError("graphviz is required to render trees, install it with `pip install graphviz`.") from e
 
         dot = Digraph(comment="MCTS Tree")
         dot.attr("node", shape="circle")
         dot.node(str(id(root)), label=f"Root\nN={int(root.visits.sum().item())}")
 
-        def add_nodes(
-            node: Node,
-            depth: int = 0,
-        ) -> None:
-            """Recursively add nodes to the graph.
-
-            Parameters
-            ----------
-            node : Node
-                Current node to add.
-            depth : int
-                Current depth in the tree.
-
-            Returns
-            -------
-            None
-            """
-
+        def add_nodes(node: Node, depth: int = 0):
             if depth > max_depth:
                 return
-
             for move, child in node.children.items():
                 idx = node.legal_moves.index(move)
                 n_visits = int(node.visits[idx].item())
-                child_node = node.children[move]
-                label = f"{move}\nN={n_visits}\nV={child_node.value[0]}"
+                label = f"{move}\nN={n_visits}\nV={child.value[0]}"
                 dot.node(str(id(child)), label=label)
                 dot.edge(str(id(node)), str(id(child)))
                 add_nodes(child, depth + 1)
 
         add_nodes(root, 0)
-        dot.render(filename, format="png", cleanup=True)
+
+        svg_tree = dot.pipe(format="svg").decode("utf-8")
+
+        if save_to is not None:
+            if not save_to.endswith(".svg"):
+                raise ValueError("Only saving to `.svg` is supported")
+            with open(save_to, "w") as f:
+                f.write(svg_tree)
+            return None
+
+        return svg_tree

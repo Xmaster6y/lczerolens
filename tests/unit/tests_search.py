@@ -3,7 +3,7 @@ File to test the mcts module of lczerolens.
 """
 
 import chess
-import os
+import numpy as np
 import pytest
 import torch
 from lczerolens import LczeroBoard
@@ -59,19 +59,19 @@ def test_dummy_heuristic_output():
 
     assert td.get("value").item() == 0.0
     assert td.get("policy").shape[0] == board.legal_moves.count()
-    assert abs(td["policy"].sum().item() - 1.0) < 1e-6
-
-
-# MCTS tests
+    assert abs(td.get("policy").sum().item() - 1.0) < 1e-6
 
 
 def test_mcts_search_best_move():
+    print("1\n")
     board = LczeroBoard("2K5/k7/8/8/8/8/8/1Q6 w - - 0 1")
     heuristic = DummyHeuristic()
     mcts = MCTS(c_puct=10)
     root = Node(board, None)
+    mcts.search_(root, heuristic, iterations=100)
+    best_move = np.argmax(root.visits)
 
-    assert mcts.search(root, heuristic, iterations=100) == "b1b7"
+    assert root.legal_moves[best_move].uci() == "b1b7"
 
 
 def test_mcts_search_terminal_root():
@@ -81,7 +81,7 @@ def test_mcts_search_terminal_root():
     heuristic = DummyHeuristic()
 
     try:
-        mcts.search(node, heuristic=heuristic, iterations=10)
+        mcts.search_(node, heuristic=heuristic, iterations=10)
     except RuntimeError as e:
         assert str(e) == "Game already over."
     else:
@@ -137,10 +137,10 @@ def test_mcts_backpropagate_updates_q_values():
     assert root.q_values[move_index] == -1.0
 
 
-def test_plot_creates_file(tmp_path):
-    board = LczeroBoard()
-    root = Node(board, None)
-    filename = tmp_path / "tree"
-    MCTS.plot(root, max_depth=1, filename=str(filename))
+# def test_plot_creates_file(tmp_path):
+#     board = LczeroBoard()
+#     root = Node(board, None)
+#     filename = tmp_path / "tree"
+#     MCTS.plot(root, max_depth=1, filename=str(filename))
 
-    assert os.path.exists(str(filename) + ".png")
+#     assert os.path.exists(str(filename) + ".png")
