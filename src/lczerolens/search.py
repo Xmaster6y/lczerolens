@@ -25,15 +25,13 @@ class Heuristic(Protocol):
 
         Returns
         -------
-        value_tensor : torch.Tensor
-            Tensor of reward for the current player (-1 for loss, 1 for win, 0.5 for draw).
-        policy_tensor : torch.Tensor
-            Tensor of policy probabilities for each legal move.
+        TensorDict
+            Dictionary with fileds value and policy.
         """
         ...
 
 
-class SimpleHeuristic:
+class DummyHeuristic:
     """Simple heuristic for MCTS."""
 
     def evaluate(
@@ -49,10 +47,8 @@ class SimpleHeuristic:
 
         Returns
         -------
-        value_tensor : torch.Tensor
-            tensor of reward for the current player (+1.0 for win, -1.0 for loss, 0.0 for draw).
-        policy_tensor : torch.Tensor
-            tensor of policy probabilities for each legal move.
+        TensorDict
+            Dictionary with fileds value and policy.
         """
         n = len(board.legal_moves)
         return TensorDict(value=torch.Tensor([0.0]), policy=torch.full((n,), 1 / n))
@@ -110,8 +106,8 @@ class Node:
         if self._value is not None or self._policy is not None:
             raise RuntimeError("Node already initialized.")
 
-        self._value = td["value"]
-        self._policy = td["policy"]
+        self._value = td.get("value")
+        self._policy = td.get("policy")
         self._initialized = True
 
 
@@ -130,7 +126,7 @@ class MCTS:
     def search(
         self,
         root: Node,
-        heuristic: SimpleHeuristic,
+        heuristic: Heuristic,
         iterations: int = 10,
     ) -> str:
         """Perform MCTS search on the given root node.
@@ -182,7 +178,7 @@ class MCTS:
     def _select_(
         self,
         node: Node,
-    ) -> Node:
+    ) -> chess.Move:
         """Select the move to explore based on the PUCT formula.
 
         Parameters
@@ -192,7 +188,7 @@ class MCTS:
 
         Returns
         -------
-        node : Node
+        move : chess.Move
             Selected move as a chess.Move object.
         """
 
@@ -251,10 +247,6 @@ class MCTS:
             Node instance representing the leaf node.
         value : float
             Float value to backpropagate.
-
-        Returns
-        -------
-        None
         """
         while node.parent is not None:
             parent = node.parent
