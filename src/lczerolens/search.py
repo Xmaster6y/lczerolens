@@ -224,10 +224,7 @@ class MCTS:
             return node.value
         elif node.is_terminal:
             outcome = node.board.outcome()
-            if outcome.winner is not None:
-                value = torch.Tensor([-1.0])
-            else:
-                value = torch.Tensor([0.0])
+            value = torch.Tensor([0.]) if outcome.winner is None else torch.Tensor([-1.])
             td = TensorDict(value=value, policy=None)
             node.set_evaluation(td)
         else:
