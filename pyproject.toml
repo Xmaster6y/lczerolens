@@ -33,6 +33,7 @@ releasenotes = "https://github.com/Xmaster6y/lczerolens/releases"
 
 [project.optional-dependencies]
 viz = [
+    "graphviz>=0.21",
     "matplotlib>=3.10.0",
 ]
 backends = [
