@@ -4,6 +4,7 @@ File to test the mcts module of lczerolens.
 
 import chess
 import numpy as np
+import os
 import pytest
 import torch
 from lczerolens import LczeroBoard
@@ -137,10 +138,10 @@ def test_mcts_backpropagate_updates_q_values():
     assert root.q_values[move_index] == -1.0
 
 
-# def test_plot_creates_file(tmp_path):
-#     board = LczeroBoard()
-#     root = Node(board, None)
-#     filename = tmp_path / "tree"
-#     MCTS.plot(root, max_depth=1, filename=str(filename))
+def test_plot_creates_file(tmp_path):
+    board = LczeroBoard()
+    root = Node(board, None)
+    filename = tmp_path / "tree"
+    MCTS.plot(root, max_depth=1, filename=str(filename))
 
-#     assert os.path.exists(str(filename) + ".png")
+    assert os.path.exists(str(filename) + ".png")

@@ -231,8 +231,8 @@ class MCTS:
             node.set_evaluation(heuristic.evaluate(node.board))
         return node.value
 
-    @staticmethod
     def _backpropagate_(
+        self,
         node: Node,
         value: float,
     ) -> None:
@@ -252,71 +252,6 @@ class MCTS:
             idx = parent.legal_moves.index(move)
             parent.q_values[idx] = (parent.q_values[idx] * parent.visits[idx] + value) / (parent.visits[idx] + 1)
             node = parent
-
-    # @staticmethod
-    # def plot(
-    #     root: Node,
-    #     max_depth: int = 3,
-    #     filename: str = "mcts_tree",
-    # ) -> None:
-    #     """Draw the MCTS tree using Graphviz and save it as a PNG.
-
-    #     Parameters
-    #     ----------
-    #     root : Node
-    #         Root node of the tree.
-    #     max_depth : int
-    #         Maximum depth to draw.
-    #     filename : str
-    #         Output PNG filename.
-
-    #     Returns
-    #     -------
-    #     None
-    #     """
-    #     try:
-    #         from graphviz import Digraph
-    #     except ImportError as e:
-    #         raise ImportError(
-    #             "graphviz is required to render trees, install it with `pip install lczerolens[viz]`."
-    #         ) from e
-
-    #     dot = Digraph(comment="MCTS Tree")
-    #     dot.attr("node", shape="circle")
-    #     dot.node(str(id(root)), label=f"Root\nN={int(root.visits.sum().item())}")
-
-    #     def add_nodes(
-    #         node: Node,
-    #         depth: int = 0,
-    #     ) -> None:
-    #         """Recursively add nodes to the graph.
-
-    #         Parameters
-    #         ----------
-    #         node : Node
-    #             Current node to add.
-    #         depth : int
-    #             Current depth in the tree.
-
-    #         Returns
-    #         -------
-    #         None
-    #         """
-
-    #         if depth > max_depth:
-    #             return
-
-    #         for move, child in node.children.items():
-    #             idx = node.legal_moves.index(move)
-    #             n_visits = int(node.visits[idx].item())
-    #             child_node = node.children[move]
-    #             label = f"{move}\nN={n_visits}\nV={child_node.value[0]}"
-    #             dot.node(str(id(child)), label=label)
-    #             dot.edge(str(id(node)), str(id(child)))
-    #             add_nodes(child, depth + 1)
-
-    #     add_nodes(root, 0)
-    #     dot.render(filename, format="png", cleanup=True)
 
     def render_tree(
         root: Node,
@@ -343,7 +278,9 @@ class MCTS:
         try:
             from graphviz import Digraph
         except ImportError as e:
-            raise ImportError("graphviz is required to render trees, install it with `pip install graphviz`.") from e
+            raise ImportError(
+                "graphviz is required to render trees, install it with `pip install lczerolens[viz]`."
+            ) from e
 
         dot = Digraph(comment="MCTS Tree")
         dot.attr("node", shape="circle")
