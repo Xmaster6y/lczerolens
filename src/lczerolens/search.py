@@ -5,13 +5,14 @@ from lczerolens.board import LczeroBoard
 import numpy as np
 from tensordict import TensorDict
 import torch
+from lczerolens.model import ForceValue, LczeroModel
 from typing import Dict, Protocol, Tuple, Optional
 
 
 class Heuristic(Protocol):
     """Heuristic protocol for evaluating chess positions."""
 
-    def evaluate(
+    def __call__(
         self,
         board: LczeroBoard,
     ) -> TensorDict:
@@ -34,7 +35,7 @@ class Heuristic(Protocol):
 class DummyHeuristic:
     """Simple heuristic for MCTS."""
 
-    def evaluate(
+    def __call__(
         self,
         board: LczeroBoard,
     ) -> TensorDict:
@@ -52,6 +53,24 @@ class DummyHeuristic:
         """
         n = board.legal_moves.count()
         return TensorDict(value=torch.Tensor([0.0]), policy=torch.full((n,), 1 / n))
+
+
+class ModelHeuristic:
+    """Evaluate boards using a neural network model for MCTS."""
+
+    def __init__(self, model: LczeroModel):
+        self._model = ForceValue.from_model(model.module)
+
+    def evaluate(self, board: LczeroBoard) -> TensorDict:
+        """
+        Evaluate a single board using the Lczero model.
+
+        Returns TensorDict with 'value' and 'policy'.
+        """
+        td = self._model(board)[0]
+        legal_indices = board.get_legal_indices()
+        td["policy"] = td["policy"].gather(0, legal_indices)
+        return td
 
 
 class Node:

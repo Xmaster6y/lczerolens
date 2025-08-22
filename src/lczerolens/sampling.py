@@ -11,6 +11,7 @@ from itertools import tee
 
 from lczerolens.model import LczeroModel
 from lczerolens.board import LczeroBoard
+from lczerolens.search import Node, MCTS, ModelHeuristic
 
 
 class Sampler(ABC):
@@ -80,6 +81,46 @@ class RandomSampler(Sampler):
             legal_indices = board.get_legal_indices()
             utilities = torch.ones_like(legal_indices, dtype=torch.float32)
             yield utilities, legal_indices, {}
+
+
+class MCTSSampler(Sampler):
+    def __init__(
+        self,
+        model: LczeroModel,
+        num_simulations: int = 100,
+        c_puct: float = 1.0,
+        use_argmax: bool = False,
+        use_q_values: bool = False,
+    ):
+        self.mcts = MCTS(c_puct=c_puct)
+        self.num_simulations = num_simulations
+        self.use_argmax = use_argmax
+        self.use_q_values = use_q_values
+
+        self._heuristic = ModelHeuristic(model)
+
+    def choose_move(self, board: LczeroBoard, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
+        if self.use_argmax:
+            idx = utility.argmax()
+            return board.decode_move(legal_indices[idx])
+        return super().choose_move(board, utility, legal_indices)
+
+    @torch.no_grad()
+    def get_utilities(
+        self, boards: Iterable[LczeroBoard], **kwargs
+    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]]:
+        for board in boards:
+            root = Node(board=board, parent=None)
+            self.mcts.search_(root, heuristic=self._heuristic, iterations=self.num_simulations)
+
+            if self.use_q_values:
+                utility = root.q_values
+            else:
+                utility = root.visits
+
+            legal_indices = board.get_legal_indices()
+
+            yield utility, legal_indices, {}
 
 
 @dataclass
