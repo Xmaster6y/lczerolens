@@ -128,7 +128,7 @@ class MCTS:
         root: Node,
         heuristic: Heuristic,
         iterations: int = 10,
-    ) -> str:
+    ) -> None:
         """Perform MCTS search on the given root node.
 
         Parameters
@@ -139,11 +139,6 @@ class MCTS:
                 Heuristic instance to evaluate board states.
             iterations : int
                 Number of iterations to run the MCTS search.
-
-        Returns
-        -------
-            best_move : str
-                Best move as a string in UCI format.
         """
         if root.board.is_game_over():
             raise RuntimeError("Game already over.")
