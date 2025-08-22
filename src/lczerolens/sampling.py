@@ -113,10 +113,7 @@ class MCTSSampler(Sampler):
             root = Node(board=board, parent=None)
             self.mcts.search_(root, heuristic=self._heuristic, iterations=self.num_simulations)
 
-            if self.use_q_values:
-                utility = root.q_values
-            else:
-                utility = root.visits
+            utility = root.q_values if self.use_q_values else root.visits
 
             legal_indices = board.get_legal_indices()
 

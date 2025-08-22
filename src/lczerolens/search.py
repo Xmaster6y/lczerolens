@@ -12,7 +12,7 @@ from typing import Dict, Protocol, Tuple, Optional
 class Heuristic(Protocol):
     """Heuristic protocol for evaluating chess positions."""
 
-    def __call__(
+    def evaluate(
         self,
         board: LczeroBoard,
     ) -> TensorDict:
