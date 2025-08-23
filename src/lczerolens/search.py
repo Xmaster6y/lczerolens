@@ -35,7 +35,7 @@ class Heuristic(Protocol):
 class DummyHeuristic:
     """Simple heuristic for MCTS."""
 
-    def __call__(
+    def evaluate(
         self,
         board: LczeroBoard,
     ) -> TensorDict:
