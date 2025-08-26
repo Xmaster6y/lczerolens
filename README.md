@@ -77,22 +77,24 @@ board = LczeroBoard()
 
 ### Spaces
 
-- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/lczerolens-demo)
-- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/lczerolens-backends-demo)
-- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/lichess-puzzles-leaderboard)
+Some [Hugging Face Spaces](https://huggingface.co/spaces/lczerolens) are available to try out the library. The demo (:red_circle: in construction) will showcase some of the features of the library and the backends demo makes the conversion of lc0 models to `onnx` easy.
+
+- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/demo)
+- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/backends-demo)
+- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/puzzles-leaderboard)
 
 ### Local Demo
 
 Additionally, you can run the gradio demos locally. First you'll need to clone the spaces (after cloning the repo):
 
 ```bash
-git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-demo spaces/lczerolens-demo
+git clone https://huggingface.co/spaces/lczerolens/demo spaces/demo
 ```
 
 And optionally the backends demo:
 
 ```bash
-git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-backends-demo spaces/lczerolens-backends-demo
+git clone https://huggingface.co/spaces/lczerolens/backends-demo spaces/backends-demo
 ```
 
 And then launch the demo (running on port `8000`):

@@ -23,7 +23,7 @@ docs:
 	cd docs && uv run --group docs make html
 
 demo:
-	uv run --group demo gradio spaces/lczerolens-demo/app.py
+	uv run --group demo gradio spaces/demo/app.py
 
 demo-backends:
-	uv run --group demo gradio spaces/lczerolens-backends-demo/app.py
+	uv run --group demo gradio spaces/backends-demo/app.py
