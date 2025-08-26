@@ -6,16 +6,7 @@ import torch
 from lczerolens.board import LczeroBoard
 from lczerolens.model import ForceValue, LczeroModel
 from tensordict import TensorDict
-from typing import Dict, Protocol, Tuple, Optional
-
-PIECE_VALUES = {
-    "P": 1,  # Pawn
-    "N": 3,  # Knight
-    "B": 3,  # Bishop
-    "R": 5,  # Rook
-    "Q": 9,  # Queen
-    "K": 0,  # King not counted
-}
+from typing import Callable, Dict, Optional, Protocol, Tuple
 
 
 class Heuristic(Protocol):
@@ -67,7 +58,7 @@ class DummyHeuristic:
 class MaterialHeuristic:
     """Heuristic 'model' that outputs uniform policy and material advantage as value."""
 
-    piece_values = {
+    piece_values_default = {
         chess.PAWN: 1,
         chess.KNIGHT: 3,
         chess.BISHOP: 3,
@@ -76,26 +67,34 @@ class MaterialHeuristic:
         chess.KING: 0,
     }
 
+    def __init__(
+        self,
+        piece_values: Optional[Dict[int, int]] = None,
+        normalization_constant: float = 0.1,
+        activation: Callable[[torch.Tensor], torch.Tensor] = torch.tanh,
+    ):
+        self.piece_values = piece_values or self.piece_values_default
+        self.normalization_constant = normalization_constant
+        self.activation = activation
+
     def evaluate(
         self,
         board: LczeroBoard,
-        piece_values: Optional[Dict[int, int]] = None,
     ) -> TensorDict:
         """
         Compute the label for a given model and input.
         """
-        if piece_values is None:
-            piece_values = self.piece_values
         us, them = board.turn, not board.turn
         relative_value = 0
         for piece in range(1, 7):
-            relative_value += len(board.pieces(piece, us)) * piece_values[piece]
-            relative_value -= len(board.pieces(piece, them)) * piece_values[piece]
+            relative_value += len(board.pieces(piece, us)) * self.piece_values[piece]
+            relative_value -= len(board.pieces(piece, them)) * self.piece_values[piece]
 
-        value = torch.tensor([relative_value / 39.0], dtype=torch.float32)
+        value = self.activation(torch.tensor([self.normalization_constant * relative_value], dtype=torch.float32))
 
         n = board.legal_moves.count()
-        return TensorDict(value=value, policy=torch.full((n,), 1 / n))
+        policy = torch.full((n,), 1 / n)
+        return TensorDict(value=value, policy=policy)
 
 
 class ModelHeuristic:

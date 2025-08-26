@@ -44,6 +44,7 @@ backends = [
 dev = [
     "datasets>=4.0.0",
     "gdown>=5.2.0",
+    "graphviz>=0.21",
     "ipykernel>=6.29.5",
     "nbconvert>=7.16.5",
     "onnxruntime>=1.20.1",
