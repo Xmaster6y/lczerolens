@@ -14,6 +14,38 @@ from lczerolens.concepts import Concept
 from lczerolens.board import LczeroBoard
 
 
+def columns_to_rows(columns: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
+    """Convert a dictionary of columns to a list of dictionaries.
+
+    Parameters
+    ----------
+    columns : Dict[str, List[Any]]
+        Dictionary containing columns of data.
+
+    Returns
+    -------
+    List[Dict[str, Any]]
+        List of dictionaries, where each dictionary contains the values from one row.
+    """
+    return [dict(zip(columns, t)) for t in zip(*columns.values())]
+
+
+def rows_to_columns(rows: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
+    """Convert a list of dictionaries to a dictionary of columns.
+
+    Parameters
+    ----------
+    rows : List[Dict[str, Any]]
+        List of dictionaries, where each dictionary contains the values from one row.
+
+    Returns
+    -------
+    Dict[str, List[Any]]
+        Dictionary containing columns of data.
+    """
+    return {} if not rows else {k: [dic[k] for dic in rows] for k in rows[0]}
+
+
 @dataclass
 class GameData:
     """Data class representing a chess game with moves and metadata.
@@ -258,13 +290,15 @@ class BoardData:
         return boards
 
     @staticmethod
-    def concept_collate_fn(batch):
+    def concept_collate_fn(batch, concept: Optional[Concept] = None):
         """Collate function for concept-based analysis with labels.
 
         Parameters
         ----------
         batch : List[Dict[str, Any]]
             List of dictionaries containing board data and labels.
+        concept : Optional[Concept], default=None
+            Concept to determine the label feature type.
 
         Returns
         -------
@@ -278,8 +312,11 @@ class BoardData:
             for move in element["moves"]:
                 board.push_san(move)
             boards.append(board)
-            labels.append(element["label"])
-        return boards, labels, batch
+            if concept is not None:
+                labels.append(concept.compute_label(board))
+            else:
+                labels.append(element["label"])
+        return boards, labels
 
     @staticmethod
     def concept_init_grad(output, infos):

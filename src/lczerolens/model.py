@@ -36,7 +36,7 @@ class LczeroModel(TensorDictModule):
         """
         if not isinstance(module, nn.Module):
             raise TypeError(f"Got invalid module type {type(module)}. Expected nn.Module.")
-        super().__init__(module, ["boards"], out_keys, **kwargs)
+        super().__init__(module, ["board"], out_keys, **kwargs)
 
     def prepare_boards(
         self,
@@ -89,7 +89,7 @@ class LczeroModel(TensorDictModule):
             The output of the model.
         """
         prepare_kwargs = prepare_kwargs or {}
-        if isinstance(inputs, LczeroBoard):
+        if isinstance(inputs, LczeroBoard):  # TODO: Move to prepare_baords
             inputs = (inputs,)
         if not isinstance(inputs, TensorDict) and not isinstance(inputs, torch.Tensor):
             inputs = self.prepare_boards(*inputs, **prepare_kwargs)
@@ -98,7 +98,7 @@ class LczeroModel(TensorDictModule):
                 inputs = inputs.unsqueeze(0)
             elif len(inputs.shape) != 4:
                 raise ValueError(f"Expected 3D or 4D tensor, got {inputs.shape}.")
-            inputs = TensorDict({"boards": inputs}, batch_size=inputs.shape[0])
+            inputs = TensorDict({"board": inputs}, batch_size=inputs.shape[0])
         return super().forward(inputs, **kwargs)
 
     def _call_module(self, tensors: Sequence[torch.Tensor], **kwargs: Any) -> Sequence[torch.Tensor]:
