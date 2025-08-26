@@ -1,12 +1,21 @@
 """Search class"""
 
 import chess
-from lczerolens.board import LczeroBoard
 import numpy as np
-from tensordict import TensorDict
 import torch
+from lczerolens.board import LczeroBoard
 from lczerolens.model import ForceValue, LczeroModel
+from tensordict import TensorDict
 from typing import Dict, Protocol, Tuple, Optional
+
+PIECE_VALUES = {
+    "P": 1,  # Pawn
+    "N": 3,  # Knight
+    "B": 3,  # Bishop
+    "R": 5,  # Rook
+    "Q": 9,  # Queen
+    "K": 0,  # King not counted
+}
 
 
 class Heuristic(Protocol):
@@ -53,6 +62,40 @@ class DummyHeuristic:
         """
         n = board.legal_moves.count()
         return TensorDict(value=torch.Tensor([0.0]), policy=torch.full((n,), 1 / n))
+
+
+class MaterialHeuristic:
+    """Heuristic 'model' that outputs uniform policy and material advantage as value."""
+
+    piece_values = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9,
+        chess.KING: 0,
+    }
+
+    def evaluate(
+        self,
+        board: LczeroBoard,
+        piece_values: Optional[Dict[int, int]] = None,
+    ) -> TensorDict:
+        """
+        Compute the label for a given model and input.
+        """
+        if piece_values is None:
+            piece_values = self.piece_values
+        us, them = board.turn, not board.turn
+        relative_value = 0
+        for piece in range(1, 7):
+            relative_value += len(board.pieces(piece, us)) * piece_values[piece]
+            relative_value -= len(board.pieces(piece, them)) * piece_values[piece]
+
+        value = torch.tensor([relative_value / 39.0], dtype=torch.float32)
+
+        n = board.legal_moves.count()
+        return TensorDict(value=value, policy=torch.full((n,), 1 / n))
 
 
 class ModelHeuristic:
@@ -117,10 +160,6 @@ class Node:
         ----------
         td : TensorDict
             TensorDict containing value and policy tensors.
-
-        Returns
-        -------
-        None
         """
         if self._value is not None or self._policy is not None:
             raise RuntimeError("Node already initialized.")
