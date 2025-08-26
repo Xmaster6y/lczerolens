@@ -64,7 +64,7 @@ class MaterialHeuristic:
         chess.BISHOP: 3,
         chess.ROOK: 5,
         chess.QUEEN: 9,
-        chess.KING: 0,
+        chess.KING: 100,
     }
 
     def __init__(
@@ -90,7 +90,7 @@ class MaterialHeuristic:
             relative_value += len(board.pieces(piece, us)) * self.piece_values[piece]
             relative_value -= len(board.pieces(piece, them)) * self.piece_values[piece]
 
-        value = self.activation(torch.tensor([self.normalization_constant * relative_value], dtype=torch.float32))
+        value = self.activation(torch.tensor([relative_value / self.normalization_constant], dtype=torch.float32))
 
         n = board.legal_moves.count()
         policy = torch.full((n,), 1 / n)
