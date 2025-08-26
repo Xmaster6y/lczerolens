@@ -43,9 +43,7 @@ def rows_to_columns(rows: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
     Dict[str, List[Any]]
         Dictionary containing columns of data.
     """
-    if len(rows) == 0:
-        return {}
-    return {k: [dic[k] for dic in rows] for k in rows[0]}
+    return {} if not rows else {k: [dic[k] for dic in rows] for k in rows[0]}
 
 
 @dataclass
