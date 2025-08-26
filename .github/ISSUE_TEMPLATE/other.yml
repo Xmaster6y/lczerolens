@@ -1,6 +1,6 @@
 name: Other
 description: Detail an issue.
-title: "[Other]: "
+title: "[Other] "
 labels: ["other"]
 projects: []
 assignees:

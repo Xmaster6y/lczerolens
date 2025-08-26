@@ -2,9 +2,11 @@
 
 # lczerolens 🔍
 
+[![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://lczerolens.readthedocs.io)
 [![lczerolens](https://img.shields.io/pypi/v/lczerolens?color=purple)](https://pypi.org/project/lczerolens/)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://github.com/Xmaster6y/lczerolens/blob/main/LICENSE)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![python versions](https://img.shields.io/pypi/pyversions/lczerolens.svg)](https://www.python.org/downloads/)
 
 [![codecov](https://codecov.io/gh/Xmaster6y/lczerolens/graph/badge.svg?token=JKJAWB451A)](https://codecov.io/gh/Xmaster6y/lczerolens)
@@ -12,9 +14,6 @@
 ![ci-tests-slow](https://github.com/Xmaster6y/lczerolens/actions/workflows/ci-tests-slow.yml/badge.svg)
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 [![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
-
-<a href="https://lczerolens.readthedocs.io"><img src="https://img.shields.io/badge/-Read%20the%20Docs%20Here-blue?style=for-the-badge&logo=Read-the-Docs&logoColor=white"></img></a>
-
 
 Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make interpretability easy and framework-agnostic (PyTorch): use it with `tdhook`, `captum`, `zennit`, or `nnsight`.
 
@@ -78,22 +77,24 @@ board = LczeroBoard()
 
 ### Spaces
 
-- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/lczerolens-demo)
-- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/lczerolens-backends-demo)
-- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/lichess-puzzles-leaderboard)
+Some [Hugging Face Spaces](https://huggingface.co/spaces/lczerolens) are available to try out the library. The demo (:red_circle: in construction) will showcase some of the features of the library and the backends demo makes the conversion of lc0 models to `onnx` easy.
+
+- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/demo)
+- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/backends-demo)
+- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/puzzles-leaderboard)
 
 ### Local Demo
 
 Additionally, you can run the gradio demos locally. First you'll need to clone the spaces (after cloning the repo):
 
 ```bash
-git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-demo spaces/lczerolens-demo
+git clone https://huggingface.co/spaces/lczerolens/demo spaces/demo
 ```
 
 And optionally the backends demo:
 
 ```bash
-git clone https://huggingface.co/spaces/Xmaster6y/lczerolens-backends-demo spaces/lczerolens-backends-demo
+git clone https://huggingface.co/spaces/lczerolens/backends-demo spaces/backends-demo
 ```
 
 And then launch the demo (running on port `8000`):

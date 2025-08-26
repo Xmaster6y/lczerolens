@@ -337,10 +337,9 @@ class TestBoardData:
                 "label": 1,
             }
         ]
-        boards, labels, infos = BoardData.concept_collate_fn(batch)
+        boards, labels = BoardData.concept_collate_fn(batch)
         assert len(boards) == 1 and isinstance(boards[0], LczeroBoard)
         assert labels == [1]
-        assert infos == batch
 
     def test_concept_init_grad(self):
         import torch
