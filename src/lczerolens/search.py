@@ -1,12 +1,12 @@
 """Search class"""
 
 import chess
-from lczerolens.board import LczeroBoard
 import numpy as np
-from tensordict import TensorDict
 import torch
+from lczerolens.board import LczeroBoard
 from lczerolens.model import ForceValue, LczeroModel
-from typing import Dict, Protocol, Tuple, Optional
+from tensordict import TensorDict
+from typing import Callable, Dict, Optional, Protocol, Tuple
 
 
 class Heuristic(Protocol):
@@ -53,6 +53,48 @@ class DummyHeuristic:
         """
         n = board.legal_moves.count()
         return TensorDict(value=torch.Tensor([0.0]), policy=torch.full((n,), 1 / n))
+
+
+class MaterialHeuristic:
+    """Heuristic 'model' that outputs uniform policy and material advantage as value."""
+
+    piece_values_default = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9,
+        chess.KING: 100,
+    }
+
+    def __init__(
+        self,
+        piece_values: Optional[Dict[int, int]] = None,
+        normalization_constant: float = 0.1,
+        activation: Callable[[torch.Tensor], torch.Tensor] = torch.tanh,
+    ):
+        self.piece_values = piece_values or self.piece_values_default
+        self.normalization_constant = normalization_constant
+        self.activation = activation
+
+    def evaluate(
+        self,
+        board: LczeroBoard,
+    ) -> TensorDict:
+        """
+        Compute the label for a given model and input.
+        """
+        us, them = board.turn, not board.turn
+        relative_value = 0
+        for piece in range(1, 7):
+            relative_value += len(board.pieces(piece, us)) * self.piece_values[piece]
+            relative_value -= len(board.pieces(piece, them)) * self.piece_values[piece]
+
+        value = self.activation(torch.tensor([relative_value / self.normalization_constant], dtype=torch.float32))
+
+        n = board.legal_moves.count()
+        policy = torch.full((n,), 1 / n)
+        return TensorDict(value=value, policy=policy)
 
 
 class ModelHeuristic:
@@ -117,10 +159,6 @@ class Node:
         ----------
         td : TensorDict
             TensorDict containing value and policy tensors.
-
-        Returns
-        -------
-        None
         """
         if self._value is not None or self._policy is not None:
             raise RuntimeError("Node already initialized.")

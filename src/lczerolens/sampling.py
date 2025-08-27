@@ -11,7 +11,7 @@ from itertools import tee
 
 from lczerolens.model import LczeroModel
 from lczerolens.board import LczeroBoard
-from lczerolens.search import Node, MCTS, ModelHeuristic
+from lczerolens.search import MCTS, ModelHeuristic, Node
 
 
 class Sampler(ABC):
@@ -91,13 +91,14 @@ class MCTSSampler(Sampler):
         c_puct: float = 1.0,
         use_argmax: bool = False,
         use_q_values: bool = False,
+        _heuristic: Optional[Callable] = None,
     ):
         self.mcts = MCTS(c_puct=c_puct)
         self.num_simulations = num_simulations
         self.use_argmax = use_argmax
         self.use_q_values = use_q_values
 
-        self._heuristic = ModelHeuristic(model)
+        self._heuristic = _heuristic or ModelHeuristic(model)
 
     def choose_move(self, board: LczeroBoard, utility: torch.Tensor, legal_indices: torch.Tensor) -> chess.Move:
         if self.use_argmax:

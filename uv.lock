@@ -1435,6 +1435,7 @@ demo = [
 dev = [
     { name = "datasets" },
     { name = "gdown" },
+    { name = "graphviz" },
     { name = "ipykernel" },
     { name = "nbconvert" },
     { name = "onnxruntime" },
@@ -1485,6 +1486,7 @@ demo = [
 dev = [
     { name = "datasets", specifier = ">=4.0.0" },
     { name = "gdown", specifier = ">=5.2.0" },
+    { name = "graphviz", specifier = ">=0.21" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "nbconvert", specifier = ">=7.16.5" },
     { name = "onnxruntime", specifier = ">=1.20.1" },
