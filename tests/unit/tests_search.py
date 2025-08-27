@@ -62,37 +62,31 @@ def test_dummy_heuristic_output():
     assert abs(td.get("policy").sum().item() - 1.0) < 1e-6
 
 
-test_cases = [
-    ("w", "P", 1.0),
-    ("b", "P", -1.0),
-    ("w", "p", -1.0),
-    ("b", "p", 1.0),
-    ("w", "N", 3.0),
-    ("b", "N", -3.0),
-    ("w", "n", -3.0),
-    ("b", "n", 3.0),
-    ("w", "B", 3.0),
-    ("b", "B", -3.0),
-    ("w", "b", -3.0),
-    ("b", "b", 3.0),
-    ("w", "R", 5.0),
-    ("b", "R", -5.0),
-    ("w", "r", -5.0),
-    ("b", "r", 5.0),
-    ("w", "Q", 9.0),
-    ("b", "Q", -9.0),
-    ("w", "q", -9.0),
-    ("b", "q", 9.0),
-    ("w", "K", 100.0),
-    ("b", "K", -100.0),
-    ("w", "k", -100.0),
-    ("b", "k", 100.0),
-]
+@pytest.mark.parametrize("turn", ("w", "b"))
+@pytest.mark.parametrize(
+    "piece,base_value",
+    [
+        ("P", 1.0),
+        ("p", 1.0),
+        ("N", 3.0),
+        ("n", 3.0),
+        ("B", 3.0),
+        ("b", 3.0),
+        ("R", 5.0),
+        ("r", 5.0),
+        ("Q", 9.0),
+        ("q", 9.0),
+        ("K", 100.0),
+        ("k", 100.0),
+    ],
+)
+def test_material_heuristic_output(turn, piece, base_value):
+    print(piece.isupper())
+    if turn == "w":
+        expected_value = base_value if piece.isupper() else -base_value
+    else:
+        expected_value = base_value if piece.islower() else -base_value
 
-
-@pytest.mark.parametrize("turn,piece,expected_value", test_cases)
-def test_material_heuristic_output(turn, piece, expected_value):
-    # Use fixed board FEN as requested
     board_fen = f"{piece}7/5K1k/8/8/8/8/8/8 {turn} - - 0 1"
     board = LczeroBoard(board_fen)
     heuristic = MaterialHeuristic(normalization_constant=1.0)
@@ -101,15 +95,14 @@ def test_material_heuristic_output(turn, piece, expected_value):
     assert "value" in td.keys()
     assert "policy" in td.keys()
 
-    # Check heuristic value
     expected_tensor = torch.tensor(
-        [torch.tanh(torch.tensor(expected_value, dtype=torch.float32))], dtype=torch.float32
+        [torch.tanh(torch.tensor(expected_value, dtype=torch.float32))],
+        dtype=torch.float32,
     )
     assert torch.isclose(td.get("value"), expected_tensor, atol=1e-6)
 
-    # Policy checks
-    assert td.get("policy").shape[0] == board.legal_moves.count()
-    assert abs(td.get("policy").sum().item() - 1.0) < 1e-6
+    assert td["policy"].shape[0] == board.legal_moves.count()
+    assert abs(td["policy"].sum().item() - 1.0) < 1e-6
 
 
 def test_mcts_search_best_move():
