@@ -1,4 +1,6 @@
-"""Search class"""
+"""
+Search utilities.
+"""
 
 import chess
 import torch
@@ -26,12 +28,12 @@ class Heuristic(Protocol):
         Returns
         -------
         TensorDict
-            Dictionary with fileds value and policy.
+            Dictionary with fields value and policy.
         """
         ...
 
 
-class DummyHeuristic:
+class RandomHeuristic:
     """Simple heuristic for MCTS."""
 
     def evaluate(
@@ -48,16 +50,16 @@ class DummyHeuristic:
         Returns
         -------
         TensorDict
-            Dictionary with fileds value and policy.
+            Dictionary with fields value and policy.
         """
         n = board.legal_moves.count()
-        return TensorDict(value=torch.Tensor([0.0]), policy=torch.full((n,), 1 / n))
+        return TensorDict(value=torch.tensor(0.0), policy=torch.full((n,), 1 / n))
 
 
 class MaterialHeuristic:
-    """Heuristic 'model' that outputs uniform policy and material advantage as value."""
+    """Heuristic that outputs uniform policy and material advantage as value."""
 
-    piece_values_default = {
+    default_piece_values = {
         chess.PAWN: 1,
         chess.KNIGHT: 3,
         chess.BISHOP: 3,
@@ -72,7 +74,7 @@ class MaterialHeuristic:
         normalization_constant: float = 0.1,
         activation: Callable[[torch.Tensor], torch.Tensor] = torch.tanh,
     ):
-        self.piece_values = piece_values or self.piece_values_default
+        self.piece_values = piece_values or self.default_piece_values
         self.normalization_constant = normalization_constant
         self.activation = activation
 
@@ -89,7 +91,7 @@ class MaterialHeuristic:
             relative_value += len(board.pieces(piece, us)) * self.piece_values[piece]
             relative_value -= len(board.pieces(piece, them)) * self.piece_values[piece]
 
-        value = self.activation(torch.tensor([relative_value / self.normalization_constant], dtype=torch.float32))
+        value = self.activation(torch.tensor(relative_value / self.normalization_constant, dtype=torch.float32))
 
         n = board.legal_moves.count()
         policy = torch.full((n,), 1 / n)
