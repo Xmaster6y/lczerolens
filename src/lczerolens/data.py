@@ -204,7 +204,9 @@ class GameData:
         try:
             from datasets import Features, Value, Sequence
         except ImportError as e:
-            raise ImportError("datasets is required to get the dataset features.") from e
+            raise ImportError(
+                "datasets is required to get the dataset features, install it with `pip install lczerolens[hf]`."
+            ) from e
         return Features(
             {
                 "gameid": Value("string"),
@@ -256,7 +258,9 @@ class BoardData:
         try:
             from datasets import Features, Value, Sequence
         except ImportError as e:
-            raise ImportError("datasets is required to get the dataset features.") from e
+            raise ImportError(
+                "datasets is required to get the dataset features, install it with `pip install lczerolens[hf]`."
+            ) from e
         concept_feature = concept.get_dataset_feature() if concept is not None else Value("null")
         return Features(
             {
@@ -595,7 +599,9 @@ class PuzzleData:
         try:
             from datasets import Features, Value
         except ImportError as e:
-            raise ImportError("datasets is required to get the dataset features.") from e
+            raise ImportError(
+                "datasets is required to get the dataset features, install it with `pip install lczerolens[hf]`."
+            ) from e
 
         return Features(
             {
