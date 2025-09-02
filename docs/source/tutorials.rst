@@ -14,10 +14,11 @@ Tutorials
 
       :bdg-primary:`Main Features`
 
+   .. grid-item-card:: Evidence of Learned Look-Ahead
+      :link: notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
+
    .. grid-item-card:: Piece Value Estimation Using LRP
       :link: notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
-
-      :bdg-primary:`Main Features`
 
    .. grid-item-card:: Train SAEs
       :link: notebooks/tutorials/train-saes.ipynb

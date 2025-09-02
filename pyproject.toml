@@ -41,6 +41,7 @@ backends = [
 ]
 hf = [
     "datasets>=4.0.0",
+    "huggingface-hub>=0.27.1",
 ]
 
 [dependency-groups]
@@ -48,13 +49,16 @@ dev = [
     "datasets>=4.0.0",
     "gdown>=5.2.0",
     "graphviz>=0.21",
+    "huggingface-hub>=0.27.1",
     "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.7",
     "nbconvert>=7.16.5",
     "onnxruntime>=1.20.1",
     "pre-commit>=4.0.1",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
     "scikit-learn>=1.7.1",
+    "seaborn>=0.13.2",
     "tdhook",
     "v-lczero-bindings>=0.31.2",
 ]
@@ -78,7 +82,6 @@ scripts = [
     "loguru>=0.7.3",
     "matplotlib>=3.10.0",
     "pylatex>=1.4.2",
-    "safetensors>=0.5.2",
     "wandb>=0.19.2",
 ]
 
@@ -90,7 +93,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv]
-default-groups = ["dev"]
+default-groups = ["dev", "demo", "docs", "scripts"]
 
 [tool.uv.sources]
 tdhook = { git = "https://github.com/Xmaster6y/tdhook" }

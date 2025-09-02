@@ -18,7 +18,8 @@ To get started with lczerolens, install it with ``pip``.
 
 .. note::
 
-   Core dependencies are light: mainly ``torch`` and ``onnx2torch``. Optional extras include ``matplotlib`` and ``graphviz`` (``viz``) and lc0 bindings (``backends``).
+   Core dependencies are light: mainly ``torch``, ``onnx2torch``, ``tensordict``, and ``python-chess``. Optional extras include ``matplotlib`` and ``graphviz`` (extra ``viz``) and lc0 bindings (extra ``backends``).
+   Also, the Hugging Face Hub is required to load models from the Hub (extra ``hf``).
 
 First Steps
 -----------
@@ -26,16 +27,16 @@ First Steps
 .. grid:: 2
    :gutter: 2
 
+   .. grid-item-card:: Walkthrough
+      :link: notebooks/walkthrough.ipynb
+
+      Walk through a basic usage of the package.
+
    .. grid-item-card:: Features
       :link: features
       :link-type: doc
 
       Review the basic features provided by :bdg-primary:`lczerolens`.
-
-   .. grid-item-card:: Walkthrough
-      :link: notebooks/walkthrough.ipynb
-
-      Walk through the basic functionality of the package.
 
 .. note::
 
