@@ -23,9 +23,8 @@ def main(args: argparse.Namespace) -> None:
     if not model_path.exists():
         raise FileNotFoundError(f"File not found: {model_path}")
 
-    path_in_repo = args.path_in_repo or model_path.name
-
     if args.push_to_hub:
+        path_in_repo = args.path_in_repo or model_path.name
         logger.info(f"Uploading `{model_path}` to `{args.repo_id}:{path_in_repo}`…")
 
         # Ensure repo exists (idempotent)

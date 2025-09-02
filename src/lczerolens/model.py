@@ -16,6 +16,12 @@ from tensordict.nn import TensorDictModule
 from lczerolens.board import InputEncoding, LczeroBoard
 
 
+MISSING_HF_ERROR = (
+    "huggingface_hub is required to push or load the model from the Hugging Face Hub. "
+    "Install it with `pip install lczerolens[hf]` or directly via `pip install huggingface_hub`."
+)
+
+
 class LczeroModel(TensorDictModule):
     """Class for wrapping the LCZero models."""
 
@@ -248,13 +254,11 @@ class LczeroModel(TensorDictModule):
         try:
             from huggingface_hub import create_repo, repo_exists, upload_file
         except ImportError as e:
-            raise ImportError(
-                "huggingface_hub is required to push the model to the Hugging Face Hub, install it with `pip install lczerolens[hf]`."
-            ) from e
+            raise ImportError(MISSING_HF_ERROR) from e
 
+        create_kwargs = create_kwargs or {}
         _exists = repo_exists(repo_id, token=create_kwargs.get("token", None))
         if create_if_not_exists and not _exists:
-            create_kwargs = create_kwargs or {}
             create_repo(repo_id, **create_kwargs)
         elif not _exists:
             raise ValueError(f"Repository {repo_id} does not exist.")
@@ -295,9 +299,7 @@ class LczeroModel(TensorDictModule):
         try:
             from huggingface_hub import hf_hub_download
         except ImportError as e:
-            raise ImportError(
-                "huggingface_hub is required to load the model from the Hugging Face Hub, install it with `pip install lczerolens[hf]`."
-            ) from e
+            raise ImportError(MISSING_HF_ERROR) from e
 
         hf_hub_kwargs = hf_hub_kwargs or {}
         path = hf_hub_download(repo_id, filename, **hf_hub_kwargs)
