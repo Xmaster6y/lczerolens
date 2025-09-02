@@ -18,7 +18,7 @@ To get started with lczerolens, install it with ``pip``.
 
 .. note::
 
-   Core dependencies are light: mainly ``torch`` and ``onnx2torch``. Optional extras include ``matplotlib`` (``viz``) and lc0 bindings (``backends``).
+   Core dependencies are light: mainly ``torch`` and ``onnx2torch``. Optional extras include ``matplotlib`` and ``graphviz`` (``viz``) and lc0 bindings (``backends``).
 
 First Steps
 -----------

@@ -68,6 +68,7 @@ Getting started with neural networks:
 
 - `3Blue1Brown Neural Networks <https://www.youtube.com/watch?v=IHZwWFHWa-w>`_ - Visual introduction to neural networks
 - `Neural Networks: Zero to Hero <https://karpathy.ai/zero-to-hero.html>`_ - Practical neural network implementation guide
+- `Netron <https://netron.app/>`_ - Visualizer for neural network architectures
 
 Interpretability and analysis:
 

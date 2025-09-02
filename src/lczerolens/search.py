@@ -1,7 +1,8 @@
-"""Search class"""
+"""
+Search utilities.
+"""
 
 import chess
-import numpy as np
 import torch
 from lczerolens.board import LczeroBoard
 from lczerolens.model import ForceValue, LczeroModel
@@ -27,12 +28,12 @@ class Heuristic(Protocol):
         Returns
         -------
         TensorDict
-            Dictionary with fileds value and policy.
+            Dictionary with fields value and policy.
         """
         ...
 
 
-class DummyHeuristic:
+class RandomHeuristic:
     """Simple heuristic for MCTS."""
 
     def evaluate(
@@ -49,16 +50,16 @@ class DummyHeuristic:
         Returns
         -------
         TensorDict
-            Dictionary with fileds value and policy.
+            Dictionary with fields value and policy.
         """
         n = board.legal_moves.count()
-        return TensorDict(value=torch.Tensor([0.0]), policy=torch.full((n,), 1 / n))
+        return TensorDict(value=torch.tensor(0.0), policy=torch.full((n,), 1 / n))
 
 
 class MaterialHeuristic:
-    """Heuristic 'model' that outputs uniform policy and material advantage as value."""
+    """Heuristic that outputs uniform policy and material advantage as value."""
 
-    piece_values_default = {
+    default_piece_values = {
         chess.PAWN: 1,
         chess.KNIGHT: 3,
         chess.BISHOP: 3,
@@ -73,7 +74,7 @@ class MaterialHeuristic:
         normalization_constant: float = 0.1,
         activation: Callable[[torch.Tensor], torch.Tensor] = torch.tanh,
     ):
-        self.piece_values = piece_values or self.piece_values_default
+        self.piece_values = piece_values or self.default_piece_values
         self.normalization_constant = normalization_constant
         self.activation = activation
 
@@ -90,7 +91,7 @@ class MaterialHeuristic:
             relative_value += len(board.pieces(piece, us)) * self.piece_values[piece]
             relative_value -= len(board.pieces(piece, them)) * self.piece_values[piece]
 
-        value = self.activation(torch.tensor([relative_value / self.normalization_constant], dtype=torch.float32))
+        value = self.activation(torch.tensor(relative_value / self.normalization_constant, dtype=torch.float32))
 
         n = board.legal_moves.count()
         policy = torch.full((n,), 1 / n)
@@ -231,25 +232,18 @@ class MCTS:
         self,
         node: Node,
     ) -> chess.Move:
-        """Select the move to explore based on the PUCT formula.
+        """Select the move to explore based on the PUCT formula."""
 
-        Parameters
-        ----------
-        node : Node
-            Node instance representing the current board state.
-
-        Returns
-        -------
-        move : chess.Move
-            Selected move as a chess.Move object.
-        """
+        Q = node.q_values.detach() if node.q_values.requires_grad else node.q_values
+        policy = node.policy.detach() if node.policy.requires_grad else node.policy
 
         # PUCT formula = Q + U
         # Q = average value from simulations
         # U = exploration bonus encouraging less-visited moves
-        Q = node.q_values
-        U = self.c_puct * node.policy * (node.visits.sum() + 1) ** 0.5 / (1 + node.visits)
-        a = np.argmax(Q + U)
+        U = self.c_puct * policy * ((node.visits.sum() + 1) ** 0.5) / (1 + node.visits)
+
+        a = torch.argmax(Q + U).item()
+
         node.visits[a] += 1
         return node.legal_moves[a]
 
@@ -306,9 +300,7 @@ class MCTS:
             node = parent
 
     def render_tree(
-        root: Node,
-        max_depth: int = 3,
-        save_to: Optional[str] = None,
+        root: Node, max_depth: int = 3, save_to: Optional[str] = None, min_visit_percentage: float = 0.0
     ) -> Optional[str]:
         """
         Render the MCTS tree as an SVG.
@@ -335,16 +327,23 @@ class MCTS:
             ) from e
 
         dot = Digraph(comment="MCTS Tree")
+        dot.attr("graph", rankdir="TB", ranksep="1.5")
         dot.attr("node", shape="circle")
         dot.node(str(id(root)), label=f"Root\nN={int(root.visits.sum().item())}")
 
         def add_nodes(node: Node, depth: int = 0):
             if depth > max_depth:
                 return
+            if not node.children:
+                return
+            visit_percentages = node.visits / node.visits.sum()
             for move, child in node.children.items():
+                child_index = node.legal_moves.index(move)
+                if visit_percentages[child_index] < min_visit_percentage:
+                    continue
                 idx = node.legal_moves.index(move)
                 n_visits = int(node.visits[idx].item())
-                label = f"{move}\nN={n_visits}\nV={child.value[0]}"
+                label = f"{move}\nN={n_visits}\nV={child.value.item():.3f}"
                 dot.node(str(id(child)), label=label)
                 dot.edge(str(id(node)), str(id(child)))
                 add_nodes(child, depth + 1)
