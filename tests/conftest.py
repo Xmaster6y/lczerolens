@@ -73,6 +73,7 @@ def pytest_addoption(parser):
     parser.addoption("--run-slow", action="store_true", default=False, help="run slow tests")
     parser.addoption("--run-fast", action="store_true", default=False, help="run fast tests")
     parser.addoption("--run-backends", action="store_true", default=False, help="run backends tests")
+    parser.addoption("--run-hf", action="store_true", default=False, help="run hf tests")
 
 
 def pytest_configure(config):
@@ -84,10 +85,12 @@ def pytest_collection_modifyitems(config, items):
     run_slow = config.getoption("--run-slow")
     run_fast = config.getoption("--run-fast")
     run_backends = config.getoption("--run-backends")
+    run_hf = config.getoption("--run-hf")
 
     skip_slow = pytest.mark.skip(reason="--run-slow not given in cli: skipping slow tests")
     skip_fast = pytest.mark.skip(reason="--run-fast not given in cli: skipping fast tests")
     skip_backends = pytest.mark.skip(reason="--run-backends not given in cli: skipping backends tests")
+    skip_hf = pytest.mark.skip(reason="--run-hf not given in cli: skipping hf tests")
 
     for item in items:
         if "slow" in item.keywords and not run_slow:
@@ -96,3 +99,5 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_fast)
         if "backends" in item.keywords and not run_backends:
             item.add_marker(skip_backends)
+        if "hf" in item.keywords and not run_hf:
+            item.add_marker(skip_hf)

@@ -3,6 +3,7 @@
 import pytest
 import torch
 from lczero.backends import GameState
+from huggingface_hub import delete_repo
 
 from lczerolens.model import LczeroBoard, PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue, LczeroModel
 from lczerolens import backends as lczero_utils
@@ -66,6 +67,17 @@ class TestManageModels:
         output = model(board)
         assert "policy" in output
         assert "wdl" in output
+
+    @pytest.mark.hf
+    def test_model_push_to_hf(self):
+        """Test that the model push to hf works."""
+        board = LczeroBoard()
+        model = LczeroModel.from_hf("lczerolens/maia-1100")
+        model.push_to_hf("lczerolens/tests")
+        output = model(board)
+        assert "policy" in output
+        assert "wdl" in output
+        delete_repo("lczerolens/tests")
 
 
 class TestFlows:
