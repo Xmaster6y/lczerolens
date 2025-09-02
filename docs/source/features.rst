@@ -21,7 +21,7 @@ Features
    :gutter: 3
 
    .. grid-item-card::
-      :link: notebooks/features/visualise-heatmaps.ipynb
+      :link: notebooks/features/encode-boards.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -29,16 +29,16 @@ Features
 
          <div class="d-flex align-items-center">
             <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
-               <i class="fa-solid fa-map fa-2x"></i>
+               <i class="fa-solid fa-key fa-2x"></i>
             </div>
             <div>
-               <h5 class="card-title">Visualise Heatmaps</h5>
-               <p class="card-text">Visualise saliency heatmaps or encodings for a given chess board.</p>
+               <h5 class="card-title">Encode Boards</h5>
+               <p class="card-text">Encode a chess board into a tensor.</p>
             </div>
          </div>
 
    .. grid-item-card::
-      :link: notebooks/features/probe-concepts.ipynb
+      :link: notebooks/features/load-models.ipynb
       :class-card: surface
       :class-body: surface
 
@@ -46,11 +46,11 @@ Features
 
          <div class="d-flex align-items-center">
             <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
-               <i class="fa-solid fa-database fa-2x"></i>
+               <i class="fa-solid fa-download fa-2x"></i>
             </div>
             <div>
-               <h5 class="card-title">Probe Concepts</h5>
-               <p class="card-text">Probe the concepts with a dataset.</p>
+               <h5 class="card-title">Load Models</h5>
+               <p class="card-text">Load a model from a file or the Hugging Face Hub.</p>
             </div>
          </div>
 
@@ -122,13 +122,49 @@ Features
             </div>
          </div>
 
+   .. grid-item-card::
+      :link: notebooks/features/visualise-heatmaps.ipynb
+      :class-card: surface
+      :class-body: surface
+
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-map fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Visualise Heatmaps</h5>
+               <p class="card-text">Visualise saliency heatmaps or encodings for a given chess board.</p>
+            </div>
+         </div>
+
+   .. grid-item-card::
+      :link: notebooks/features/probe-concepts.ipynb
+      :class-card: surface
+      :class-body: surface
+
+      .. raw:: html
+
+         <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center" style="min-width: 50px; margin-right: 20px; height: 100%;">
+               <i class="fa-solid fa-database fa-2x"></i>
+            </div>
+            <div>
+               <h5 class="card-title">Probe Concepts</h5>
+               <p class="card-text">Probe the concepts with a dataset.</p>
+            </div>
+         </div>
+
 .. toctree::
    :hidden:
    :maxdepth: 2
 
-   notebooks/features/visualise-heatmaps.ipynb
-   notebooks/features/probe-concepts.ipynb
+   notebooks/features/encode-boards.ipynb
+   notebooks/features/load-models.ipynb
    notebooks/features/move-prediction.ipynb
    notebooks/features/run-models-on-gpu.ipynb
    notebooks/features/evaluate-models-on-puzzles.ipynb
    notebooks/features/convert-official-weights.ipynb
+   notebooks/features/visualise-heatmaps.ipynb
+   notebooks/features/probe-concepts.ipynb
