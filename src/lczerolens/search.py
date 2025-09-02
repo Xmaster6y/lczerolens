@@ -1,7 +1,6 @@
 """Search class"""
 
 import chess
-import numpy as np
 import torch
 from lczerolens.board import LczeroBoard
 from lczerolens.model import ForceValue, LczeroModel
@@ -241,10 +240,7 @@ class MCTS:
         # U = exploration bonus encouraging less-visited moves
         U = self.c_puct * policy * ((node.visits.sum() + 1) ** 0.5) / (1 + node.visits)
 
-        if isinstance(Q, torch.Tensor) and isinstance(U, torch.Tensor):
-            a = torch.argmax(Q + U).item()
-        else:
-            a = np.argmax(Q + U)
+        a = torch.argmax(Q + U).item()
 
         node.visits[a] += 1
         return node.legal_moves[a]
