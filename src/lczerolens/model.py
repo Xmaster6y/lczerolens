@@ -3,6 +3,7 @@
 import os
 from abc import ABCMeta, abstractmethod
 from typing import Dict, Any, Union, Iterable, List, Optional, Sequence
+import tempfile
 
 import torch
 from onnx2torch import convert
@@ -183,7 +184,7 @@ class LczeroModel(TensorDictModule):
             raise ValueError(f"Could not load model at {onnx_model_path}.") from e
 
     @classmethod
-    def from_torch_path(cls, torch_model_path: str, **kwargs) -> "LczeroModel":
+    def from_torch_path(cls, torch_model_path: str, weights_only: bool = False, **kwargs) -> "LczeroModel":
         """Builds a model from a PyTorch file path.
 
         Parameters
@@ -206,7 +207,7 @@ class LczeroModel(TensorDictModule):
         if not os.path.exists(torch_model_path):
             raise FileNotFoundError(f"Model path {torch_model_path} does not exist.")
         try:
-            torch_model = torch.load(torch_model_path)
+            torch_model = torch.load(torch_model_path, weights_only=weights_only)
         except Exception as e:
             raise ValueError(f"Could not load model at {torch_model_path}.") from e
         if isinstance(torch_model, LczeroModel):
@@ -215,6 +216,92 @@ class LczeroModel(TensorDictModule):
             return cls.from_model(torch_model, **kwargs)
         else:
             raise ValueError(f"Could not load model at {torch_model_path}.")
+
+    def push_to_hf(
+        self,
+        repo_id: str,
+        create_if_not_exists: bool = True,
+        create_kwargs: Optional[Dict[str, Any]] = None,
+        path_in_repo: str = "model.pt",
+        **kwargs,
+    ):
+        """Pushes the model to the Hugging Face Hub.
+
+        Parameters
+        ----------
+        repo_id : str
+            The repository id to push the model to.
+        create_if_not_exists : bool, optional
+            Whether to create the repository if it does not exist, by default True
+        create_kwargs : Optional[Dict[str, Any]], optional
+            Additional keyword arguments to pass to the create_repo method.
+        path_in_repo : str, optional
+            The path in the repository to save the model to.
+        **kwargs : Any
+            Additional keyword arguments to pass to the upload_file method.
+
+        Raises
+        ------
+        ImportError
+            If the huggingface_hub library is not installed.
+        """
+        try:
+            from huggingface_hub import create_repo, repo_exists, upload_file
+        except ImportError as e:
+            raise ImportError(
+                "huggingface_hub is required to push the model to the Hugging Face Hub, install it with `pip install lczerolens[hf]`."
+            ) from e
+
+        _exists = repo_exists(repo_id, token=create_kwargs.get("token", None))
+        if create_if_not_exists and not _exists:
+            create_kwargs = create_kwargs or {}
+            create_repo(repo_id, **create_kwargs)
+        elif not _exists:
+            raise ValueError(f"Repository {repo_id} does not exist.")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "model.pt")
+            torch.save(self.module, path)
+            upload_file(path_or_fileobj=path, repo_id=repo_id, path_in_repo=path_in_repo, **kwargs)
+
+    @classmethod
+    def from_hf(
+        cls, repo_id: str, filename: str = "model.pt", hf_hub_kwargs: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> "LczeroModel":
+        """
+        Loads a model from the Hugging Face Hub.
+
+        Parameters
+        ----------
+        repo_id : str
+            The repository id to load the model from.
+        filename : str
+            The filename of the model to load.
+        hf_hub_kwargs : Optional[Dict[str, Any]], optional
+            Additional keyword arguments to pass to the hf_hub_download method.
+        **kwargs : Any
+            Additional keyword arguments to pass to the from_path method.
+
+        Returns
+        -------
+        LczeroModel
+            The loaded model instance
+
+        Raises
+        ------
+        ImportError
+            If the huggingface_hub library is not installed.
+        """
+        try:
+            from huggingface_hub import hf_hub_download
+        except ImportError as e:
+            raise ImportError(
+                "huggingface_hub is required to load the model from the Hugging Face Hub, install it with `pip install lczerolens[hf]`."
+            ) from e
+
+        hf_hub_kwargs = hf_hub_kwargs or {}
+        path = hf_hub_download(repo_id, filename, **hf_hub_kwargs)
+        return cls.from_path(path, **kwargs)
 
     @staticmethod
     def _get_output_names(model: nn.Module) -> List[str]:

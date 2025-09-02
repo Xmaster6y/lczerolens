@@ -4,7 +4,7 @@ import pytest
 import torch
 from lczero.backends import GameState
 
-from lczerolens.model import LczeroBoard, PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue
+from lczerolens.model import LczeroBoard, PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue, LczeroModel
 from lczerolens import backends as lczero_utils
 
 
@@ -56,6 +56,16 @@ class TestModel:
             lczero_policy, lczero_value = lczero_utils.prediction_from_backend(tiny_lczero_backend, lczero_game)
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
+
+
+class TestManageModels:
+    def test_model_from_hf(self):
+        """Test that the model save and load works."""
+        board = LczeroBoard()
+        model = LczeroModel.from_hf("lczerolens/maia-1100")
+        output = model(board)
+        assert "policy" in output
+        assert "wdl" in output
 
 
 class TestFlows:
