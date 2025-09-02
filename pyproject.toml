@@ -39,6 +39,9 @@ viz = [
 backends = [
     "v-lczero-bindings>=0.31.2"
 ]
+hf = [
+    "datasets>=4.0.0",
+]
 
 [dependency-groups]
 dev = [
