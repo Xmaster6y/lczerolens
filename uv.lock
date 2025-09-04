@@ -1530,7 +1530,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "scikit-learn", specifier = ">=1.7.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
-    { name = "tdhook", git = "https://github.com/Xmaster6y/tdhook" },
+    { name = "tdhook", git = "https://github.com/Xmaster6y/tdhook?rev=c6a4954f97e45b0e159fb305d061835c0b84171d" },
     { name = "v-lczero-bindings", specifier = ">=0.31.2" },
 ]
 docs = [
@@ -3742,7 +3742,7 @@ wheels = [
 [[package]]
 name = "tdhook"
 version = "0.1.1"
-source = { git = "https://github.com/Xmaster6y/tdhook#de3f5b75892e185c4166c7435b6116016411dbd8" }
+source = { git = "https://github.com/Xmaster6y/tdhook?rev=c6a4954f97e45b0e159fb305d061835c0b84171d#c6a4954f97e45b0e159fb305d061835c0b84171d" }
 dependencies = [
     { name = "tensordict" },
     { name = "torch" },
