@@ -77,9 +77,9 @@ board = LczeroBoard()
 
 Some [Hugging Face Spaces](https://huggingface.co/spaces/lczerolens) are available to try out the library. The demo (:red_circle: in construction) will showcase some of the features of the library and the backends demo makes the conversion of lc0 models to `onnx` easy.
 
-- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/demo)
-- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/backends-demo)
-- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/puzzles-leaderboard)
+- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/demo): Showcase some of the features of the library.
+- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/backends-demo): Make the conversion of lc0 models to `onnx` easy.
+- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/puzzles-leaderboard): Coming soon...
 
 ### Local Demo
 
