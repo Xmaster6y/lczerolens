@@ -99,7 +99,7 @@ build-backend = "setuptools.build_meta"
 default-groups = ["dev", "demo", "docs", "scripts"]
 
 [tool.uv.sources]
-tdhook = { git = "https://github.com/Xmaster6y/tdhook", rev = "resolve" }
+tdhook = { git = "https://github.com/Xmaster6y/tdhook", rev = "6e236e4" }
 
 [tool.ruff]
 line-length = 119
