@@ -20,6 +20,7 @@ extensions = [
     "sphinx_design",  # Boostrap design components
     "nbsphinx",  # Jupyter notebook support
     "autoapi.extension",
+    "sphinx_llm.txt",
 ]
 
 templates_path = ["_templates"]
