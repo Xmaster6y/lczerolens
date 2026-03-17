@@ -40,7 +40,7 @@ Key chess engines and AI systems:
 - `Maia <https://www.maiachess.com/>`_ - Human-like chess playing neural network
 
 Technical Background
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 Understanding probabilities and search:
 

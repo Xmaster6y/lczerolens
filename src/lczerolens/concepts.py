@@ -289,15 +289,15 @@ class BestLegalMove(MulticlassConcept):
         model: LczeroModel,
     ):
         """Initialize the class."""
-        self.policy_flow = PolicyFlow(model)
+        self.policy_flow = PolicyFlow.from_model(model.module)
 
     def compute_label(
         self,
         board: LczeroBoard,
     ) -> int:
         """Compute the label for a given model and input."""
-        (policy,) = self.policy_flow(board)
-        policy = torch.softmax(policy.squeeze(0), dim=-1)
+        output = self.policy_flow(board)
+        policy = torch.softmax(output["policy"].squeeze(0), dim=-1)
 
         legal_move_indices = [LczeroBoard.encode_move(move, board.turn) for move in board.legal_moves]
         sub_index = policy[legal_move_indices].argmax().item()
@@ -313,7 +313,7 @@ class PieceBestLegalMove(BinaryConcept):
         piece: str,
     ):
         """Initialize the class."""
-        self.policy_flow = PolicyFlow(model)
+        self.policy_flow = PolicyFlow.from_model(model.module)
         self.piece = chess.Piece.from_symbol(piece)
 
     def compute_label(
@@ -321,8 +321,8 @@ class PieceBestLegalMove(BinaryConcept):
         board: LczeroBoard,
     ) -> int:
         """Compute the label for a given model and input."""
-        (policy,) = self.policy_flow(board)
-        policy = torch.softmax(policy.squeeze(0), dim=-1)
+        output = self.policy_flow(board)
+        policy = torch.softmax(output["policy"].squeeze(0), dim=-1)
 
         legal_moves = list(board.legal_moves)
         legal_move_indices = [LczeroBoard.encode_move(move, board.turn) for move in legal_moves]

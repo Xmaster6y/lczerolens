@@ -20,6 +20,7 @@ extensions = [
     "sphinx_design",  # Boostrap design components
     "nbsphinx",  # Jupyter notebook support
     "autoapi.extension",
+    "sphinx_llm.txt",
 ]
 
 templates_path = ["_templates"]
@@ -101,11 +102,10 @@ html_css_files = [
 ]
 
 # Nbsphinx
-nbsphinx_execute = "auto"
-nbsphinx_allow_errors = True
+nbsphinx_execute = "never"
 
 # Autoapi
 autoapi_dirs = ["../../src"]
 autoapi_root = "api"
-autoapi_keep_files = False
+autoapi_keep_files = True  # Weird rtd fail
 autodoc_typehints = "description"
