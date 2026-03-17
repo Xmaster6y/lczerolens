@@ -2,6 +2,9 @@
 Test cases for the concept module.
 """
 
+import torch
+from unittest.mock import MagicMock, patch
+
 from lczerolens.concepts import (
     BinaryConcept,
     AndBinaryConcept,
@@ -9,6 +12,8 @@ from lczerolens.concepts import (
     HasPiece,
     HasMaterialAdvantage,
     HasThreat,
+    BestLegalMove,
+    PieceBestLegalMove,
 )
 from lczerolens import LczeroBoard
 
@@ -42,22 +47,18 @@ class TestBinaryConcept:
         """
         Test the relative threat concept.
         """
-        concept = HasThreat("p", relative=True)  # Is an enemy pawn threatened?
+        concept = HasThreat("p", relative=True)
         assert concept.compute_label(LczeroBoard("8/8/8/8/8/8/8/8 w - - 0 1")) == 0
         assert concept.compute_label(LczeroBoard("R7/8/8/8/8/8/p7/8 w - - 0 1")) == 1
         assert concept.compute_label(LczeroBoard("R7/8/8/8/8/8/p7/8 b - - 0 1")) == 0
 
     def test_has_piece_relative_and_absolute(self):
         """Check HasPiece on trivially small boards."""
-        # One white pawn on a2, white to move
         board = LczeroBoard("8/8/8/8/8/8/P7/8 w - - 0 1")
         assert HasPiece("P", relative=True).compute_label(board) == 1
         assert HasPiece("p", relative=True).compute_label(board) == 0
-        # Absolute: white pawn exists regardless of turn
         assert HasPiece("P", relative=False).compute_label(board) == 1
-        # Switch turn
         board = LczeroBoard("8/8/8/8/8/8/P7/8 b - - 0 1")
-        # Relative now refers to black's perspective
         assert HasPiece("P", relative=True).compute_label(board) == 0
         assert HasPiece("p", relative=True).compute_label(board) == 1
 
@@ -82,13 +83,91 @@ class TestBinaryConcept:
 
     def test_has_material_advantage_relative_and_absolute(self):
         """Material advantage on boards with one or two pieces."""
-        # White to move, one white pawn vs lone black king → advantage
         board = LczeroBoard("k7/8/8/8/8/8/P7/7K w - - 0 1")
         assert HasMaterialAdvantage(relative=True).compute_label(board) == 1
         assert HasMaterialAdvantage(relative=False).compute_label(board) == 1
-        # Black to move, same position but turn flips relative perspective
         board = LczeroBoard("k7/8/8/8/8/8/P7/7K b - - 0 1")
-        # Relative: side to move is black (no material) → not advantage
         assert HasMaterialAdvantage(relative=True).compute_label(board) == 0
-        # Absolute advantage for white remains
         assert HasMaterialAdvantage(relative=False).compute_label(board) == 1
+
+
+class TestMoveConcepts:
+    """Test cases for BestLegalMove and PieceBestLegalMove."""
+
+    def test_best_legal_move(self):
+        """Test BestLegalMove returns the index of the policy's best legal move."""
+        board = LczeroBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+        legal_indices = [LczeroBoard.encode_move(move, board.turn) for move in board.legal_moves]
+
+        policy = torch.zeros(1858)
+        policy[legal_indices[0]] = 10.0
+        policy[legal_indices[1:]] = -10.0
+
+        mock_policy_flow = MagicMock(return_value={"policy": policy.unsqueeze(0)})
+        mock_model = MagicMock()
+        mock_model.module = MagicMock()
+
+        with patch("lczerolens.concepts.PolicyFlow") as mock_policy_flow_cls:
+            mock_policy_flow_cls.from_model.return_value = mock_policy_flow
+
+            concept = BestLegalMove(mock_model)
+            label = concept.compute_label(board)
+
+        assert label == legal_indices[0]
+        mock_policy_flow_cls.from_model.assert_called_once_with(mock_model.module)
+        mock_policy_flow.assert_called_once_with(board)
+
+    def test_piece_best_legal_move(self):
+        """Test PieceBestLegalMove returns 1 when best move is from the specified piece."""
+        board = LczeroBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+        legal_moves = list(board.legal_moves)
+        legal_indices = [LczeroBoard.encode_move(move, board.turn) for move in legal_moves]
+
+        e2e4 = next(m for m in legal_moves if m.uci() == "e2e4")
+        e2e4_idx = LczeroBoard.encode_move(e2e4, board.turn)
+
+        policy = torch.zeros(1858)
+        policy[e2e4_idx] = 10.0
+        for idx in legal_indices:
+            if idx != e2e4_idx:
+                policy[idx] = -10.0
+
+        mock_policy_flow = MagicMock(return_value={"policy": policy.unsqueeze(0)})
+        mock_model = MagicMock()
+        mock_model.module = MagicMock()
+
+        with patch("lczerolens.concepts.PolicyFlow") as mock_policy_flow_cls:
+            mock_policy_flow_cls.from_model.return_value = mock_policy_flow
+
+            concept = PieceBestLegalMove(mock_model, "P")
+            label = concept.compute_label(board)
+
+        assert label == 1
+        mock_policy_flow_cls.from_model.assert_called_once_with(mock_model.module)
+
+    def test_piece_best_legal_move_wrong_piece(self):
+        """Test PieceBestLegalMove returns 0 when best move is not from the specified piece."""
+        board = LczeroBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+        legal_moves = list(board.legal_moves)
+        legal_indices = [LczeroBoard.encode_move(move, board.turn) for move in legal_moves]
+
+        g1f3 = next(m for m in legal_moves if m.uci() == "g1f3")
+        g1f3_idx = LczeroBoard.encode_move(g1f3, board.turn)
+
+        policy = torch.zeros(1858)
+        policy[g1f3_idx] = 10.0
+        for idx in legal_indices:
+            if idx != g1f3_idx:
+                policy[idx] = -10.0
+
+        mock_policy_flow = MagicMock(return_value={"policy": policy.unsqueeze(0)})
+        mock_model = MagicMock()
+        mock_model.module = MagicMock()
+
+        with patch("lczerolens.concepts.PolicyFlow") as mock_policy_flow_cls:
+            mock_policy_flow_cls.from_model.return_value = mock_policy_flow
+
+            concept = PieceBestLegalMove(mock_model, "P")
+            label = concept.compute_label(board)
+
+        assert label == 0
