@@ -168,3 +168,4 @@ Features
    notebooks/features/convert-official-weights.ipynb
    notebooks/features/visualise-heatmaps.ipynb
    notebooks/features/probe-concepts.ipynb
+   notebooks/features/selfplay-mcts-nn.ipynb

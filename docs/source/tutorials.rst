@@ -20,3 +20,7 @@ Tutorials
 
    notebooks/walkthrough.ipynb
    notebooks/tutorials/framework-agnostic-interpretability.ipynb
+   notebooks/tutorials/automated-interpretability.ipynb
+   notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
+   notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
+   notebooks/tutorials/train-saes.ipynb
