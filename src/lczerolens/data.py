@@ -517,7 +517,7 @@ class PuzzleData:
         else:
             return metric_inputs_generator()
 
-    def evaluate(self, sampler: Sampler, all_moves: bool = False, **kwargs) -> Tuple[float, Optional[float]]:
+    def evaluate(self, sampler: Sampler, all_moves: bool = False, **kwargs) -> Dict[str, float]:
         """Evaluate this single puzzle using a sampler.
 
         Parameters
@@ -531,8 +531,8 @@ class PuzzleData:
 
         Returns
         -------
-        Tuple[float, Optional[float]]
-            Tuple containing score and perplexity metrics.
+        Dict[str, float]
+            Dictionary containing score, perplexity, and normalized_perplexity metrics.
         """
         return next(iter(self.evaluate_multiple([self], sampler, all_moves, **kwargs)))
 

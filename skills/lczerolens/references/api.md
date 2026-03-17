@@ -24,17 +24,17 @@ x = model.prepare_boards(board1, board2, input_encoding=InputEncoding.INPUT_CLAS
 
 ### Flow Variants
 
-- `PolicyFlow(model)`: Isolate policy head only
-- `ValueFlow(model)`: Isolate value head
-- `WdlFlow(model)`: Isolate WDL head
-- `ForceValue(model)`: Force value flow (for MCTS heuristic)
+- `PolicyFlow.from_model(model)`: Isolate policy head only
+- `ValueFlow.from_model(model)`: Isolate value head
+- `WdlFlow.from_model(model)`: Isolate WDL head
+- `ForceValue.from_model(model)`: Force value flow (for MCTS heuristic)
 
 ## LczeroBoard
 
 Subclass of `chess.Board` with lc0-specific encoding.
 
 ```python
-board = LczeroBoard()  # empty
+board = LczeroBoard()
 board = LczeroBoard("r1bqkbnr/pppppppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1")
 
 # Input tensor
@@ -53,7 +53,7 @@ for next_board in board.get_next_legal_boards(n_history=7):
     ...
 
 # Heatmap
-svg_board, svg_colorbar = board.render_heatmap(heatmap, normalise="abs", save_to="out.svg")
+board.render_heatmap(heatmap, normalise="abs", save_to="out.svg")
 ```
 
 ### InputEncoding
@@ -86,7 +86,7 @@ puzzle = PuzzleData.from_dict({...})
 board = puzzle.initial_board  # after first move
 for b, m in puzzle.board_move_generator(all_moves=False):
     ...
-score, perplexity = puzzle.evaluate(sampler)
+metrics = puzzle.evaluate(sampler)
 ```
 
 ## Concepts

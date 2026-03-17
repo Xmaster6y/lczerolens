@@ -21,4 +21,4 @@ Step-by-step tutorials and notebooks.
 
 ## Colab
 
-All notebooks have "Open In Colab" badges. For dev: clone repo and `pip install ./lczerolens`.
+All notebooks have "Open In Colab" badges. For dev: clone repo, cd into it, then `pip install .` or `uv sync`.

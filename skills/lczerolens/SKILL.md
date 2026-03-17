@@ -5,7 +5,7 @@ version: 1.0.0
 author: Xmaster6y
 license: MIT
 tags: [lczerolens, lc0, Chess, Interpretability, Leela Chess Zero, TensorDict, PyTorch, Heatmaps, Probing, Concepts]
-dependencies: [lczerolens, tensordict>=0.9.1, torch>=2.5.0, python-chess>=1.999]
+dependencies: [lczerolens, tensordict>=0.9.1, torch>=2.5.0, python-chess>=1.999, huggingface-hub>=0.27.1]
 ---
 
 # lczerolens
@@ -207,7 +207,7 @@ score, perplexity = puzzle.evaluate(sampler)
 | `board` | (B, 112, 8, 8) | Input (from TensorDict) |
 | `policy` | (B, 1858) | Move logits |
 | `wdl` | (B, 3) | Win-Draw-Loss probs |
-| `value` | (B,) | Derived from wdl if not native |
+| `value` | (B,) | Native value head (if present); use `ForceValue` to derive from wdl when absent |
 | `mlh` | (B,) | Moves-left head (optional) |
 
 ---
