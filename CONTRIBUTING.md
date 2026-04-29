@@ -2,9 +2,10 @@
 
 ## Guidelines
 
-The project dependencies are managed using `uv`, see their installation [guide](https://docs.astral.sh/uv/). For even more stability, I recommend using `pyenv` or python `3.9.16`.
+The project dependencies are managed using `uv`, see the installation [guide](https://docs.astral.sh/uv/).
+Use Python `>=3.10` (the same versions tested in CI are `3.10`, `3.11`, and `3.12`).
 
-Additionally, to make your life easier, install `make` to use the shortcut commands.
+Additionally, install `just` to run the project shortcut commands.
 
 ## Dev Install
 
@@ -23,15 +24,21 @@ uv run pre-commit install
 To run the checks (`pre-commit` checks):
 
 ```bash
-make checks
+just checks
 ```
 
 To run the tests (using `pytest`):
 
 ```bash
-make tests
+just tests
+```
+
+To build the documentation locally:
+
+```bash
+just docs
 ```
 
 ## Branches
 
-Make a branch before making a pull request to `develop`.
+Make a branch before opening a pull request to `main`.
