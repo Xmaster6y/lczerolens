@@ -79,8 +79,8 @@ html_theme_options = {
         },
         {
             "name": "PyPI",
-            "url": "https://pypi.org/project/pydata-sphinx-theme",
-            "icon": "fa-custom fa-pypi",
+            "url": "https://pypi.org/project/lczerolens/",
+            "icon": "fa-brands fa-python",
         },
     ],
     "show_version_warning_banner": True,

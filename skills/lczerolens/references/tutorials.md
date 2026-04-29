@@ -16,7 +16,6 @@ Step-by-step tutorials and notebooks.
 | [Probe Concepts](https://lczerolens.readthedocs.io/en/latest/notebooks/features/probe-concepts.html) | Concept probing |
 | [Framework-Agnostic Interpretability](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html) | tdhook, captum, zennit, nnsight
 | [Piece Value Estimation (LRP)](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/piece-value-estimation-using-lrp.html) | LRP with zennit |
-| [Train SAEs](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/train-saes.html) | Sparse autoencoders |
 | [Evidence of Learned Look-Ahead](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/evidence-of-learned-look-ahead.html) | Planning analysis |
 
 ## Colab

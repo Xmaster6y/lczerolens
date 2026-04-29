@@ -23,9 +23,6 @@ Tutorials
    .. grid-item-card:: Piece Value Estimation Using LRP
       :link: notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
 
-   .. grid-item-card:: Train SAEs
-      :link: notebooks/tutorials/train-saes.ipynb
-
 .. toctree::
    :hidden:
    :maxdepth: 2
@@ -35,4 +32,3 @@ Tutorials
    notebooks/tutorials/automated-interpretability.ipynb
    notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
    notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
-   notebooks/tutorials/train-saes.ipynb

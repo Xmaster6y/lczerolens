@@ -25,6 +25,12 @@ Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make interpret
 pip install lczerolens
 ```
 
+Most examples below use models from Hugging Face Hub, so install the `hf` extra as well:
+
+```bash
+pip install "lczerolens[hf]"
+```
+
 Take the `viz` extra to render heatmaps and the `backends` extra to use the `lc0` backends.
 
 ### Run Models
@@ -48,10 +54,21 @@ Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook
 
 ```python
 from lczerolens import LczeroBoard, LczeroModel
+from tdhook.attribution import Saliency
+from tensordict import TensorDict
+
 model = LczeroModel.from_hf("lczerolens/maia-1100")
 board = LczeroBoard()
 
-# TODO: complete this example
+def best_logit_init_targets(td: TensorDict, _):
+    policy = td["policy"]
+    best_logit = policy.max(dim=-1).values
+    return TensorDict(out=best_logit, batch_size=td.batch_size)
+
+saliency_context = Saliency(init_attr_targets=best_logit_init_targets)
+with saliency_context.prepare(model) as hooked_model:
+    output = hooked_model(TensorDict(board=model.prepare_boards(board), batch_size=1))
+    attr = output.get(("attr", "board"))
 ```
 
 ### Features
@@ -67,7 +84,7 @@ board = LczeroBoard()
 
 ### Tutorials
 
-- [Walkthrough](https://lczerolens.readthedocs.io/en/latest/notebooks/walkthrough.html): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/docs/source/notebooks/walkthrough.ipynb)
+- [Walkthrough](https://lczerolens.readthedocs.io/en/latest/notebooks/walkthrough.html): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/walkthrough.ipynb)
 - [Framework-Agnostic Interpretability](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb)
 - More to come...
 

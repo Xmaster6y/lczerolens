@@ -2,7 +2,7 @@
 
 Example
 -------
-uv run python -m scripts.models.push_to_hf \
+uv run -m scripts.models.push_to_hf \
     --model_path ./assets/maia-1100.onnx \
     --repo_id lczerolens/maia-1100 \
     --push_to_hub
@@ -17,13 +17,14 @@ from lczerolens.model import LczeroModel
 
 
 def main(args: argparse.Namespace) -> None:
-    logger.info("Loading model…")
+    logger.info(f"Uploading `{args.model_path}` to `{args.repo_id}`…")
     model = LczeroModel.from_path(args.model_path)
 
     if args.push_to_hub:
         model.push_to_hf(
             repo_id=args.repo_id, create_if_not_exists=True, create_kwargs={"token": HF_TOKEN}, token=HF_TOKEN
         )
+        logger.info("Upload completed ✅")
     else:
         logger.warning("--push_to_hub was not supplied, skipping actual upload. Dry-run only.")
 
