@@ -90,8 +90,6 @@ If you use ``lczerolens`` in your research, please cite it with the following Bi
      url = {https://github.com/Xmaster6y/lczerolens}
    }
 
-The canonical metadata is available in `CITATION.cff <https://github.com/Xmaster6y/lczerolens/blob/main/CITATION.cff>`_.
-
 License
 -------
 
