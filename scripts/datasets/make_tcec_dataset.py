@@ -2,7 +2,7 @@
 
 Run with:
 ```bash
-uv run python -m scripts.datasets.make_tcec_dataset
+uv run -m scripts.datasets.make_tcec_dataset
 ```
 """
 

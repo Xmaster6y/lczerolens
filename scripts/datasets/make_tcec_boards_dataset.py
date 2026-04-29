@@ -2,7 +2,7 @@
 
 Run with:
 ```bash
-uv run python -m scripts.datasets.make_tcec_boards_dataset --push_to_hub
+uv run -m scripts.datasets.make_tcec_boards_dataset --push_to_hub
 ```
 """
 

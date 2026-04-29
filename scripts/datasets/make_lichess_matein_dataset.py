@@ -2,7 +2,7 @@
 
 Run with:
 ```bash
-uv run python -m scripts.datasets.make_lichess_matein_dataset --mate_in 3 --push_to_hub
+uv run -m scripts.datasets.make_lichess_matein_dataset --mate_in 3 --push_to_hub
 ```
 """
 

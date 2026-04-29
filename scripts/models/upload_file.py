@@ -2,7 +2,7 @@
 
 Example
 -------
-uv run python -m scripts.models.upload_file \
+uv run -m scripts.models.upload_file \
   --model_path ./assets/maia-1100.onnx  \
   --path_in_repo model.onnx \
   --repo_id lczerolens/maia-1100 \

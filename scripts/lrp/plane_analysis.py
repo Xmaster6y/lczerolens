@@ -2,7 +2,7 @@
 
 Run with:
 ```
-uv run python -m scripts.lrp.plane_analysis
+uv run -m scripts.lrp.plane_analysis
 ```
 """
 

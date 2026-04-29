@@ -3,7 +3,7 @@
 Example
 -------
 ```bash
-uv run python -m scripts.models.run_scraping \
+uv run -m scripts.models.run_scraping \
     --pattern "^512x19-t81-swa-(?P<model_id>\d+)\.pb\.gz\$" \
     --repo_id lczerolens/run-512x19-t81-swa \
     --limit 2
