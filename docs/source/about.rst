@@ -74,3 +74,25 @@ Interpretability and analysis:
 
 - `Mechanistic Interpretability <https://www.neelnanda.io/mechanistic-interpretability/getting-started>`_ - Understanding how neural networks work internally
 - `Zoom In: An Introduction to Circuits <https://distill.pub/2020/circuits/zoom-in/>`_ - Visual exploration of neural network circuits
+
+Citation
+--------
+
+If you use ``lczerolens`` in your research, please cite it with the following BibTeX entry:
+
+.. code-block:: bibtex
+
+   @software{poupart_lczerolens_2026,
+     author = {Poupart, Yoann},
+     title = {LCZeroLens},
+     version = {0.4.0},
+     year = {2026},
+     url = {https://github.com/Xmaster6y/lczerolens}
+   }
+
+The canonical metadata is available in `CITATION.cff <https://github.com/Xmaster6y/lczerolens/blob/main/CITATION.cff>`_.
+
+License
+-------
+
+``lczerolens`` is licensed under the MIT License. See the `LICENSE <https://github.com/Xmaster6y/lczerolens/blob/main/LICENSE>`_ file for details.
