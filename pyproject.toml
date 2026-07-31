@@ -94,6 +94,16 @@ build-backend = "setuptools.build_meta"
 [tool.uv]
 default-groups = []
 
+[tool.pytest.ini_options]
+markers = [
+    "unit: deterministic tests of library code with no external service or model fixture",
+    "conformance: lc0 compatibility checks that require versioned model fixtures",
+    "integration: tests that exercise notebooks or another process boundary",
+    "network: tests that contact an external service and are never in the offline suite",
+    "slow: tests intended for the explicitly requested slow tier",
+    "backends: legacy alias for an lc0 conformance test",
+]
+
 [tool.ruff]
 line-length = 119
 target-version = "py311"

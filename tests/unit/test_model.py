@@ -60,6 +60,7 @@ class TestModel:
 
 
 class TestManageModels:
+    @pytest.mark.network
     def test_model_from_hf(self):
         """Test that the model save and load works."""
         board = LczeroBoard()
@@ -68,7 +69,7 @@ class TestManageModels:
         assert "policy" in output
         assert "wdl" in output
 
-    @pytest.mark.hf
+    @pytest.mark.network
     def test_model_push_to_hf(self):
         """Test that the model push to hf works."""
         board = LczeroBoard()

@@ -2,6 +2,9 @@
 File to test the encodings for the Leela Chess Zero engine.
 """
 
+import hashlib
+from pathlib import Path
+
 import onnxruntime as ort
 import pytest
 from lczero.backends import Backend, Weights
@@ -10,15 +13,37 @@ from lczerolens import LczeroModel
 from lczerolens import backends as lczero_utils
 
 
+ROOT = Path(__file__).parents[1]
+FIXTURE_MANIFEST = ROOT / "assets" / "test-fixtures.sha256"
+
+
+def _require_fixture(name: str) -> Path:
+    """Return a verified conformance fixture without ever downloading it."""
+    fixture = ROOT / "assets" / name
+    expected = {
+        line.split(maxsplit=1)[1].strip(): line.split(maxsplit=1)[0]
+        for line in FIXTURE_MANIFEST.read_text().splitlines()
+        if line and not line.startswith("#")
+    }
+    if not fixture.is_file():
+        pytest.fail(
+            f"Missing conformance fixture {fixture}. Run `just test-fixtures` before this tier.",
+            pytrace=False,
+        )
+    if hashlib.sha256(fixture.read_bytes()).hexdigest() != expected[name]:
+        pytest.fail(f"Fixture checksum mismatch for {fixture}; re-run `just test-fixtures`.", pytrace=False)
+    return fixture
+
+
 @pytest.fixture(scope="session")
 def tiny_lczero_backend():
-    lczero_weights = Weights("assets/tinygyal-8.pb.gz")
+    lczero_weights = Weights(str(_require_fixture("tinygyal-8.pb.gz")))
     yield Backend(weights=lczero_weights)
 
 
 @pytest.fixture(scope="session")
 def tiny_ensure_network():
-    lczero_utils.convert_to_onnx("assets/tinygyal-8.pb.gz", "assets/tinygyal-8.onnx")
+    lczero_utils.convert_to_onnx(str(_require_fixture("tinygyal-8.pb.gz")), "assets/tinygyal-8.onnx")
     yield
 
 
@@ -69,35 +94,19 @@ def winner_senet_ort(winner_ensure_network):
     yield ort.InferenceSession("assets/384x30-2022_0108_1903_17_608.onnx")
 
 
-def pytest_addoption(parser):
-    parser.addoption("--run-slow", action="store_true", default=False, help="run slow tests")
-    parser.addoption("--run-fast", action="store_true", default=False, help="run fast tests")
-    parser.addoption("--run-backends", action="store_true", default=False, help="run backends tests")
-    parser.addoption("--run-hf", action="store_true", default=False, help="run hf tests")
-
-
-def pytest_configure(config):
-    config.addinivalue_line("markers", "slow: mark test as slow to run")
-    config.addinivalue_line("markers", "backends: mark test as backends test")
-
-
-def pytest_collection_modifyitems(config, items):
-    run_slow = config.getoption("--run-slow")
-    run_fast = config.getoption("--run-fast")
-    run_backends = config.getoption("--run-backends")
-    run_hf = config.getoption("--run-hf")
-
-    skip_slow = pytest.mark.skip(reason="--run-slow not given in cli: skipping slow tests")
-    skip_fast = pytest.mark.skip(reason="--run-fast not given in cli: skipping fast tests")
-    skip_backends = pytest.mark.skip(reason="--run-backends not given in cli: skipping backends tests")
-    skip_hf = pytest.mark.skip(reason="--run-hf not given in cli: skipping hf tests")
-
+def pytest_collection_modifyitems(items):
+    """Every test receives an explicit tier marker for stable selection."""
     for item in items:
-        if "slow" in item.keywords and not run_slow:
-            item.add_marker(skip_slow)
-        if "fast" in item.keywords and not run_fast:
-            item.add_marker(skip_fast)
-        if "backends" in item.keywords and not run_backends:
-            item.add_marker(skip_backends)
-        if "hf" in item.keywords and not run_hf:
-            item.add_marker(skip_hf)
+        path = Path(str(item.fspath))
+        if "integration" in path.parts:
+            item.add_marker(pytest.mark.integration)
+        elif "slow" in item.keywords:
+            item.add_marker(pytest.mark.slow)
+        elif "network" in item.keywords:
+            item.add_marker(pytest.mark.network)
+        elif "conformance" in item.keywords:
+            item.add_marker(pytest.mark.conformance)
+        elif "backends" in item.keywords or {"tiny_model", "winner_model", "maia_model"} & set(item.fixturenames):
+            item.add_marker(pytest.mark.conformance)
+        else:
+            item.add_marker(pytest.mark.unit)

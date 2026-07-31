@@ -34,12 +34,22 @@ jobs:
     - name: Run checks
       run: |
         just checks
-    - name: Download assets
+    - name: Download and validate conformance fixtures
+      if: inputs.tests-type == 'tests-conformance'
       run: |
-        just tests-assets
+        just test-fixtures
     - name: Run tests
       run: |
         just ${{ inputs.tests-type }}
+    - name: Upload test artifacts
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-artifacts-py${{ matrix.python-version }}-${{ inputs.tests-type }}
+        path: |
+          junit.xml
+          coverage.xml
+        if-no-files-found: ignore
     - name: Upload coverage reports to Codecov
       if: matrix.python-version == '3.11'
       uses: codecov/codecov-action@v5
