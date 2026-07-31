@@ -8,7 +8,7 @@ license-files = ["LICENSE"]
 authors = [
     {name = "Yoann Poupart", email = "yoann.poupart@ens-lyon.org"},
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "onnx2torch>=1.5.15",
     "python-chess>=1.999",
@@ -19,9 +19,9 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 
 [project.urls]
@@ -50,7 +50,7 @@ datasets = [
 [dependency-groups]
 dev = [
     "gdown>=5.2.0",
-    "onnxruntime>=1.20.1,<1.24",
+    "onnxruntime>=1.20.1",
     "pre-commit>=4.0.1",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",

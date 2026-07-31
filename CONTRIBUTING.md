@@ -3,7 +3,7 @@
 ## Guidelines
 
 The project dependencies are managed using `uv`, see the installation [guide](https://docs.astral.sh/uv/).
-Use Python `>=3.10` (the same versions tested in CI are `3.10`, `3.11`, and `3.12`).
+Use Python `>=3.11` (the same versions tested in CI are `3.11`, `3.12`, and `3.13`).
 
 Additionally, install `just` to run the project shortcut commands.
 
