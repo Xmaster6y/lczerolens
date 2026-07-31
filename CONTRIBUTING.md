@@ -42,3 +42,12 @@ just docs
 ## Branches
 
 Make a branch before opening a pull request to `main`.
+
+## Scope gate
+
+Before proposing new public API, check it against the [scope and compatibility
+policy](docs/source/scope.rst). Core changes must either preserve the lc0 model
+interoperability contract or add chess-domain decision evidence. Hooks,
+attribution, probing, SAE/transcoder, and coaching abstractions belong in
+downstream integrations unless a later scope decision explicitly changes this
+boundary.
