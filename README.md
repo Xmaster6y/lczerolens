@@ -39,6 +39,8 @@ pip install "lczerolens[viz]"
 pip install "lczerolens[backends]"
 ```
 
+The historical `hf` extra remains available as a compatibility alias for installing both Hub and dataset support.
+
 ### Run Models
 
 Get the best move predicted by a model:
