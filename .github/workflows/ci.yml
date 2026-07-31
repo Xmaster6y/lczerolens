@@ -11,7 +11,6 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
-    environment: ci
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
