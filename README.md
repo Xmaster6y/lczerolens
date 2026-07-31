@@ -25,13 +25,19 @@ Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make interpret
 pip install lczerolens
 ```
 
-Most examples below use models from Hugging Face Hub, so install the `hf` extra as well:
+Loading or publishing models through Hugging Face Hub requires the `hub` extra:
 
 ```bash
-pip install "lczerolens[hf]"
+pip install "lczerolens[hub]"
 ```
 
-Take the `viz` extra to render heatmaps and the `backends` extra to use the `lc0` backends.
+Install `datasets` for dataset adapters and concept metrics, `viz` to render heatmaps, or `backends` to use the `lc0` bindings:
+
+```bash
+pip install "lczerolens[datasets]"
+pip install "lczerolens[viz]"
+pip install "lczerolens[backends]"
+```
 
 ### Run Models
 

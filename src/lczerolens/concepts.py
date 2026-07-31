@@ -59,7 +59,9 @@ class BinaryConcept(Concept):
         try:
             from sklearn import metrics
         except ImportError as e:
-            raise ImportError("scikit-learn is required to compute metrics.") from e
+            raise ImportError(
+                "scikit-learn is required to compute metrics. Install it with `pip install lczerolens[datasets]`."
+            ) from e
         return {
             "accuracy": metrics.accuracy_score(labels, predictions),
             "precision": metrics.precision_score(labels, predictions),
@@ -73,7 +75,9 @@ class BinaryConcept(Concept):
         try:
             from datasets import ClassLabel
         except ImportError as e:
-            raise ImportError("datasets is required to get the dataset features.") from e
+            raise ImportError(
+                "datasets is required to get the dataset features. Install it with `pip install lczerolens[datasets]`."
+            ) from e
         return ClassLabel(num_classes=2)
 
 
@@ -150,7 +154,9 @@ class MulticlassConcept(Concept):
         try:
             from sklearn import metrics
         except ImportError as e:
-            raise ImportError("scikit-learn is required to compute metrics.") from e
+            raise ImportError(
+                "scikit-learn is required to compute metrics. Install it with `pip install lczerolens[datasets]`."
+            ) from e
         return {
             "accuracy": metrics.accuracy_score(labels, predictions),
             "precision": metrics.precision_score(labels, predictions, average="weighted"),
@@ -164,7 +170,9 @@ class MulticlassConcept(Concept):
         try:
             from datasets import Value
         except ImportError as e:
-            raise ImportError("datasets is required to get the dataset features.") from e
+            raise ImportError(
+                "datasets is required to get the dataset features. Install it with `pip install lczerolens[datasets]`."
+            ) from e
         return (Value("int32"),)
 
 
@@ -184,7 +192,9 @@ class ContinuousConcept(Concept):
         try:
             from sklearn import metrics
         except ImportError as e:
-            raise ImportError("scikit-learn is required to compute metrics.") from e
+            raise ImportError(
+                "scikit-learn is required to compute metrics. Install it with `pip install lczerolens[datasets]`."
+            ) from e
         return {
             "rmse": metrics.root_mean_squared_error(labels, predictions),
             "mae": metrics.mean_absolute_error(labels, predictions),
@@ -197,7 +207,9 @@ class ContinuousConcept(Concept):
         try:
             from datasets import Value
         except ImportError as e:
-            raise ImportError("datasets is required to get the dataset features.") from e
+            raise ImportError(
+                "datasets is required to get the dataset features. Install it with `pip install lczerolens[datasets]`."
+            ) from e
         return Value("float32")
 
 

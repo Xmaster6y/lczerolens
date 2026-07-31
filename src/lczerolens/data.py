@@ -16,7 +16,7 @@ from lczerolens.board import LczeroBoard
 
 MISSING_DATASETS_ERROR = (
     "datasets is required to get the dataset features. "
-    "Install it with `pip install lczerolens[hf]` or directly via `pip install datasets`."
+    "Install it with `pip install lczerolens[datasets]` or directly via `pip install datasets`."
 )
 
 

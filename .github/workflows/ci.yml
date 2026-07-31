@@ -27,7 +27,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        uv sync --locked
+        uv sync --locked --group dev --extra hub --extra datasets --extra viz --extra backends
     - name: Run checks
       run: |
         just checks
@@ -48,3 +48,38 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
+
+  installation:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: base
+            sync-args: --no-default-groups
+            import: import lczerolens
+          - name: hub
+            sync-args: --no-default-groups --extra hub
+            import: import lczerolens, huggingface_hub
+          - name: datasets
+            sync-args: --no-default-groups --extra datasets
+            import: import lczerolens, datasets, sklearn
+          - name: viz
+            sync-args: --no-default-groups --extra viz
+            import: import lczerolens, graphviz, matplotlib
+          - name: backends
+            sync-args: --no-default-groups --extra backends
+            import: import lczerolens; from lczero.backends import Backend
+          - name: docs
+            sync-args: --no-default-groups --group docs
+            import: import lczerolens, sphinx
+    name: Installation (${{ matrix.name }})
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: "3.11"
+    - name: Install selected package dependencies
+      run: uv sync --locked ${{ matrix.sync-args }}
+    - name: Check imports
+      run: uv run --no-sync python -c "${{ matrix.import }}"
