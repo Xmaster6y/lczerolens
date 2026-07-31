@@ -201,9 +201,16 @@ class TestLegalPolicy:
         with pytest.raises(ValueError, match="policy|logits"):
             LczeroBoard().get_legal_policy(policy)
 
-    def test_rejects_terminal_position(self):
-        board = LczeroBoard("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1")
-        with pytest.raises(ValueError, match="no legal moves"):
+    @pytest.mark.parametrize(
+        "fen",
+        [
+            "7k/6Q1/6K1/8/8/8/8/8 b - - 0 1",  # checkmate: no legal moves
+            "8/8/8/8/8/8/8/K6k w - - 0 1",  # insufficient material: legal moves remain
+        ],
+    )
+    def test_rejects_terminal_position(self, fen):
+        board = LczeroBoard(fen)
+        with pytest.raises(ValueError, match="terminal position"):
             board.get_legal_policy(torch.zeros(1858))
 
 

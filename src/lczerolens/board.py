@@ -274,9 +274,9 @@ class LczeroBoard(chess.Board):
             raise ValueError(
                 f"Expected one policy vector with {len(POLICY_INDEX)} entries, got shape {tuple(policy.shape)}."
             )
+        if self.is_game_over():
+            raise ValueError("Cannot normalize a legal policy for a terminal position.")
         legal_indices = self.get_legal_indices().to(policy.device)
-        if legal_indices.numel() == 0:
-            raise ValueError("Cannot normalize a legal policy for a position with no legal moves.")
         legal_logits = policy.gather(0, legal_indices)
         if not torch.isfinite(legal_logits).all():
             raise ValueError("Cannot normalize a legal policy with non-finite legal logits.")
