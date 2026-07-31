@@ -39,6 +39,15 @@ pip install "lczerolens[viz]"
 pip install "lczerolens[backends]"
 ```
 
+### Tests
+
+After `just test-fixtures` has fetched and checksummed the lc0 fixtures, `just
+tests` runs the complete fast, offline suite (unit and conformance tests) and
+produces the coverage report. `just tests-unit` and `just tests-conformance`
+select either tier for diagnosis. Notebook and release checks are opt-in with
+`just tests-slow`; CI retains JUnit and coverage artifacts to make failures
+inspectable.
+
 ### Run Models
 
 Get the best move predicted by a model:

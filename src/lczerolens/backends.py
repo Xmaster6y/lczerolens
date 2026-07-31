@@ -109,24 +109,31 @@ def prediction_from_backend(
 
 def moves_with_castling_swap(lczero_game: GameState, board: LczeroBoard):
     """
-    Get the moves with castling swap.
+    Return backend legal moves in the project's canonical castling notation.
+
+    lc0 has historically represented castling in the policy head as a king
+    move to the rook square (``e1h1`` / ``e1a1``).  Bindings have used both
+    that notation and standard UCI (``e1g1`` / ``e1c1``) for ``moves()``,
+    while retaining the rook-square policy index.  Normalize both forms to
+    the fixed policy vocabulary used by :class:`LczeroBoard`.
     """
-    lczero_legal_moves = lczero_game.moves()
+    lczero_legal_moves = list(lczero_game.moves())
     lczero_policy_indices = list(lczero_game.policy_indices())
     for move in board.legal_moves:
-        uci_move = move.uci()
-        if uci_move in lczero_legal_moves:
+        if not board.is_castling(move):
             continue
-        if board.is_castling(move):
-            leela_uci_move = uci_move.replace("g", "h").replace("c", "a")
-            if leela_uci_move in lczero_legal_moves:
-                lczero_legal_moves.remove(leela_uci_move)
-                lczero_legal_moves.append(uci_move)
-                lczero_policy_indices.remove(
-                    LczeroBoard.encode_move(
-                        chess.Move.from_uci(leela_uci_move),
-                        board.turn,
-                    )
-                )
-                lczero_policy_indices.append(LczeroBoard.encode_move(move, board.turn))
+
+        uci_move = move.uci()
+        rook_file = 7 if board.is_kingside_castling(move) else 0
+        rook_square = chess.square(rook_file, chess.square_rank(move.from_square))
+        leela_uci_move = chess.Move(move.from_square, rook_square).uci()
+        try:
+            index = next(
+                i for i, backend_move in enumerate(lczero_legal_moves) if backend_move in (uci_move, leela_uci_move)
+            )
+        except StopIteration:
+            continue
+
+        lczero_legal_moves[index] = uci_move
+        lczero_policy_indices[index] = LczeroBoard.encode_move(move, board.turn)
     return lczero_legal_moves, lczero_policy_indices

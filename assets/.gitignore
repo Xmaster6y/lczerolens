@@ -1,3 +1,4 @@
 *
 !.gitignore
 !resolve-tests-assets.sh
+!test-fixtures.sha256
