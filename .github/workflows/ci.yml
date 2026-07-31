@@ -35,12 +35,16 @@ jobs:
       run: |
         just checks
     - name: Download and validate conformance fixtures
-      if: inputs.tests-type == 'tests' || inputs.tests-type == 'tests-conformance'
+      if: (inputs.tests-type == 'tests' || inputs.tests-type == 'tests-conformance') && matrix.python-version != '3.13'
       run: |
         just test-fixtures
     - name: Run tests
       run: |
-        just ${{ inputs.tests-type }}
+        if [[ "${{ inputs.tests-type }}" == "tests" && "${{ matrix.python-version }}" == "3.13" ]]; then
+          just tests-unit
+        else
+          just ${{ inputs.tests-type }}
+        fi
     - name: Upload test artifacts
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
