@@ -15,41 +15,45 @@ variations, and search decisions.
 Supported use cases
 -------------------
 
-lczerolens supports:
+Current v0.4 capabilities are:
 
 * loading or converting lc0-family weights and evaluating one position or a
   batch in PyTorch;
 * encoding positions and mapping policy indices to legal chess moves;
 * consuming a standardized policy, WDL, value, and MLH evaluator result;
-* recording and comparing position facts, moves, variations, counterfactual
-  positions, and search traces; and
 * passing an evaluator through arbitrary external instrumentation while
   retaining the same input/output contract.
+
+The planned in-scope public surface will add chess-domain evidence for position
+facts, moves, variations, counterfactual positions, and search traces and
+comparisons. Those facilities do not yet have a counterfactual API or a
+search-trace schema in v0.4; this policy defines their ownership before they are
+introduced.
 
 Evaluator contract
 ------------------
 
-The model boundary is ``LczeroBoard`` positions in and a ``TensorDict`` out.
-The output has policy logits over the fixed lc0 vocabulary and WDL probabilities
-when the network supplies them; value and MLH are exposed when supplied or
-derived by an explicit adapter such as ``ForceValue``. Batching, device
-movement, and legal-policy masking preserve that contract. Consumers must mask
-policy values with the board's legal indices before interpreting them as move
-choices.
+Conceptually, the chess boundary is an ``LczeroBoard`` position in and a
+``TensorDict`` evaluator result out. At runtime, ``LczeroModel.forward()`` also
+accepts an iterable of boards, a 3D or 4D board tensor, or a ``TensorDict``.
+The output contains raw policy values over the fixed 1858-entry lc0 vocabulary
+and WDL probabilities when the network supplies them; value and MLH are exposed
+when supplied or derived by an explicit adapter such as ``ForceValue``.
+Batching and device movement preserve this contract. Legal masking is a
+downstream operation: the wrapper returns raw policy values, and consumers must
+select the board's legal indices before interpreting a move choice.
 
 Architecture boundary
 ---------------------
 
 .. code-block:: text
 
-   python-chess                      external interpretability tools
-   rules, FEN, legal moves           hooks, patches, probes, attribution
-          |                                          |
-          v                                          | instruments only
-   LczeroBoard -- encoding / move vocabulary --------+
-          |
-          v
-   lc0 adapters -- conversion, loading, TensorDict batching
+   python-chess                         external interpretability tools
+   rules, FEN, legal moves              hooks, patches, probes, attribution
+          |                                            |
+          v                                            | wrap or instrument
+   LczeroBoard -- encoding / move vocabulary --> lc0 adapters / PyTorch evaluator
+                                              conversion, loading, TensorDict batching
           |
           v
    evaluator contract -- policy / WDL / value / MLH

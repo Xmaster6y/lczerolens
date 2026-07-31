@@ -50,8 +50,11 @@ model = LczeroModel.from_hf("lczerolens/maia-1100")
 board = LczeroBoard()
 
 output = model(board)
-best_move_idx = output["policy"].argmax()
-print(board.decode_move(best_move_idx))
+policy = output["policy"].squeeze(0)
+legal_indices = board.get_legal_indices()
+best_legal_offset = policy[legal_indices].argmax()
+best_move_idx = legal_indices[best_legal_offset]
+print(board.decode_move(best_move_idx.item()))
 ```
 
 ### External Interpretability Integrations
