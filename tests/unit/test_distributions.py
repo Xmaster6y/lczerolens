@@ -7,6 +7,8 @@ import tarfile
 import zipfile
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).parents[2]
 
@@ -23,6 +25,7 @@ def _build_distributions(output_dir: Path) -> tuple[Path, Path]:
     return next(output_dir.glob("*.whl")), next(output_dir.glob("*.tar.gz"))
 
 
+@pytest.mark.slow
 def test_distributions_contain_only_library_release_files(tmp_path: Path) -> None:
     """Keep development-only surfaces out of published artifacts."""
     wheel_path, sdist_path = _build_distributions(tmp_path)
