@@ -5,7 +5,10 @@ test-fixtures:
 	bash assets/resolve-tests-assets.sh
 
 tests:
-	uv run --group dev --extra hub --extra datasets --extra viz --extra backends pytest tests -m 'unit' --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+	uv run --group dev --extra hub --extra datasets --extra viz --extra backends pytest tests -m 'unit or conformance' --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+
+tests-unit:
+	uv run --group dev --extra hub --extra datasets --extra viz --extra backends pytest tests -m 'unit' --cov=src --cov-report=term-missing -s -v
 
 tests-conformance:
 	uv run --group dev --extra hub --extra datasets --extra viz --extra backends pytest tests -m 'conformance' --cov=src --cov-report=term-missing -s -v

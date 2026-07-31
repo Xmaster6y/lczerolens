@@ -35,7 +35,7 @@ jobs:
       run: |
         just checks
     - name: Download and validate conformance fixtures
-      if: inputs.tests-type == 'tests-conformance'
+      if: inputs.tests-type == 'tests' || inputs.tests-type == 'tests-conformance'
       run: |
         just test-fixtures
     - name: Run tests
@@ -51,12 +51,12 @@ jobs:
           coverage.xml
         if-no-files-found: ignore
     - name: Upload coverage reports to Codecov
-      if: matrix.python-version == '3.11'
+      if: matrix.python-version == '3.11' && inputs.tests-type == 'tests'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
     - name: Upload test results to Codecov
-      if: matrix.python-version == '3.11' && ${{ !cancelled() }}
+      if: matrix.python-version == '3.11' && inputs.tests-type == 'tests' && ${{ !cancelled() }}
       uses: codecov/test-results-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}

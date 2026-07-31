@@ -1,6 +1,7 @@
 # Versioned external fixture provenance. Google Drive IDs are in
 # resolve-tests-assets.sh; update both files in the same fixture revision.
 b6b55cb12f653f7321b79adfa5c87067762f23284f7799858b5db855add961a2  tinygyal-8.pb.gz
+9ce7440198a9f9b4e95b22a4dfbd604d4426ebd4231b852e6c1e668ce5765765  384x30-2022_0108_1903_17_608.pb.gz
 e1cf1cd0c96b8a4fa6a275f4b9fd54ed1ffebf9fe44641b9fceded310e9619c4  maia-1100.pb.gz
 1fdb1519e5b02e03f1d9201ec8eb95f640e32cc6459a4f14c0eab6890dc097e8  t1-smolgen-512x15x8h-distilled-swa-3395000.pb.gz
 4f184488b59e595ad2924b7ea49bb800cc6a9f8d92b7d7d3c8a00084b17a8e49  test_stockfish_10.jsonl
