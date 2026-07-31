@@ -14,6 +14,9 @@ sources=(
 for source in "${sources[@]}"; do
   fixture="${source%%:*}"
   source_id="${source#*:}"
+  if [[ -f "assets/$fixture" ]] && ! (cd assets && grep -F "  $fixture" test-fixtures.sha256 | shasum -a 256 -c - >/dev/null); then
+    rm "assets/$fixture"
+  fi
   if [[ ! -f "assets/$fixture" ]]; then
     uv run --group dev gdown "$source_id" -O "assets/$fixture"
   fi
