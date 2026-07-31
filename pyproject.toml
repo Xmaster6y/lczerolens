@@ -8,7 +8,7 @@ license-files = ["LICENSE"]
 authors = [
     {name = "Yoann Poupart", email = "yoann.poupart@ens-lyon.org"},
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "onnx2torch>=1.5.15",
     "python-chess>=1.999",
@@ -19,9 +19,9 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 
 [project.urls]
@@ -39,30 +39,30 @@ viz = [
 backends = [
     "v-lczero-bindings>=0.31.2"
 ]
-hf = [
-    "datasets>=4.0.0",
+hub = [
     "huggingface-hub>=0.27.1",
+]
+datasets = [
+    "datasets>=4.0.0",
+    "scikit-learn>=1.7.1",
 ]
 
 [dependency-groups]
 dev = [
-    "captum>=0.8.0",
-    "datasets>=4.0.0",
     "gdown>=5.2.0",
-    "graphviz>=0.21",
-    "huggingface-hub>=0.27.1",
-    "ipykernel>=6.29.5",
-    "ipywidgets>=8.1.7",
-    "nbconvert>=7.16.5",
-    "nnsight>=0.6.3",
     "onnxruntime>=1.20.1",
     "pre-commit>=4.0.1",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
-    "scikit-learn>=1.7.1",
+]
+notebooks = [
+    "captum>=0.8.0",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.7",
+    "nbconvert>=7.16.5",
+    "nnsight>=0.6.3",
     "seaborn>=0.13.2",
     "tdhook>=0.1.3",
-    "v-lczero-bindings>=0.31.2",
     "zennit>=0.5.1",
 ]
 docs = [
@@ -92,7 +92,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv]
-default-groups = ["dev", "docs", "scripts"]
+default-groups = []
 
 [tool.ruff]
 line-length = 119

@@ -18,7 +18,7 @@ from lczerolens.board import InputEncoding, LczeroBoard
 
 MISSING_HF_ERROR = (
     "huggingface_hub is required to push or load the model from the Hugging Face Hub. "
-    "Install it with `pip install lczerolens[hf]` or directly via `pip install huggingface_hub`."
+    "Install it with `pip install lczerolens[hub]` or directly via `pip install huggingface_hub`."
 )
 
 

@@ -13,8 +13,8 @@ It provides:
 ## Fast setup
 
 ```bash
-uv sync
-uv run pre-commit install
+uv sync --group dev
+uv run --group dev pre-commit install
 ```
 
 Common project commands:
