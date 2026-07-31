@@ -63,9 +63,6 @@ jobs:
           - name: hub
             sync-args: --no-default-groups --extra hub
             import: import lczerolens, huggingface_hub
-          - name: hf compatibility
-            sync-args: --no-default-groups --extra hf
-            import: import lczerolens, datasets, huggingface_hub
           - name: datasets
             sync-args: --no-default-groups --extra datasets
             import: import lczerolens, datasets, sklearn

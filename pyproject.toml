@@ -42,10 +42,6 @@ backends = [
 hub = [
     "huggingface-hub>=0.27.1",
 ]
-hf = [
-    "datasets>=4.0.0",
-    "huggingface-hub>=0.27.1",
-]
 datasets = [
     "datasets>=4.0.0",
     "scikit-learn>=1.7.1",

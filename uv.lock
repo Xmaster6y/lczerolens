@@ -1618,10 +1618,6 @@ datasets = [
     { name = "datasets" },
     { name = "scikit-learn" },
 ]
-hf = [
-    { name = "datasets" },
-    { name = "huggingface-hub" },
-]
 hub = [
     { name = "huggingface-hub" },
 ]
@@ -1672,9 +1668,7 @@ scripts = [
 [package.metadata]
 requires-dist = [
     { name = "datasets", marker = "extra == 'datasets'", specifier = ">=4.0.0" },
-    { name = "datasets", marker = "extra == 'hf'", specifier = ">=4.0.0" },
     { name = "graphviz", marker = "extra == 'viz'", specifier = ">=0.21" },
-    { name = "huggingface-hub", marker = "extra == 'hf'", specifier = ">=0.27.1" },
     { name = "huggingface-hub", marker = "extra == 'hub'", specifier = ">=0.27.1" },
     { name = "matplotlib", marker = "extra == 'viz'", specifier = ">=3.10.0" },
     { name = "onnx2torch", specifier = ">=1.5.15" },
@@ -1684,7 +1678,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.5.0" },
     { name = "v-lczero-bindings", marker = "extra == 'backends'", specifier = ">=0.31.2" },
 ]
-provides-extras = ["viz", "backends", "hub", "hf", "datasets"]
+provides-extras = ["viz", "backends", "hub", "datasets"]
 
 [package.metadata.requires-dev]
 dev = [
