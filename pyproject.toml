@@ -65,11 +65,6 @@ dev = [
     "v-lczero-bindings>=0.31.2",
     "zennit>=0.5.1",
 ]
-demo = [
-    "gradio>=5.12.0",
-    "matplotlib>=3.10.0",
-    "v-lczero-bindings>=0.31.2",
-]
 docs = [
     "nbsphinx>=0.9.6",
     "pandoc>=2.4",
@@ -97,7 +92,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv]
-default-groups = ["dev", "demo", "docs", "scripts"]
+default-groups = ["dev", "docs", "scripts"]
 
 [tool.ruff]
 line-length = 119
