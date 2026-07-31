@@ -95,3 +95,21 @@ See the full [documentation](https://lczerolens.readthedocs.io).
 ## Contribute
 
 See the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Citation
+
+If you're using `lczerolens` in your research, please cite it using the following BibTeX entry:
+
+```bibtex
+@software{poupart_lczerolens_2026,
+  author = {Poupart, Yoann},
+  title = {LCZeroLens},
+  version = {0.4.0},
+  year = {2026},
+  url = {https://github.com/Xmaster6y/lczerolens}
+}
+```
+
+## License
+
+`lczerolens` is licensed under the MIT License. See [LICENSE](./LICENSE) for details.

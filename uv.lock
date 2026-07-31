@@ -1360,7 +1360,7 @@ wheels = [
 
 [[package]]
 name = "lczerolens"
-version = "0.3.3.dev0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "onnx2torch" },
