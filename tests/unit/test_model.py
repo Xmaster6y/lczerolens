@@ -4,6 +4,7 @@ import pytest
 import torch
 from lczero.backends import GameState
 from huggingface_hub import delete_repo
+from torch import nn
 
 from lczerolens.model import LczeroBoard, PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue, LczeroModel
 from lczerolens import backends as lczero_utils
@@ -60,6 +61,64 @@ class TestModel:
 
 
 class TestManageModels:
+    def test_model_from_hf_is_hermetic(self, monkeypatch):
+        """The Hub adapter forwards its download result without contacting the network."""
+        import huggingface_hub
+
+        downloaded_path = "/tmp/downloaded-model.pt"
+        expected_model = object()
+        download_calls = []
+
+        def fake_download(repo_id, filename, **kwargs):
+            download_calls.append((repo_id, filename, kwargs))
+            return downloaded_path
+
+        def fake_from_path(cls, path, **kwargs):
+            assert cls is LczeroModel
+            assert path == downloaded_path
+            assert kwargs == {"weights_only": True}
+            return expected_model
+
+        monkeypatch.setattr(huggingface_hub, "hf_hub_download", fake_download)
+        monkeypatch.setattr(LczeroModel, "from_path", classmethod(fake_from_path))
+
+        assert (
+            LczeroModel.from_hf("owner/model", "weights.pt", {"revision": "abc"}, weights_only=True) is expected_model
+        )
+        assert download_calls == [("owner/model", "weights.pt", {"revision": "abc"})]
+
+    def test_model_push_to_hf_is_hermetic(self, monkeypatch):
+        """The Hub adapter creates, serializes, and uploads without a live repository."""
+        import huggingface_hub
+
+        created = []
+        uploaded = []
+        monkeypatch.setattr(huggingface_hub, "repo_exists", lambda repo_id, token: False)
+        monkeypatch.setattr(
+            huggingface_hub, "create_repo", lambda repo_id, **kwargs: created.append((repo_id, kwargs))
+        )
+        monkeypatch.setattr(
+            huggingface_hub,
+            "upload_file",
+            lambda path_or_fileobj, repo_id, path_in_repo, **kwargs: uploaded.append(
+                (path_or_fileobj, repo_id, path_in_repo, kwargs)
+            ),
+        )
+
+        model = LczeroModel(nn.Identity(), out_keys=["output"])
+        model.push_to_hf(
+            "owner/model",
+            create_kwargs={"token": "secret", "private": True},
+            path_in_repo="weights/model.pt",
+            commit_message="test upload",
+        )
+
+        assert created == [("owner/model", {"token": "secret", "private": True})]
+        assert len(uploaded) == 1
+        _, repo_id, path_in_repo, upload_kwargs = uploaded[0]
+        assert (repo_id, path_in_repo) == ("owner/model", "weights/model.pt")
+        assert upload_kwargs == {"commit_message": "test upload"}
+
     @pytest.mark.network
     def test_model_from_hf(self):
         """Test that the model save and load works."""
