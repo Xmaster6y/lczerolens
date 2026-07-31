@@ -33,6 +33,14 @@ pip install "lczerolens[hf]"
 
 Take the `viz` extra to render heatmaps and the `backends` extra to use the `lc0` backends.
 
+### Tests
+
+After setup, `just tests` runs the offline unit tier and never downloads a
+model. lc0 compatibility tests are explicit: run `just test-fixtures` once to
+fetch and checksum their fixtures, then `just tests-conformance`. Notebook and
+release checks are opt-in with `just tests-slow`; CI retains JUnit and coverage
+artifacts to make failures inspectable.
+
 ### Run Models
 
 Get the best move predicted by a model:

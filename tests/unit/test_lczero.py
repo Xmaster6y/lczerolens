@@ -9,6 +9,7 @@ from lczero.backends import GameState
 from lczerolens import backends as lczero_utils
 
 
+@pytest.mark.conformance
 class TestExecution:
     def test_describenet(self):
         """

@@ -1,20 +1,17 @@
 checks:
 	uv run pre-commit run --all-files
 
-tests-assets:
+test-fixtures:
 	bash assets/resolve-tests-assets.sh
 
 tests:
-	uv run pytest tests --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --run-fast --run-backends --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+	uv run pytest tests -m 'unit' --cov=src --cov-report=term-missing --cov-fail-under=50 -s -v --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
-tests-fast:
-	uv run pytest tests --cov=src --cov-report=term-missing -s -v --run-fast
+tests-conformance:
+	uv run pytest tests -m 'conformance' --cov=src --cov-report=term-missing -s -v
 
 tests-slow:
-	uv run pytest tests --cov=src --cov-report=term-missing -s -v --run-slow
-
-tests-backends:
-	uv run pytest tests --cov=src --cov-report=term-missing -s -v --run-backends
+	uv run pytest tests -m 'slow or integration' --cov=src --cov-report=term-missing -s -v
 
 docs:
 	cd docs && uv run --group docs make html
