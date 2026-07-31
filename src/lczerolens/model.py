@@ -64,9 +64,11 @@ class LczeroModel(TensorDictModule):
         torch.Tensor
             The prepared boards.
         """
+        if not boards:
+            raise ValueError("Expected at least one LczeroBoard.")
         for board in boards:
             if not isinstance(board, LczeroBoard):
-                raise ValueError(f"Got invalid input type {type(board)}.")
+                raise TypeError(f"Got invalid board type {type(board)}. Expected LczeroBoard.")
 
         tensor_list = [board.to_input_tensor(input_encoding=input_encoding).unsqueeze(0) for board in boards]
         batched_tensor = torch.cat(tensor_list, dim=0)
@@ -105,12 +107,16 @@ class LczeroModel(TensorDictModule):
                 inputs = inputs.unsqueeze(0)
             elif len(inputs.shape) != 4:
                 raise ValueError(f"Expected 3D or 4D tensor, got {inputs.shape}.")
+            inputs = inputs.to(self.device)
             inputs = TensorDict({"board": inputs}, batch_size=inputs.shape[0])
         return super().forward(inputs, **kwargs)
 
     def _call_module(self, tensors: Sequence[torch.Tensor], **kwargs: Any) -> Sequence[torch.Tensor]:
         out = super()._call_module(tensors, **kwargs)
-        return tuple(out)
+        # TensorDictModule expects one value per output key.  Converted lc0
+        # graphs return a tuple, while transparent PyTorch wrappers often
+        # return a single tensor.
+        return (out,) if isinstance(out, torch.Tensor) else tuple(out)
 
     @classmethod
     def from_model(cls, model: nn.Module, **kwargs) -> "LczeroModel":
@@ -182,8 +188,7 @@ class LczeroModel(TensorDictModule):
         if not os.path.exists(onnx_model_path):
             raise FileNotFoundError(f"Model path {onnx_model_path} does not exist.")
         try:
-            if check:
-                onnx_model = safe_shape_inference(onnx_model_path)
+            onnx_model = safe_shape_inference(onnx_model_path) if check else onnx_model_path
             onnx_torch_model = convert(onnx_model)
             return cls.from_model(onnx_torch_model, **kwargs)
         except Exception as e:
@@ -319,6 +324,11 @@ class LczeroModel(TensorDictModule):
         List[str]
             The output names of the model.
         """
+        if not hasattr(model, "graph"):
+            raise ValueError(
+                "Cannot infer evaluator heads from this PyTorch module. "
+                "Pass explicit out_keys to LczeroModel(...) or load an lc0 ONNX model."
+            )
         output_node = list(model.graph.nodes)[-1]
         return [n.name.replace("output_", "") for n in output_node.all_input_nodes]
 

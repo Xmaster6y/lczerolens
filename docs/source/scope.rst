@@ -42,6 +42,22 @@ when supplied or derived by an explicit adapter such as ``ForceValue``.
 Batching and device movement preserve this contract. Legal masking is a
 downstream operation: the wrapper returns raw policy values, and consumers must
 select the board's legal indices before interpreting a move choice.
+``LczeroBoard.get_legal_policy(policy)`` performs that selection and softmax
+normalization for one policy vector; it rejects terminal positions, malformed
+vectors, and non-finite legal logits rather than returning an invalid
+distribution.
+
+Model-format compatibility
+--------------------------
+
+``LczeroModel.from_path`` supports ``.onnx`` files through ``onnx2torch`` and
+serialized ``.pt`` ``torch.nn.Module`` objects. Official lc0 weights are
+converted with the optional native backend's ``leela2onnx`` command, then loaded
+from the resulting ONNX file. Native bindings are a conversion and conformance
+oracle only; ordinary PyTorch inference and unit tests do not require them.
+Arbitrary PyTorch modules can be wrapped with ``LczeroModel(module, out_keys)``;
+automatic head discovery is reserved for converted lc0 graphs and reports how
+to provide explicit keys when that structure is unavailable.
 
 Architecture boundary
 ---------------------
