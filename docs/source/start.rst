@@ -1,9 +1,12 @@
 Getting Started
 ===============
 
-**lczerolens** is a package for running interpretability methods on lc0 models.
-It is designed to be easy to use and to work with the most common interpretability
-techniques. It is framework-agnostic (as long as you use PyTorch): you can pair it with ``tdhook``, ``captum``, ``zennit``, or ``nnsight``.
+**lczerolens** makes lc0-family models portable and operable in PyTorch, then
+expresses their evaluator and search behavior as chess-domain evidence. It owns
+the model and chess-analysis boundary, not a neural-interpretability method.
+Tools such as ``tdhook``, ``captum``, ``zennit``, and ``nnsight`` can instrument
+that boundary without lczerolens depending on or abstracting over them. See
+:doc:`scope` for the supported surface and compatibility policy.
 
 .. _installation:
 

@@ -9,6 +9,7 @@ lczerolens
     :hidden:
 
     start
+    scope
     features
     tutorials
     api/index
@@ -33,10 +34,10 @@ lczerolens
 
         .. div:: sd-fs-4 sd-font-weight-bold sd-my-0 sub-bot image-container
 
-            Interpretability for lc0 networks
+            lc0 interoperability and chess-decision analysis
 
-        **lczerolens** focuses on interpretability for lc0 networks, with utilities to load/run models and render heatmaps.
-        It is framework-agnostic (PyTorch), so you can use it with `tdhook`, `captum`, `zennit`, or `nnsight`.
+        **lczerolens** makes lc0-family models operable in PyTorch and turns their evaluator and search behavior into chess-domain evidence.
+        Interpretability frameworks such as `tdhook`, `captum`, `zennit`, and `nnsight` integrate at this boundary; they are not core abstractions.
 
         .. div:: button-group
 

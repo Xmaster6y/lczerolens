@@ -15,7 +15,7 @@
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 [![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
 
-Leela Chess Zero (lc0) Lens (`lczerolens`): a set of utilities to make interpretability easy and framework-agnostic (PyTorch): use it with `tdhook`, `captum`, `zennit`, or `nnsight`.
+Leela Chess Zero (lc0) Lens (`lczerolens`) makes lc0-family models portable and operable in PyTorch, then expresses their evaluator and search behavior as chess-domain evidence. It provides the model and chess-analysis boundary; interpretability methods remain external integrations. See the [scope and compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html).
 
 ## Getting Started
 
@@ -54,9 +54,9 @@ best_move_idx = output["policy"].argmax()
 print(board.decode_move(best_move_idx))
 ```
 
-### Framework-Agnostic Interpretability
+### External Interpretability Integrations
 
-Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook`, `captum`, `zennit`, `nnsight`). More examples in the [framework-agnostic interpretability notebook](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html).
+Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook`, `captum`, `zennit`, `nnsight`). These packages are optional examples, not lczerolens abstractions or dependencies of its core evaluator contract. More examples are in the [framework-agnostic interpretability notebook](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html).
 
 ```python
 from lczerolens import LczeroBoard, LczeroModel
