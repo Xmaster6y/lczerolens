@@ -180,6 +180,30 @@ class TestStability:
 
 @pytest.mark.backends
 class TestBackend:
+    @pytest.mark.parametrize(
+        "backend_moves",
+        [
+            ["e1h1", "e1a1"],  # legacy bindings use the rook square in UCI
+            ["e1g1", "e1c1"],  # current bindings use standard UCI
+        ],
+    )
+    def test_normalizes_castling_policy_indices(self, backend_moves):
+        """Castling policy slots stay canonical across binding UCI spellings."""
+
+        class Game:
+            def moves(self):
+                return backend_moves
+
+            def policy_indices(self):
+                # lc0's historical policy slots use the rook square.
+                return [103, 97]
+
+        board = LczeroBoard("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+        moves, indices = lczero_utils.moves_with_castling_swap(Game(), board)
+
+        assert moves == ["e1g1", "e1c1"]
+        assert indices == [102, 99]
+
     def test_encode_decode_random(self, random_move_board_list):
         """
         Test that encoding and decoding a move corresponds to the backend.
