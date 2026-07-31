@@ -1,7 +1,5 @@
 """Tests for the release artifacts."""
 
-from __future__ import annotations
-
 import subprocess
 import tarfile
 import zipfile
