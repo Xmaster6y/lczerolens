@@ -94,42 +94,6 @@ with saliency_context.prepare(model) as hooked_model:
 - [Framework-Agnostic Interpretability](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb)
 - More to come...
 
-## Demo
-
-### Spaces
-
-Some [Hugging Face Spaces](https://huggingface.co/spaces/lczerolens) are available to try out the library. The demo (:red_circle: in construction) will showcase some of the features of the library and the backends demo makes the conversion of lc0 models to `onnx` easy.
-
-- [Lczerolens Demo](https://huggingface.co/spaces/lczerolens/demo): Showcase some of the features of the library.
-- [Lczerolens Backends Demo](https://huggingface.co/spaces/lczerolens/backends-demo): Make the conversion of lc0 models to `onnx` easy.
-- [Lczerolens Puzzles Leaderboard](https://huggingface.co/spaces/lczerolens/puzzles-leaderboard): Coming soon...
-
-### Local Demo
-
-Additionally, you can run the gradio demos locally. First you'll need to clone the spaces (after cloning the repo):
-
-```bash
-git clone https://huggingface.co/spaces/lczerolens/demo spaces/demo
-```
-
-And optionally the backends demo:
-
-```bash
-git clone https://huggingface.co/spaces/lczerolens/backends-demo spaces/backends-demo
-```
-
-And then launch the demo (running on port `8000`):
-
-```bash
-just demo
-```
-
-To test the backends use:
-
-```bash
-just demo-backends
-```
-
 ## Full Documentation
 
 See the full [documentation](https://lczerolens.readthedocs.io).
