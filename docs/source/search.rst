@@ -177,8 +177,8 @@ compatibility window while #140 supplies its replacement contract:
      - Decision
      - Rationale
    * - ``MCTS``
-     - Refocus
-     - Becomes the deterministic, auditable reference search; no production or lc0-fidelity claim.
+     - Retain temporarily
+     - The mutable legacy API stays importable through 0.x; new auditable search uses ``ReferenceMCTS``.
    * - ``Node``
      - Internalize
      - Mutable tree storage is an implementation detail; trace records are the public evidence boundary.
@@ -201,5 +201,28 @@ compatibility window while #140 supplies its replacement contract:
      - Internalize
      - Rendering mutable implementation nodes is not the portable trace contract.
 
-Actual warning and migration behavior accompanies the #140 implementation;
-this design PR does not change runtime search behavior.
+Issue #140 implements the new reference API without breaking the existing
+mutable API. A future major-version migration may rename or remove the legacy
+surface after downstream callers have moved to typed traces.
+
+Reference implementation
+------------------------
+
+:class:`~lczerolens.reference_search.ReferenceMCTS` is the #140 implementation.
+It consumes the #130 single-board evaluator TensorDict (a raw 1858-logit
+``policy`` and scalar side-to-move ``value``) and returns a
+:class:`~lczerolens.search_trace.SearchTrace` with ``replayable`` capability.
+The public :func:`~lczerolens.reference_search.replay_root_events` helper
+reconstructs final root statistics using events alone; it neither reads mutable
+tree state nor calls the search backup routine.
+
+The reference PUCT score is ``Q + c_puct * P * sqrt(sum(N)) / (1 + N)``.
+Exact score ties and zero-visit root selection use UCI lexicographic order;
+final root selection is maximum visit count at temperature zero. Search is
+strictly sequential. It intentionally omits lc0 FPU, batching, virtual visits,
+collisions, pruning, transpositions, noise, and tree reuse, and therefore
+makes no lc0-equivalence or playing-strength claim.
+
+The legacy ``MCTS``/``Node`` API remains available during the 0.x compatibility
+window. New audit or research code should use ``ReferenceMCTS.search`` and its
+typed trace rather than depending on the mutable legacy tree.
