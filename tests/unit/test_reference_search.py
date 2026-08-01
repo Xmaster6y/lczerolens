@@ -6,7 +6,15 @@ from tensordict import TensorDict
 
 from lczerolens import LczeroBoard
 from lczerolens.reference_search import ReferenceMCTS, replay_root_events
-from lczerolens.search_trace import SearchCapability
+from lczerolens.search_trace import (
+    BackupUpdate,
+    EdgeStatistics,
+    LeafRecord,
+    PositionEvaluation,
+    SearchCapability,
+    SimulationEvent,
+    ValuePerspective,
+)
 
 
 class FixedEvaluator:
@@ -20,6 +28,16 @@ class FixedEvaluator:
         for rank, move in enumerate(sorted(board.legal_moves, key=lambda candidate: candidate.uci())):
             policy[board.encode_move(move, board.turn)] = float(rank)
         return TensorDict({"policy": policy, "value": torch.tensor(self.value)})
+
+
+class BatchedFixedEvaluator(FixedEvaluator):
+    """Match the singleton TensorDict batch emitted by LczeroModel."""
+
+    def __call__(self, board):
+        output = super().__call__(board)
+        return TensorDict(
+            {"policy": output["policy"].unsqueeze(0), "value": output["value"].reshape(1)}, batch_size=[1]
+        )
 
 
 @pytest.mark.parametrize("simulations", (1, 2, 8, 32))
@@ -52,6 +70,12 @@ def test_reference_search_revisits_a_child_and_alternates_backup_signs():
     assert [backup.signed_value for backup in trace.events[1].backups] == pytest.approx((0.4, -0.4))
 
 
+def test_reference_search_accepts_the_canonical_singleton_evaluator_batch():
+    trace = ReferenceMCTS().search(LczeroBoard(), BatchedFixedEvaluator(), simulations=1)
+
+    assert trace.events[0].leaf.evaluator.legal_policy_logits
+
+
 def test_reference_search_records_terminal_leaf_without_evaluator_call():
     board = LczeroBoard("8/8/8/8/8/8/4Q3/K1k5 w - - 0 1")
     trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
@@ -66,3 +90,21 @@ def test_reference_search_rejects_invalid_evaluator_policy():
 
     with pytest.raises(ValueError, match="non-finite"):
         ReferenceMCTS().search(LczeroBoard(), invalid, simulations=1)
+
+
+def test_replayer_rejects_an_event_that_changes_the_root_move_set():
+    before = EdgeStatistics("a2a3", ValuePerspective.ROOT_PLAYER, visits=0, total_value=0.0, mean_value=0.0)
+    after = EdgeStatistics("a2a3", ValuePerspective.ROOT_PLAYER, visits=1, total_value=0.5, mean_value=0.5)
+    extra = EdgeStatistics("a2a4", ValuePerspective.ROOT_PLAYER, visits=0, total_value=0.0, mean_value=0.0)
+    event = SimulationEvent(
+        "event-0",
+        0,
+        (),
+        LeafRecord("leaf", PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.5), False),
+        (BackupUpdate("root", 0.5, before, after),),
+        root_before=(before,),
+        root_after=(after, extra),
+    )
+
+    with pytest.raises(ValueError, match="root move set"):
+        replay_root_events((event,))

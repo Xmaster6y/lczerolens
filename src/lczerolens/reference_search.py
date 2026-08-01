@@ -163,7 +163,7 @@ class ReferenceMCTS:
     def _expand(
         self, node: _Node, evaluator: Evaluator | Callable[[LczeroBoard], TensorDict], perspective: ValuePerspective
     ) -> tuple[PositionEvaluation, NodeExpansion, EvaluatorCall]:
-        output = evaluator(node.board)
+        output = self._single_evaluation(evaluator(node.board))
         policy = output.get("policy")
         value = output.get("value")
         if not isinstance(policy, torch.Tensor) or not isinstance(value, torch.Tensor):
@@ -194,6 +194,17 @@ class ReferenceMCTS:
             NodeExpansion(node.node_id, edge_stats),
             evaluator_call,
         )
+
+    @staticmethod
+    def _single_evaluation(output: TensorDict) -> TensorDict:
+        """Normalize the canonical evaluator's optional singleton batch."""
+        if not isinstance(output, TensorDict):
+            raise ValueError("Evaluator must return a TensorDict.")
+        if output.batch_size == torch.Size([]):
+            return output
+        if output.batch_size == torch.Size([1]):
+            return output[0]
+        raise ValueError("Reference search requires one evaluator result per board.")
 
     def _leaf(
         self, node: _Node, evaluator: Evaluator | Callable[[LczeroBoard], TensorDict], root_turn: chess.Color
@@ -256,12 +267,19 @@ def replay_root_events(events: tuple[SimulationEvent, ...]) -> tuple[EdgeStatist
     """Reconstruct final root state from events without accessing a search tree."""
     if not events:
         raise ValueError("At least one simulation event is required.")
-    state = {edge.move: edge for edge in events[0].root_before or ()}
+    initial = events[0].root_before or ()
+    state = {edge.move: edge for edge in initial}
+    if len(state) != len(initial):
+        raise ValueError("Replayable events require unique root moves.")
     if not state:
         raise ValueError("Replayable events require a non-empty root state.")
     for event in events:
         before = {edge.move: edge for edge in event.root_before or ()}
         after = {edge.move: edge for edge in event.root_after or ()}
+        if len(before) != len(event.root_before or ()) or len(after) != len(event.root_after or ()):
+            raise ValueError(f"Event {event.event_id} has duplicate root moves.")
+        if before.keys() != after.keys():
+            raise ValueError(f"Event {event.event_id} changes the root move set.")
         if before != state:
             raise ValueError(f"Event {event.event_id} does not chain from the reconstructed root state.")
         changed = [move for move in state if state[move] != after.get(move)]
