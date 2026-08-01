@@ -2,9 +2,11 @@
 
 import pytest
 import torch
+import chess
 from lczero.backends import GameState
 from huggingface_hub import delete_repo
 from torch import nn
+from tensordict import TensorDict
 
 from lczerolens.model import LczeroBoard, PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue, LczeroModel
 from lczerolens import backends as lczero_utils
@@ -61,6 +63,37 @@ class TestModel:
 
 
 class TestManageModels:
+    def test_prepare_boards_rejects_empty_or_invalid_input(self):
+        model = LczeroModel(nn.Identity(), out_keys=["output"])
+        with pytest.raises(ValueError, match="at least one"):
+            model.prepare_boards()
+        with pytest.raises(TypeError, match="Expected LczeroBoard"):
+            model.prepare_boards(chess.Board())
+
+    def test_raw_tensor_is_batched_and_moved_to_evaluator_device(self):
+        model = LczeroModel(nn.Identity(), out_keys=["output"])
+        output = model(torch.zeros((112, 8, 8)))
+        assert output["output"].shape == (1, 112, 8, 8)
+        assert output["output"].device == model.device
+
+    def test_tensordict_input_remains_transparent(self):
+        model = LczeroModel(nn.Identity(), out_keys=["output"])
+        inputs = TensorDict({"board": torch.zeros((1, 112, 8, 8))}, batch_size=1)
+        output = model(inputs)
+        assert output["output"].shape == (1, 112, 8, 8)
+
+    def test_from_model_requires_explicit_keys_for_plain_modules(self):
+        with pytest.raises(ValueError, match="explicit out_keys"):
+            LczeroModel.from_model(nn.Identity())
+
+    def test_onnx_loading_without_shape_check_passes_the_path(self, monkeypatch, tmp_path):
+        path = tmp_path / "model.onnx"
+        path.touch()
+        converted = nn.Identity()
+        monkeypatch.setattr("lczerolens.model.convert", lambda value: converted)
+        monkeypatch.setattr(LczeroModel, "from_model", classmethod(lambda cls, model, **_: model))
+        assert LczeroModel.from_onnx_path(str(path), check=False) is converted
+
     def test_model_from_hf_is_hermetic(self, monkeypatch):
         """The Hub adapter forwards its download result without contacting the network."""
         import huggingface_hub

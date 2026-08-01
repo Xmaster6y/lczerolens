@@ -5,6 +5,7 @@ Tests for the board.
 from typing import List, Tuple
 import pytest
 import chess
+import torch
 from lczero.backends import GameState
 
 from lczerolens import backends as lczero_utils
@@ -176,6 +177,41 @@ class TestStability:
             decoded_move = board.decode_move(encoded_move)
             assert move == decoded_move
             us, them = them, us
+
+
+class TestLegalPolicy:
+    def test_masks_then_normalizes_legal_logits(self):
+        board = LczeroBoard()
+        legal_indices = board.get_legal_indices()
+        policy = torch.full((1858,), -100.0)
+        policy[legal_indices[0]] = 0.0
+        policy[legal_indices[1]] = 1.0
+
+        legal_policy = board.get_legal_policy(policy)
+
+        assert legal_policy.shape == legal_indices.shape
+        assert torch.allclose(legal_policy.sum(), torch.tensor(1.0))
+        assert torch.allclose(legal_policy[:2], torch.softmax(torch.tensor([0.0, 1.0]), dim=0))
+
+    @pytest.mark.parametrize(
+        "policy",
+        [torch.zeros(1857), torch.zeros((1, 1858)), torch.full((1858,), float("nan"))],
+    )
+    def test_rejects_malformed_or_nonfinite_policy(self, policy):
+        with pytest.raises(ValueError, match="policy|logits"):
+            LczeroBoard().get_legal_policy(policy)
+
+    @pytest.mark.parametrize(
+        "fen",
+        [
+            "7k/6Q1/6K1/8/8/8/8/8 b - - 0 1",  # checkmate: no legal moves
+            "8/8/8/8/8/8/8/K6k w - - 0 1",  # insufficient material: legal moves remain
+        ],
+    )
+    def test_rejects_terminal_position(self, fen):
+        board = LczeroBoard(fen)
+        with pytest.raises(ValueError, match="terminal position"):
+            board.get_legal_policy(torch.zeros(1858))
 
 
 @pytest.mark.backends

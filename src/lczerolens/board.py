@@ -257,6 +257,31 @@ class LczeroBoard(chess.Board):
         us = self.turn
         return torch.tensor([self.encode_move(move, us) for move in self.legal_moves])
 
+    def get_legal_policy(self, policy: torch.Tensor) -> torch.Tensor:
+        """Return normalized probabilities for this position's legal moves.
+
+        ``policy`` is the evaluator's raw lc0 policy logits.  The returned
+        tensor is ordered like :meth:`get_legal_indices`, rather than the full
+        1858-entry vocabulary, so its entries always sum to one.
+
+        Raises
+        ------
+        ValueError
+            If ``policy`` is not a single lc0 policy vector, has non-finite
+            legal logits, or the position has no legal moves.
+        """
+        if policy.ndim != 1 or policy.shape[0] != len(POLICY_INDEX):
+            raise ValueError(
+                f"Expected one policy vector with {len(POLICY_INDEX)} entries, got shape {tuple(policy.shape)}."
+            )
+        if self.is_game_over():
+            raise ValueError("Cannot normalize a legal policy for a terminal position.")
+        legal_indices = self.get_legal_indices().to(policy.device)
+        legal_logits = policy.gather(0, legal_indices)
+        if not torch.isfinite(legal_logits).all():
+            raise ValueError("Cannot normalize a legal policy with non-finite legal logits.")
+        return torch.softmax(legal_logits, dim=0)
+
     def get_next_legal_boards(
         self,
         n_history: int = 7,
