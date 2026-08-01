@@ -1,12 +1,17 @@
 """Contracts for engine-independent search trace records."""
 
+import math
+
 import pytest
 
 from lczerolens.search_trace import (
     BackupUpdate,
     ChessPlayer,
     EdgeStatistics,
+    EvaluatorCall,
     LeafRecord,
+    NodeExpansion,
+    PathStep,
     PositionEvaluation,
     PrincipalVariation,
     RootAction,
@@ -286,3 +291,207 @@ def test_replayable_capability_requires_pre_and_post_root_state():
         events=(replayable_event,),
     )
     assert trace.require(SearchCapability.REPLAYABLE) is trace
+
+
+@pytest.mark.parametrize(
+    ("factory", "message"),
+    [
+        (lambda: SearchParameter("", 1), "parameter names"),
+        (lambda: SearchParameter("temperature", math.nan), "must be finite"),
+        (lambda: SearchProvenance(source=""), "source must not be empty"),
+        (
+            lambda: SearchProvenance(
+                source="reference", parameters=(SearchParameter("seed", 1), SearchParameter("seed", 2))
+            ),
+            "must be unique",
+        ),
+        (lambda: SearchBudget(SearchBudgetUnit.NODES), "requested or observed"),
+        (lambda: SearchBudget(SearchBudgetUnit.NODES, requested=-1), "non-negative"),
+        (lambda: Wdl(-0.1, 0.5, 0.6, ValuePerspective.ROOT_PLAYER), "probabilities"),
+        (lambda: Wdl(0.2, 0.2, 0.2, ValuePerspective.ROOT_PLAYER), "sum to one"),
+        (lambda: Wdl(0.5, 0.0, 0.5, ValuePerspective.ROOT_PLAYER).scalar(math.nan), "draw_score"),
+        (lambda: PositionEvaluation(ValuePerspective.ROOT_PLAYER), "scalar value or WDL"),
+        (lambda: PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=2.0), r"in \[-1, 1\]"),
+        (
+            lambda: PositionEvaluation(
+                ValuePerspective.ROOT_PLAYER,
+                wdl=Wdl(0.5, 0.0, 0.5, ValuePerspective.WHITE),
+            ),
+            "perspectives must agree",
+        ),
+        (lambda: PrincipalVariation(()), "must contain"),
+        (lambda: EdgeStatistics("", ValuePerspective.ROOT_PLAYER), "non-empty"),
+        (lambda: EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, prior=2.0), "P must"),
+        (lambda: EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=1.5), "N must"),
+        (lambda: EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, total_value=math.nan), "W must"),
+        (lambda: EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, mean_value=2.0), "Q must"),
+        (lambda: EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, exploration=-0.1), "U must"),
+        (
+            lambda: EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=1, total_value=1.1),
+            "W must be in",
+        ),
+        (lambda: RootSelection("", "bestmove", "engine-defined"), "must be explicit"),
+        (lambda: RootSelection("e2e4", "bestmove", "engine-defined", temperature=-1), "non-negative"),
+        (
+            lambda: RootSnapshot(sequence=-1, evaluation=PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.0)),
+            "non-negative",
+        ),
+        (lambda: RootSnapshot(sequence=0), "selection, evaluation, or exposed actions"),
+    ],
+)
+def test_record_validation_errors(factory, message):
+    with pytest.raises(ValueError, match=message):
+        factory()
+
+
+def test_root_and_event_record_validation_errors():
+    edge = EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, prior=1.0, visits=0)
+    with pytest.raises(ValueError, match="must start"):
+        RootAction(edge, principal_variation=PrincipalVariation(("d2d4",)))
+    with pytest.raises(ValueError, match="unique moves"):
+        RootSnapshot(
+            sequence=0,
+            actions=(RootAction(edge), RootAction(edge)),
+        )
+    with pytest.raises(ValueError, match="dtype and device"):
+        EvaluatorCall("", "cpu", "cpu")
+    with pytest.raises(ValueError, match="unique, non-empty"):
+        EvaluatorCall("float32", "cpu", "cpu", legal_policy_logits=(("e2e4", 0.0), ("e2e4", 1.0)))
+    with pytest.raises(ValueError, match="must be finite"):
+        EvaluatorCall("float32", "cpu", "cpu", legal_policy_logits=(("e2e4", math.nan),))
+    with pytest.raises(ValueError, match="unique moves"):
+        NodeExpansion("root", (edge, edge))
+    with pytest.raises(ValueError, match="explicit prior"):
+        NodeExpansion("root", (EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER),))
+    with pytest.raises(ValueError, match="sum to one"):
+        NodeExpansion("root", (EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, prior=0.5),))
+
+
+def test_optional_evaluator_and_empty_expansion_records_are_valid():
+    EvaluatorCall("float32", "cpu", "cpu")
+    EvaluatorCall("float32", "cpu", "cpu", legal_policy_logits=(("e2e4", 0.0),))
+    NodeExpansion("terminal", ())
+
+
+def test_backup_and_event_validation_errors():
+    before = EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=0, total_value=0.0, mean_value=0.0)
+    after = EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=1, total_value=0.5, mean_value=0.5)
+    with pytest.raises(ValueError, match=r"in \[-1, 1\]"):
+        BackupUpdate("root", 2.0, before, after)
+    with pytest.raises(ValueError, match="same edge"):
+        BackupUpdate(
+            "root",
+            0.5,
+            before,
+            EdgeStatistics("d2d4", ValuePerspective.ROOT_PLAYER, visits=1, total_value=0.5, mean_value=0.5),
+        )
+    with pytest.raises(ValueError, match="pre/post N, W, and Q"):
+        BackupUpdate("root", 0.5, EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER), after)
+    with pytest.raises(ValueError, match="N_post"):
+        BackupUpdate(
+            "root",
+            0.5,
+            before,
+            EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=2, total_value=0.5, mean_value=0.25),
+        )
+    with pytest.raises(ValueError, match="ID and non-negative"):
+        SimulationEvent(
+            event_id="",
+            simulation=0,
+            path=(PathStep("root", "e2e4", "child"),),
+            leaf=LeafRecord("child", PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.0), False),
+            backups=(),
+        )
+
+
+def test_search_trace_validation_errors():
+    root_only = RootSnapshot(sequence=0, evaluation=PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.0))
+    action_snapshot = RootSnapshot(
+        sequence=0,
+        budget=SearchBudget(SearchBudgetUnit.NODES, observed=0),
+        actions=(),
+    )
+    trace_args = dict(
+        root_fen=START_FEN,
+        root_player=ChessPlayer.WHITE,
+        capability=SearchCapability.ROOT_RESULT,
+        provenance=SearchProvenance(source="test"),
+        snapshots=(root_only,),
+    )
+    with pytest.raises(ValueError, match="root_player must"):
+        SearchTrace(**(trace_args | {"root_player": "white"}))
+    with pytest.raises(ValueError, match="valid chess FEN"):
+        SearchTrace(**(trace_args | {"root_fen": "not a FEN"}))
+    with pytest.raises(ValueError, match="must match"):
+        SearchTrace(**(trace_args | {"root_fen": START_FEN.replace(" w ", " b ")}))
+    with pytest.raises(ValueError, match="must contain at least one"):
+        SearchTrace(**(trace_args | {"snapshots": ()}))
+    with pytest.raises(ValueError, match="unique and increasing"):
+        SearchTrace(**(trace_args | {"snapshots": (root_only, root_only)}))
+    with pytest.raises(ValueError, match="Full-event capability"):
+        SearchTrace(
+            **(
+                trace_args
+                | {
+                    "capability": SearchCapability.FULL_EVENTS,
+                    "snapshots": (action_snapshot,),
+                }
+            )
+        )
+
+    with pytest.raises(ValueError, match="Every root action"):
+        SearchTrace(
+            **(
+                trace_args
+                | {
+                    "snapshots": (
+                        RootSnapshot(
+                            sequence=0,
+                            actions=(RootAction(EdgeStatistics("e2e5", ValuePerspective.ROOT_PLAYER)),),
+                        ),
+                    )
+                }
+            )
+        )
+    for variation, message in (
+        (("e2e4", "not-a-move"), "valid UCI"),
+        (("e2e4", "e2e4"), "legal in sequence"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            SearchTrace(
+                **(
+                    trace_args
+                    | {
+                        "snapshots": (
+                            RootSnapshot(
+                                sequence=0,
+                                actions=(
+                                    RootAction(
+                                        EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER),
+                                        principal_variation=PrincipalVariation(variation),
+                                    ),
+                                ),
+                            ),
+                        )
+                    }
+                )
+            )
+
+    event = SimulationEvent(
+        event_id="event-0",
+        simulation=0,
+        path=(),
+        leaf=LeafRecord("root", PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.0), False),
+        backups=(),
+    )
+    with pytest.raises(ValueError, match="IDs must be unique"):
+        SearchTrace(**(trace_args | {"events": (event, event)}))
+    repeated_simulation = SimulationEvent(
+        event_id="event-1",
+        simulation=0,
+        path=(),
+        leaf=event.leaf,
+        backups=(),
+    )
+    with pytest.raises(ValueError, match="indices must be unique"):
+        SearchTrace(**(trace_args | {"events": (event, repeated_simulation)}))
