@@ -10,6 +10,7 @@ lczerolens
 
     start
     scope
+    search
     features
     tutorials
     api/index
