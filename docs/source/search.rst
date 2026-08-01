@@ -37,7 +37,9 @@ The schema uses stable UCI move strings at adapter boundaries. FEN identifies
 the root position, including side to move and clocks. Provenance records source,
 engine/version, network identity/checksum when available, and source-specific
 parameters. A :class:`~lczerolens.search_trace.SearchBudget` distinguishes the
-requested budget from the observed budget and states its unit.
+requested budget from the observed budget and states its unit. Node, visit,
+simulation, and depth budgets are non-negative integers; time budgets may be
+fractional milliseconds.
 
 Root snapshots contain an optional position evaluation, selected action, and
 root-action records. A principal variation is only the move sequence reported
@@ -104,7 +106,8 @@ Capabilities are ordered promises:
 
 ``root_result``
   A root evaluation and/or selected move is available. Action details may be
-  absent.
+  absent. A trace must contain at least one snapshot with one of these root
+  fields, though an intermediate snapshot may contain only action statistics.
 
 ``root_action_stats``
   The producer exposed the legal root action collection and available P/N/W/Q/U

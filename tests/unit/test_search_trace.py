@@ -410,6 +410,7 @@ def test_replayable_events_require_a_real_root_transition_and_final_state():
         ),
         (lambda: SearchBudget(SearchBudgetUnit.NODES), "requested or observed"),
         (lambda: SearchBudget(SearchBudgetUnit.NODES, requested=-1), "non-negative"),
+        (lambda: SearchBudget(SearchBudgetUnit.NODES, requested=1.5), "must be an integer"),
         (lambda: Wdl(-0.1, 0.5, 0.6, ValuePerspective.ROOT_PLAYER), "probabilities"),
         (lambda: Wdl(0.2, 0.2, 0.2, ValuePerspective.ROOT_PLAYER), "sum to one"),
         (lambda: Wdl(0.5, 0.0, 0.5, ValuePerspective.ROOT_PLAYER).scalar(math.nan), "draw_score"),
@@ -470,6 +471,11 @@ def test_root_and_event_record_validation_errors():
         NodeExpansion("root", (EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, prior=0.5),))
 
 
+def test_time_budget_permits_fractional_milliseconds():
+    budget = SearchBudget(SearchBudgetUnit.TIME_MS, requested=0.5, observed=1.25)
+    assert budget.observed == pytest.approx(1.25)
+
+
 def test_optional_evaluator_and_empty_expansion_records_are_valid():
     EvaluatorCall("float32", "cpu", "cpu")
     EvaluatorCall("float32", "cpu", "cpu", legal_policy_logits=(("e2e4", 0.0),))
@@ -512,6 +518,7 @@ def test_search_trace_validation_errors():
     action_snapshot = RootSnapshot(
         sequence=0,
         budget=SearchBudget(SearchBudgetUnit.NODES, observed=0),
+        evaluation=PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.0),
         actions=(),
     )
     trace_args = dict(
@@ -529,6 +536,15 @@ def test_search_trace_validation_errors():
         SearchTrace(**(trace_args | {"root_fen": START_FEN.replace(" w ", " b ")}))
     with pytest.raises(ValueError, match="must contain at least one"):
         SearchTrace(**(trace_args | {"snapshots": ()}))
+    with pytest.raises(ValueError, match="root selection or evaluation"):
+        SearchTrace(
+            **(
+                trace_args
+                | {
+                    "snapshots": (RootSnapshot(sequence=0, actions=()),),
+                }
+            )
+        )
     with pytest.raises(ValueError, match="unique and increasing"):
         SearchTrace(**(trace_args | {"snapshots": (root_only, root_only)}))
     with pytest.raises(ValueError, match="Full-event capability"):

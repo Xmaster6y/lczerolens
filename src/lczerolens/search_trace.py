@@ -72,6 +72,14 @@ class SearchBudgetUnit(str, Enum):
     DEPTH = "depth"
 
 
+_COUNT_BUDGET_UNITS = {
+    SearchBudgetUnit.NODES,
+    SearchBudgetUnit.VISITS,
+    SearchBudgetUnit.SIMULATIONS,
+    SearchBudgetUnit.DEPTH,
+}
+
+
 @dataclass(frozen=True)
 class SearchParameter:
     """One source-specific search option retained as provenance."""
@@ -119,6 +127,8 @@ class SearchBudget:
         for name, value in (("requested", self.requested), ("observed", self.observed)):
             if value is not None and (isinstance(value, bool) or not math.isfinite(value) or value < 0):
                 raise ValueError(f"Search budget {name} must be finite and non-negative.")
+            if value is not None and self.unit in _COUNT_BUDGET_UNITS and not isinstance(value, int):
+                raise ValueError(f"Search budget {name} must be an integer for {self.unit.value}.")
 
 
 @dataclass(frozen=True)
@@ -454,6 +464,8 @@ class SearchTrace:
                         variation_board.push(move)
         if not self.snapshots:
             raise ValueError("A search trace must contain at least one root snapshot.")
+        if not any(snapshot.selection is not None or snapshot.evaluation is not None for snapshot in self.snapshots):
+            raise ValueError("A search trace must contain a root selection or evaluation.")
         sequences = [snapshot.sequence for snapshot in self.snapshots]
         if sequences != sorted(sequences) or len(sequences) != len(set(sequences)):
             raise ValueError("Root snapshot sequence numbers must be unique and increasing.")
