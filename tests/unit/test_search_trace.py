@@ -107,7 +107,7 @@ def test_captured_lc0_output_fits_budgeted_root_snapshot_schema():
                         EdgeStatistics(
                             move="e2e4",
                             perspective=ValuePerspective.ROOT_PLAYER,
-                            prior=0.4,
+                            prior=0.6,
                             visits=60,
                             mean_value=0.18,
                             exploration=0.03,
@@ -126,7 +126,7 @@ def test_captured_lc0_output_fits_budgeted_root_snapshot_schema():
                         EdgeStatistics(
                             move="d2d4",
                             perspective=ValuePerspective.ROOT_PLAYER,
-                            prior=0.3,
+                            prior=0.4,
                             visits=40,
                             mean_value=0.15,
                             exploration=0.04,
@@ -225,6 +225,17 @@ def test_selected_move_must_be_among_exposed_root_actions():
         )
 
 
+def test_exposed_root_priors_must_sum_to_one():
+    with pytest.raises(ValueError, match="root priors"):
+        RootSnapshot(
+            sequence=0,
+            actions=(
+                RootAction(EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, prior=0.4)),
+                RootAction(EdgeStatistics("d2d4", ValuePerspective.ROOT_PLAYER, prior=0.3)),
+            ),
+        )
+
+
 def test_trace_rejects_illegal_root_actions():
     with pytest.raises(ValueError, match="legal in root_fen"):
         SearchTrace(
@@ -291,6 +302,98 @@ def test_replayable_capability_requires_pre_and_post_root_state():
         events=(replayable_event,),
     )
     assert trace.require(SearchCapability.REPLAYABLE) is trace
+
+
+def test_replayable_events_require_a_real_root_transition_and_final_state():
+    before = EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=0, total_value=0.0, mean_value=0.0)
+    after = EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=1, total_value=0.5, mean_value=0.5)
+    backup = BackupUpdate("root", signed_value=0.5, before=before, after=after)
+    leaf = LeafRecord("root", PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.5), False)
+    empty_states = SimulationEvent("empty", 0, (), leaf, (backup,), root_before=(), root_after=())
+    duplicate_states = SimulationEvent(
+        "duplicate", 0, (), leaf, (backup,), root_before=(before, before), root_after=(after, after)
+    )
+    unrelated_after = EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=1, total_value=0.4, mean_value=0.4)
+    unrelated_states = SimulationEvent(
+        "unrelated", 0, (), leaf, (backup,), root_before=(before,), root_after=(unrelated_after,)
+    )
+
+    assert not empty_states.replayable
+    assert not duplicate_states.replayable
+    assert not unrelated_states.replayable
+
+    event = SimulationEvent("event-0", 0, (), leaf, (backup,), root_before=(before,), root_after=(after,))
+    with pytest.raises(ValueError, match="final root snapshot"):
+        SearchTrace(
+            root_fen=START_FEN,
+            root_player=ChessPlayer.WHITE,
+            capability=SearchCapability.REPLAYABLE,
+            provenance=SearchProvenance(source="reference"),
+            snapshots=(
+                RootSnapshot(
+                    sequence=0,
+                    budget=SearchBudget(SearchBudgetUnit.SIMULATIONS, observed=1),
+                    selection=RootSelection("e2e4", "maximum N", "UCI order"),
+                    actions=(RootAction(unrelated_after),),
+                ),
+            ),
+            events=(event,),
+        )
+
+    next_after = EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, visits=2, total_value=0.7, mean_value=0.35)
+    next_backup = BackupUpdate("root", signed_value=0.2, before=after, after=next_after)
+    chained_event = SimulationEvent(
+        "event-1",
+        1,
+        (),
+        leaf,
+        (next_backup,),
+        root_before=(after,),
+        root_after=(next_after,),
+    )
+    chained_trace = SearchTrace(
+        root_fen=START_FEN,
+        root_player=ChessPlayer.WHITE,
+        capability=SearchCapability.REPLAYABLE,
+        provenance=SearchProvenance(source="reference"),
+        snapshots=(
+            RootSnapshot(
+                sequence=0,
+                budget=SearchBudget(SearchBudgetUnit.SIMULATIONS, observed=2),
+                selection=RootSelection("e2e4", "maximum N", "UCI order"),
+                actions=(RootAction(next_after),),
+            ),
+        ),
+        events=(event, chained_event),
+    )
+    assert chained_trace.require(SearchCapability.REPLAYABLE) is chained_trace
+
+    unrelated_edge = EdgeStatistics("d2d4", ValuePerspective.ROOT_PLAYER, visits=0, total_value=0.0, mean_value=0.0)
+    unchained_event = SimulationEvent(
+        "event-1",
+        1,
+        (),
+        leaf,
+        (next_backup,),
+        root_before=(after, unrelated_edge),
+        root_after=(next_after, unrelated_edge),
+    )
+    with pytest.raises(ValueError, match="must chain"):
+        SearchTrace(
+            root_fen=START_FEN,
+            root_player=ChessPlayer.WHITE,
+            capability=SearchCapability.REPLAYABLE,
+            provenance=SearchProvenance(source="reference"),
+            snapshots=(
+                RootSnapshot(
+                    sequence=0,
+                    budget=SearchBudget(SearchBudgetUnit.SIMULATIONS, observed=2),
+                    selection=RootSelection("e2e4", "maximum N", "UCI order"),
+                    actions=(RootAction(next_after), RootAction(unrelated_edge)),
+                ),
+            ),
+            events=(event, unchained_event),
+        )
 
 
 @pytest.mark.parametrize(

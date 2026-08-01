@@ -280,6 +280,15 @@ class RootSnapshot:
                 raise ValueError("Root snapshot actions must have unique moves.")
             if self.selection is not None and self.selection.move not in moves:
                 raise ValueError("The selected root move must appear in the exposed actions.")
+            priors = [action.statistics.prior for action in self.actions]
+            if (
+                priors
+                and all(prior is not None for prior in priors)
+                and not math.isclose(
+                    sum(prior for prior in priors if prior is not None), 1.0, rel_tol=1e-6, abs_tol=1e-6
+                )
+            ):
+                raise ValueError("Exposed root priors must sum to one.")
 
 
 @dataclass(frozen=True)
@@ -383,7 +392,16 @@ class SimulationEvent:
     @property
     def replayable(self) -> bool:
         """Whether this event contains the state transitions needed for replay."""
-        return self.root_before is not None and self.root_after is not None
+        if not self.root_before or not self.root_after:
+            return False
+        before = {edge.move: edge for edge in self.root_before}
+        after = {edge.move: edge for edge in self.root_after}
+        if len(before) != len(self.root_before) or len(after) != len(self.root_after) or before.keys() != after.keys():
+            return False
+        changed = [(before[move], after[move]) for move in before if before[move] != after[move]]
+        return len(changed) == 1 and any(
+            update.before == changed[0][0] and update.after == changed[0][1] for update in self.backups
+        )
 
     def __post_init__(self) -> None:
         if (
@@ -458,6 +476,16 @@ class SearchTrace:
                 raise ValueError("Simulation indices must be unique and increasing.")
         if self.capability is SearchCapability.REPLAYABLE and any(not event.replayable for event in self.events or ()):
             raise ValueError("Replayable capability requires replay state on every event.")
+        if self.capability is SearchCapability.REPLAYABLE and self.events:
+            for previous, current in zip(self.events, self.events[1:]):
+                if previous.root_after != current.root_before:
+                    raise ValueError("Replayable root states must chain between simulation events.")
+            final_actions = self.snapshots[-1].actions
+            final_root_state = self.events[-1].root_after
+            final_action_stats = {action.statistics.move: action.statistics for action in final_actions or ()}
+            final_event_stats = {edge.move: edge for edge in final_root_state or ()}
+            if final_actions is None or final_root_state is None or final_action_stats != final_event_stats:
+                raise ValueError("Replayable root state must agree with the final root snapshot.")
 
     def supports(self, capability: SearchCapability) -> bool:
         """Return whether this trace advertises at least ``capability``."""

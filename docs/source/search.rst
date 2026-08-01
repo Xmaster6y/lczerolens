@@ -70,7 +70,8 @@ scalar value, WDL, or both; one is not silently derived from the other.
 For an edge from a node to a legal action:
 
 * ``P`` (``prior``) is the normalized probability assigned to that action at
-  expansion. It is non-negative and legal-action priors sum to one.
+  expansion. It is non-negative; when every exposed root action has ``P``,
+  those priors sum to one.
 * ``N`` (``visits``) is the number of completed traversals backed up through
   that edge at the time of the record.
 * ``W`` (``total_value``) is the sum of backed-up scalar values in the edge's
@@ -118,7 +119,10 @@ Capabilities are ordered promises:
 
 ``replayable``
   Every event also contains the backup and pre/post root state required for an
-  independent replayer to reconstruct the emitted root statistics.
+  independent replayer to reconstruct the emitted root statistics. Each state
+  is non-empty, contains exactly one edge transition matching a recorded
+  backup, chains from the preceding event, and the final state equals the final
+  root snapshot.
 
 Consumers call :meth:`~lczerolens.search_trace.SearchTrace.supports` or
 :meth:`~lczerolens.search_trace.SearchTrace.require` before making a claim.
