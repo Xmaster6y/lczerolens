@@ -26,9 +26,8 @@ Current v0.4 capabilities are:
 
 The planned in-scope public surface will add chess-domain evidence for position
 facts, moves, variations, counterfactual positions, and search traces and
-comparisons. Those facilities do not yet have a counterfactual API or a
-search-trace schema in v0.4; this policy defines their ownership before they are
-introduced.
+comparisons. Search records follow the capability-aware schema in
+:doc:`search`; counterfactual facilities do not yet have a public API in v0.4.
 
 Evaluator contract
 ------------------
@@ -157,6 +156,10 @@ announced compatibility release.
        ``ModelHeuristic``, ``Node``, ``MCTS``
      - Refocus
      - Search traces and comparisons supporting decision evidence.
+   * - ``search_trace``
+     - Typed provenance, budget, snapshot, edge-statistic, event, and capability records
+     - Retain
+     - Engine-independent public evidence boundary for reference and production search adapters.
 
 Compatibility policy
 --------------------
