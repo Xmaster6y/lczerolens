@@ -151,7 +151,11 @@ checksum, command options, and requested/observed nodes or time belong to
 provenance and budget records. Unless lc0 exposes simulation transitions
 through a separately supported interface, the adapter advertises at most
 ``root_snapshots``. Tests exercise a representative captured-output-shaped
-record without an lc0 binary.
+record without an lc0 binary. The optional
+:class:`~lczerolens.lc0_adapter.Lc0RootSnapshotParser` implements this
+versioned captured-output contract; its paired process adapter invokes a
+user-supplied UCI binary. Live conformance is opt-in through
+``LC0_EXECUTABLE``, ``LC0_NETWORK``, and ``LC0_VERSION``.
 
 Adapter boundary
 ----------------
