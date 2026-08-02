@@ -1,7 +1,7 @@
 [project]
 name = "lczerolens"
 version = "0.4.0"
-description = "Interpretability for LeelaChessZero networks."
+description = "lc0 interoperability and chess-decision evidence in PyTorch."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
