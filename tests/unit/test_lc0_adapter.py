@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from lczerolens import lc0_adapter
 from lczerolens.lc0_adapter import Lc0OutputError, Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from lczerolens.search_trace import SearchCapability, SearchCapabilityError
 
@@ -52,6 +54,83 @@ def test_rejects_unknown_or_incomplete_lc0_output(lines, message):
         Lc0RootSnapshotParser().parse(
             lines, request=Lc0SearchRequest(ROOT_FEN, nodes=3), engine_version="test", network="test"
         )
+
+
+@pytest.mark.parametrize(
+    "kwargs, message",
+    [
+        ({}, "exactly one"),
+        ({"nodes": 1, "time_ms": 1}, "exactly one"),
+        ({"nodes": -1}, "non-negative"),
+        ({"time_ms": -1}, "non-negative"),
+    ],
+)
+def test_search_request_rejects_invalid_budget(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        Lc0SearchRequest(ROOT_FEN, **kwargs)
+
+
+def test_parses_root_result_with_time_budget_when_move_stats_are_unavailable():
+    trace = Lc0RootSnapshotParser().parse(
+        ["info time 7", "bestmove e2e4"],
+        request=Lc0SearchRequest(ROOT_FEN, time_ms=10),
+        engine_version="test",
+        network="test",
+    )
+    assert trace.capability is SearchCapability.ROOT_RESULT
+    assert trace.snapshots[0].budget and trace.snapshots[0].budget.observed == 7
+    assert trace.snapshots[0].actions is None
+
+
+@pytest.mark.parametrize(
+    "lines, message",
+    [
+        (["bestmove invalid"], "bestmove"),
+        (["not-a-move (P: 100.00%)", "bestmove e2e4"], "move-stat line"),
+        (["e2e4 (P: 100.00%) (PV: d2d4)", "bestmove e2e4"], "principal variation"),
+        (["e2e4 (P: 1.0)", "bestmove e2e4"], "Invalid"),
+    ],
+)
+def test_rejects_unsupported_lc0_output_shapes(lines, message):
+    with pytest.raises(Lc0OutputError, match=message):
+        Lc0RootSnapshotParser().parse(
+            lines, request=Lc0SearchRequest(ROOT_FEN, nodes=1), engine_version="test", network="test"
+        )
+
+
+def test_process_adapter_runs_uci_and_parses_result(monkeypatch):
+    calls = []
+
+    def fake_run(*args, **kwargs):
+        calls.append((args, kwargs))
+        return SimpleNamespace(returncode=0, stdout="info nodes 2\nbestmove e2e4\n", stderr="")
+
+    monkeypatch.setattr(lc0_adapter.subprocess, "run", fake_run)
+    trace = Lc0ProcessAdapter("lc0", engine_version="v-test", network="weights").run(
+        Lc0SearchRequest(ROOT_FEN, nodes=2, options={"VerboseMoveStats": True}), timeout=3
+    )
+    assert trace.snapshots[0].selection and trace.snapshots[0].selection.move == "e2e4"
+    assert calls[0][0] == (["lc0"],)
+    assert "setoption name VerboseMoveStats value true" in calls[0][1]["input"]
+    assert calls[0][1]["timeout"] == 3
+
+
+@pytest.mark.parametrize(
+    "result, message",
+    [
+        (OSError("missing"), "Could not run"),
+        (SimpleNamespace(returncode=2, stdout="", stderr="bad network"), "status 2"),
+    ],
+)
+def test_process_adapter_reports_execution_failures(monkeypatch, result, message):
+    def fake_run(*_args, **_kwargs):
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(lc0_adapter.subprocess, "run", fake_run)
+    with pytest.raises(Lc0OutputError, match=message):
+        Lc0ProcessAdapter("lc0", engine_version="test", network="test").run(Lc0SearchRequest(ROOT_FEN, nodes=1))
 
 
 @pytest.mark.integration
