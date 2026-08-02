@@ -22,7 +22,7 @@ To get started with lczerolens, install it with ``pip``.
 .. note::
 
    Core dependencies are light: mainly ``torch``, ``onnx2torch``, ``tensordict``, and ``python-chess``. Optional extras include ``matplotlib`` and ``graphviz`` (extra ``viz``) and lc0 bindings (extra ``backends``).
-   Also, the Hugging Face Hub is required to load models from the Hub (extra ``hf``).
+   Also, loading models from the Hugging Face Hub requires the ``hub`` extra.
 
 First Steps
 -----------

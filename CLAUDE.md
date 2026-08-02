@@ -2,19 +2,30 @@
 
 ## What this repo is
 
-`lczerolens` is a PyTorch-first interpretability toolkit for Leela Chess Zero (`lc0`) networks.
+`lczerolens` makes lc0-family models portable and operable in PyTorch, then
+expresses their evaluator and search behavior as chess-domain evidence. It owns
+the lc0 interoperability and chess-analysis boundary; neural-interpretability
+methods remain external integrations.
+
 It provides:
 
 - loading of lc0 models (`.onnx`, `.pt`, and Hugging Face Hub);
 - chess board encoding into lc0-compatible tensors;
-- policy/value inference helpers;
-- utilities for attribution/probing workflows with `tdhook`, `captum`, `zennit`, and `nnsight`.
+- a stable evaluator contract for policy, WDL, value, and MLH outputs;
+- typed, capability-aware search traces and a deterministic reference MCTS for
+  decision evidence.
 
 ## Fast setup
 
 ```bash
 uv sync --group dev
 uv run --group dev pre-commit install
+```
+
+The docs command needs its own dependency group:
+
+```bash
+uv sync --group docs
 ```
 
 Common project commands:
@@ -29,7 +40,8 @@ Optional extras when installing from PyPI:
 
 ```bash
 pip install "lczerolens[viz]"      # heatmaps / graphviz
-pip install "lczerolens[hf]"       # huggingface datasets/hub
+pip install "lczerolens[hub]"      # Hugging Face Hub loading/publishing
+pip install "lczerolens[datasets]" # dataset adapters and concept metrics
 pip install "lczerolens[backends]" # lc0 bindings
 ```
 
@@ -39,7 +51,11 @@ pip install "lczerolens[backends]" # lc0 bindings
 - `src/lczerolens/model.py`: `LczeroModel` + flow wrappers (`PolicyFlow`, `WdlFlow`, `ValueFlow`, `ForceValue`).
 - `src/lczerolens/data.py`: `GameData`, `BoardData`, `PuzzleData` adapters and dataset helpers.
 - `src/lczerolens/sampling.py`: `PolicySampler`, `ModelSampler`, `MCTSSampler`, `SelfPlay`.
-- `src/lczerolens/search.py`: MCTS primitives used by `MCTSSampler`.
+- `src/lczerolens/search.py`: legacy MCTS primitives used by `MCTSSampler`.
+- `src/lczerolens/search_trace.py`: engine-independent typed provenance, budgets,
+  snapshots, events, and capability records for search evidence.
+- `src/lczerolens/reference_search.py`: deterministic, evaluator-guided reference
+  MCTS and replay helpers; an analysis oracle, not production lc0 search.
 - `src/lczerolens/constants.py`: 1858-policy move vocabulary (`POLICY_INDEX` and inverse).
 
 ## Core mental model
@@ -111,7 +127,22 @@ best_idx = out["policy"].argmax().item()
 best_move = board.decode_move(best_idx)
 ```
 
-## Interpretability integration pattern
+## Architecture boundaries
+
+- `python-chess` owns chess rules, FENs, and legal moves.
+- `lczerolens` owns lc0 encoding, move-vocabulary transport, the PyTorch
+  evaluator contract, and chess-decision evidence.
+- External packages such as `tdhook`, `captum`, `zennit`, and `nnsight` own
+  attribution, probing, hooks, patches, and other neural-method semantics.
+- `ReferenceMCTS` is deterministic reference search for evaluation and replay;
+  a production lc0 search adapter must expose its own capabilities and must not
+  be represented as the reference implementation.
+
+Search consumers must call `SearchTrace.supports()` or `SearchTrace.require()`
+before making capability-dependent claims. A trace records evidence at the
+capability level it actually provides.
+
+## External interpretability integration pattern
 
 With `tdhook`, keep keys aligned with `LczeroModel`:
 
@@ -134,7 +165,7 @@ Example shape flow:
 
 ## Common gotchas
 
-- `from_hf` requires `huggingface_hub` (`pip install "lczerolens[hf]"`).
+- `from_hf` requires `huggingface_hub` (`pip install "lczerolens[hub]"`).
 - Always mask policy logits with `board.get_legal_indices()` before interpreting top moves.
 - For Integrated Gradients, baseline tensor must match input shape/device exactly.
 - Heatmap orientation: start with `heatmap_mode="relative_flip"`.
