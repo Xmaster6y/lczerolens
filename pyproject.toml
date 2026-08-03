@@ -96,11 +96,11 @@ default-groups = []
 
 [tool.pytest.ini_options]
 markers = [
-    "unit: deterministic tests of library code with no external service or model fixture",
-    "conformance: lc0 compatibility checks that require versioned model fixtures",
-    "integration: tests that exercise notebooks or another process boundary",
-    "network: tests that contact an external service and are never in the offline suite",
-    "slow: tests intended for the explicitly requested slow tier",
+    "unit: deterministic tests of library code with no external service or model fixture (automatic default)",
+    "conformance: lc0 compatibility checks that require versioned model fixtures (explicit primary tier)",
+    "integration: tests that exercise notebooks or another process boundary (explicit primary tier)",
+    "network: tests that contact an external service and are never in the offline suite (explicit primary tier)",
+    "slow: tests intended for the explicitly requested slow tier (explicit primary tier)",
     "backends: legacy alias for an lc0 conformance test",
 ]
 
