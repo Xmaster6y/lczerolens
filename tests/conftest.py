@@ -95,8 +95,11 @@ def winner_senet_ort(winner_ensure_network):
 
 
 def pytest_collection_modifyitems(items):
-    """Every test receives an explicit tier marker for stable selection."""
+    """Assign a default tier only when a test has no explicit primary tier."""
+    primary_tiers = {"unit", "conformance", "integration", "network", "slow"}
     for item in items:
+        if primary_tiers & {marker.name for marker in item.iter_markers()}:
+            continue
         path = Path(str(item.fspath))
         if "integration" in path.parts:
             item.add_marker(pytest.mark.integration)
