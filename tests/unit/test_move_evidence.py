@@ -144,6 +144,22 @@ def test_special_moves_have_explicit_exact_metadata(fen, uci, effects, capture_s
     assert (delta.move.rook_move.uci() if delta.move.rook_move else None) == rook_uci
 
 
+def test_chess960_castling_moves_the_configured_rook_without_a_capture():
+    board = chess.Board(None, chess960=True)
+    board.set_piece_at(chess.G1, chess.Piece(chess.KING, chess.WHITE))
+    board.set_piece_at(chess.H1, chess.Piece(chess.ROOK, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.castling_rights = chess.BB_H1
+    move = chess.Move(chess.G1, chess.H1)
+
+    delta = analyze_move_delta(board, move, MaterialAnalyzer())
+
+    assert delta.move.effects == (ExactMoveEffect.CASTLING,)
+    assert delta.move.captured_piece is None
+    assert delta.move.capture_square is None
+    assert delta.move.rook_move == chess.Move(chess.H1, chess.F1)
+
+
 def test_unchanged_control_is_preserved_without_losing_original_evidence():
     board = chess.Board()
     before = MaterialAnalyzer(FactPerspective.WHITE).analyze(board)
@@ -183,6 +199,15 @@ def test_transition_and_input_validation_rejects_inconsistent_records():
         analyze_move_delta(chess.Board(), "not a move")
     assert illegal.value.reason is VariationFailureReason.ILLEGAL_MOVE
     assert illegal.value.move is None
+    malformed = chess.Move(64, chess.E4)
+    with pytest.raises(VariationAnalysisError) as malformed_delta:
+        analyze_move_delta(chess.Board(), malformed)
+    assert malformed_delta.value.reason is VariationFailureReason.ILLEGAL_MOVE
+    assert malformed_delta.value.move == malformed
+    with pytest.raises(VariationAnalysisError) as malformed_variation:
+        analyze_variation(chess.Board(), (malformed,))
+    assert malformed_variation.value.reason is VariationFailureReason.ILLEGAL_MOVE
+    assert malformed_variation.value.ply_index == 0
     with pytest.raises(TypeError, match="Variation analysis"):
         analyze_variation("not a board", (chess.Move.from_uci("e2e4"),))
     with pytest.raises(ValueError, match="history_policy"):
@@ -208,6 +233,19 @@ def test_variation_tracks_alternating_perspective_terminal_result_and_intent():
     assert variation.terminal.result == "1-0"
     assert variation.terminal.winner.value == "white"
     assert variation.terminal.termination is chess.Termination.CHECKMATE
+    assert not variation.terminal.claimable_draw
+
+
+def test_claimable_draw_is_not_reported_as_a_terminal_result():
+    moves = tuple(chess.Move.from_uci(uci) for uci in ("g1f3", "g8f6", "f3g1", "f6g8") * 2)
+
+    variation = analyze_variation(chess.Board(), moves, MaterialAnalyzer())
+
+    assert variation.final.history_complete
+    assert not variation.terminal.is_terminal
+    assert variation.terminal.result == "*"
+    assert variation.terminal.termination is None
+    assert variation.terminal.claimable_draw
 
 
 def test_refutation_intent_names_candidate_and_opponent_response():

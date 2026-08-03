@@ -173,6 +173,7 @@ class VariationTerminal:
     result: str
     winner: ChessSide | None
     termination: chess.Termination | None
+    claimable_draw: bool
 
 
 @dataclass(frozen=True)
@@ -287,10 +288,10 @@ def analyze_variation(
     initial = _position_evidence(current, initial_set)
     deltas: list[MoveDelta] = []
     for ply_index, move in enumerate(line):
-        if not isinstance(move, chess.Move) or move not in current.legal_moves:
+        if not _is_legal_move(current, move):
             raise VariationAnalysisError(
                 VariationFailureReason.ILLEGAL_MOVE,
-                f"Illegal variation move at ply {ply_index}: {move!s}.",
+                f"Illegal variation move at ply {ply_index}: {_move_label(move)}.",
                 ply_index=ply_index,
                 move=move if isinstance(move, chess.Move) else None,
                 fen=current.fen(),
@@ -299,12 +300,17 @@ def analyze_variation(
         deltas.append(delta)
         current.push(move)
     final = deltas[-1].after
-    outcome = current.outcome(claim_draw=complete)
+    outcome = current.outcome()
     terminal = VariationTerminal(
         is_terminal=outcome is not None,
         result=outcome.result() if outcome is not None else "*",
         winner=ChessSide.from_color(outcome.winner) if outcome is not None and outcome.winner is not None else None,
         termination=outcome.termination if outcome is not None else None,
+        claimable_draw=(
+            complete
+            and outcome is None
+            and (current.can_claim_fifty_moves() or current.can_claim_threefold_repetition())
+        ),
     )
     return VariationEvidence(
         initial=initial,
@@ -392,13 +398,16 @@ def _position_evidence(board: chess.Board, evidence: EvidenceSet) -> PositionEvi
 def _move_evidence(board: chess.Board, move: chess.Move) -> MoveEvidence:
     moving_piece = board.piece_at(move.from_square)
     assert moving_piece is not None
-    en_passant = board.is_en_passant(move)
-    capture_square = move.to_square
-    if en_passant:
-        capture_square += -8 if board.turn == chess.WHITE else 8
-    captured_piece = board.piece_at(capture_square)
     is_castling = board.is_castling(move)
-    rook_move = _castling_rook_move(board.turn, move) if is_castling else None
+    en_passant = board.is_en_passant(move)
+    capture_square: chess.Square | None = None
+    captured_piece: chess.Piece | None = None
+    if not is_castling:
+        capture_square = move.to_square
+        if en_passant:
+            capture_square += -8 if board.turn == chess.WHITE else 8
+        captured_piece = board.piece_at(capture_square)
+    rook_move = _castling_rook_move(board, move) if is_castling else None
     was_check = board.is_check()
     after = board.copy(stack=False)
     after.push(move)
@@ -426,23 +435,43 @@ def _move_evidence(board: chess.Board, move: chess.Move) -> MoveEvidence:
     )
 
 
-def _castling_rook_move(color: chess.Color, move: chess.Move) -> chess.Move:
-    rank = 0 if color == chess.WHITE else 7
-    if chess.square_file(move.to_square) > chess.square_file(move.from_square):
-        return chess.Move(chess.square(7, rank), chess.square(5, rank))
-    return chess.Move(chess.square(0, rank), chess.square(3, rank))
+def _castling_rook_move(board: chess.Board, move: chess.Move) -> chess.Move:
+    rank = chess.square_rank(move.from_square)
+    kingside = board.is_kingside_castling(move)
+    if board.chess960:
+        rook_from = move.to_square
+    elif kingside:
+        rook_from = chess.square(7, rank)
+    else:
+        rook_from = chess.square(0, rank)
+    rook_to = chess.square(5 if kingside else 3, rank)
+    return chess.Move(rook_from, rook_to)
 
 
 def _validate_board_and_move(board: chess.Board, move: chess.Move) -> None:
     if not isinstance(board, chess.Board):
         raise TypeError("Move-delta analysis requires a python-chess Board.")
-    if not isinstance(move, chess.Move) or move not in board.legal_moves:
+    if not _is_legal_move(board, move):
         raise VariationAnalysisError(
             VariationFailureReason.ILLEGAL_MOVE,
-            f"Move is not legal in the supplied position: {move!s}.",
+            f"Move is not legal in the supplied position: {_move_label(move)}.",
             move=move if isinstance(move, chess.Move) else None,
             fen=board.fen(),
         )
+
+
+def _is_well_formed_move(move: object) -> bool:
+    return isinstance(move, chess.Move) and move.from_square in chess.SQUARES and move.to_square in chess.SQUARES
+
+
+def _is_legal_move(board: chess.Board, move: object) -> bool:
+    return _is_well_formed_move(move) and move in board.legal_moves
+
+
+def _move_label(move: object) -> str:
+    if not _is_well_formed_move(move):
+        return "<malformed move>"
+    return chess.square_name(move.from_square) + chess.square_name(move.to_square)
 
 
 def _validate_intent_line(intent: VariationIntent, line: tuple[chess.Move, ...], fen: str) -> None:

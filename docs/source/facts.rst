@@ -83,5 +83,6 @@ position/ply context.
 a candidate, or as an opponent response that refutes that claim. These records
 do not generate prose and do not infer heuristic notions such as initiative or
 compensation. Terminal result metadata uses rule-exact ``python-chess``
-outcomes; history-dependent draw claims are considered only when complete
-history is available.
+outcomes. ``VariationTerminal.claimable_draw`` separately records a threefold
+or fifty-move draw that can be claimed when complete history is available; it
+does not turn a legally continuable position into a terminal result.
