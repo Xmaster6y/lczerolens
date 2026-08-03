@@ -3,6 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from .board import LczeroBoard
+from .lc0_adapter import Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from .model import LczeroModel
 from .reference_search import ReferenceMCTS, replay_root_events
 
@@ -14,6 +15,9 @@ except PackageNotFoundError:
 __all__ = [
     "LczeroBoard",
     "LczeroModel",
+    "Lc0ProcessAdapter",
+    "Lc0RootSnapshotParser",
+    "Lc0SearchRequest",
     "ReferenceMCTS",
     "replay_root_events",
 ]

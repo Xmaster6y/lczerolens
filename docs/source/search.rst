@@ -142,16 +142,24 @@ visits to ``N``, and ``q_values`` to ``Q``. It does not retain cumulative
 ``W``, source ``U``, budget snapshots, or append-only events, so those fields
 remain absent. Tests exercise this record without upgrading its capability.
 
-Captured lc0 ``VerboseMoveStats`` or ``LogLiveStats`` output maps each reported
-root move and its available P/N/Q/U/PV fields into a budget-labelled root
-snapshot. Reported ``WL`` and ``D`` form the action's search evaluation, while
-``V`` is its separately labelled leaf/network evaluation; unavailable entries
-remain absent. UCI ``bestmove`` supplies the selection. Version, network
-checksum, command options, and requested/observed nodes or time belong to
-provenance and budget records. Unless lc0 exposes simulation transitions
-through a separately supported interface, the adapter advertises at most
-``root_snapshots``. Tests exercise a representative captured-output-shaped
-record without an lc0 binary.
+Captured lc0 ``VerboseMoveStats`` or ``LogLiveStats`` output maps its public
+``info string <move>`` records and available P/N/Q/U/PV fields into a
+budget-labelled root snapshot. ``M``, ``S``, and ``Q+U`` are recognised but
+have no counterpart in the shared schema; ``W`` is recorded only when the
+source emits it. Reported ``WL`` and ``D`` form the action's search evaluation,
+while ``V`` is its separately labelled leaf/network evaluation; unavailable
+entries remain absent. Display-rounded P values are normalised across a fully
+exposed root action set before the schema's unit-sum invariant is checked. UCI
+``bestmove`` supplies the legal selection; terminal root FENs are rejected
+before starting the engine. Version, network checksum, command options, and
+requested/observed nodes or time belong to provenance and budget records.
+Unless lc0 exposes simulation transitions through a separately supported
+interface, the adapter advertises at most ``root_snapshots``. Tests exercise a
+representative captured-output-shaped record without an lc0 binary. The optional
+:class:`~lczerolens.lc0_adapter.Lc0RootSnapshotParser` implements this
+versioned captured-output contract; its paired process adapter invokes a
+user-supplied UCI binary. Live conformance is opt-in through
+``LC0_EXECUTABLE``, ``LC0_NETWORK``, and ``LC0_VERSION``.
 
 Adapter boundary
 ----------------
