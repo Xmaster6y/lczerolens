@@ -54,3 +54,34 @@ position facts. Keep using them for compatibility or represent a new analyzer's
 result with ``engine-derived`` or ``search-derived`` guarantee as appropriate.
 No dataset, scikit-learn, neural hook, or attribution dependency is imported by
 the core fact API.
+
+Move deltas and variation evidence
+----------------------------------
+
+``lczerolens.move_evidence`` composes the exact fact analyzers across legal
+moves. ``analyze_move_delta`` records the before and after FEN, concrete mover,
+moving and captured pieces, special-move metadata, and the original evidence on
+both sides of every changed fact. Its ``created`` and ``removed`` collections
+are set-difference views, while ``preserved`` retains unchanged controls and
+``transitions`` links corresponding before/after records.
+
+Calling ``analyze_move_delta`` without an explicit analyzer list uses
+``exact_move_analyzers``: material, check status, piece presence, and
+attack/defender facts for both concrete sides, plus side-to-move mobility. This
+makes alternating perspectives explicit instead of silently comparing "us" at
+one ply with a different "us" at the next.
+
+``analyze_variation`` applies the same comparison to every ply of an ordered
+legal line. Its position snapshots state whether the board carries complete
+standard-game history. Truncated histories can be retained explicitly or
+rejected with ``HistoryPolicy.REQUIRE_COMPLETE``. Empty or illegal lines,
+history incompatibility, and declared candidate/response mismatches raise
+``VariationAnalysisError`` with a stable ``VariationFailureReason`` and
+position/ply context.
+
+``VariationIntent`` can mark a line as neutral, as support for a named claim by
+a candidate, or as an opponent response that refutes that claim. These records
+do not generate prose and do not infer heuristic notions such as initiative or
+compensation. Terminal result metadata uses rule-exact ``python-chess``
+outcomes; history-dependent draw claims are considered only when complete
+history is available.
