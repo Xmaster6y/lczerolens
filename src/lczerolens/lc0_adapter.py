@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Iterable, Mapping
 
@@ -38,8 +38,11 @@ class Lc0OutputError(ValueError):
     """Raised when claimed lc0 root output cannot be represented safely."""
 
 
-_MOVE_STAT = re.compile(r"^\s*(?:\d+\.\s*)?(?P<move>[a-h][1-8][a-h][1-8][qrbn]?)\s+(?P<fields>.*)$")
-_FIELD = re.compile(r"\((?P<name>P|N|Q|U|V|WL|D|PV):\s*(?P<value>[^)]*)\)")
+_MOVE_STAT = re.compile(r"^\s*(?:info string\s+)?(?:\d+\.\s*)?(?P<move>[a-h][1-8][a-h][1-8][qrbn]?)(?P<fields>.*)$")
+_FIELD = re.compile(
+    r"(?:\((?P<name>P|Q|U|V|WL|D|PV|W|M|S|Q\+U):\s*(?P<value>[^)]*)\)|"
+    r"\b(?P<bare_name>N):\s*(?P<bare_value>\d+)(?:\s*\(\+\s*\d+\))?)"
+)
 _INFO_NUMBER = re.compile(r"\b(?P<name>nodes|time)\s+(?P<value>\d+)\b")
 
 
@@ -59,7 +62,9 @@ class Lc0SearchRequest:
             raise ValueError("nodes must be non-negative.")
         if self.time_ms is not None and self.time_ms < 0:
             raise ValueError("time_ms must be non-negative.")
-        chess.Board(self.root_fen)
+        board = chess.Board(self.root_fen)
+        if board.is_game_over():
+            raise ValueError("lc0 root snapshots require a non-terminal root FEN.")
 
 
 @dataclass(frozen=True)
@@ -120,6 +125,7 @@ class Lc0RootSnapshotParser:
         network: str,
         network_checksum: str | None = None,
     ) -> SearchTrace:
+        root_board = chess.Board(request.root_fen)
         actions: list[RootAction] = []
         bestmove: str | None = None
         observed_nodes: int | None = None
@@ -127,28 +133,33 @@ class Lc0RootSnapshotParser:
         for line in (line.rstrip() for line in output):
             if line.startswith("bestmove "):
                 tokens = line.split()
-                if len(tokens) < 2 or not _is_uci(tokens[1]):
+                if (
+                    len(tokens) < 2
+                    or not _is_uci(tokens[1])
+                    or chess.Move.from_uci(tokens[1]) not in root_board.legal_moves
+                ):
                     raise Lc0OutputError(f"Unsupported lc0 bestmove line: {line!r}")
                 bestmove = tokens[1]
+            elif _MOVE_STAT.match(line):
+                actions.append(self._parse_action(line))
             elif line.startswith("info "):
                 for match in _INFO_NUMBER.finditer(line):
                     if match["name"] == "nodes":
                         observed_nodes = int(match["value"])
                     else:
                         observed_time = int(match["value"])
-            elif any(f"({name}:" in line for name in ("P", "N", "Q", "U", "V", "WL", "D", "PV")):
-                actions.append(self._parse_action(line))
         if bestmove is None:
             raise Lc0OutputError("lc0 output did not contain a UCI bestmove line.")
         if actions and bestmove not in {action.statistics.move for action in actions}:
             raise Lc0OutputError("lc0 bestmove was absent from captured root action statistics.")
+        actions = _normalise_priors(actions)
         unit = SearchBudgetUnit.NODES if request.nodes is not None else SearchBudgetUnit.TIME_MS
         requested = request.nodes if request.nodes is not None else request.time_ms
         observed = observed_nodes if unit is SearchBudgetUnit.NODES else observed_time
         parameters = (SearchParameter("parser_format", self.format_version),) + tuple(
             SearchParameter(f"uci.{name}", value) for name, value in (request.options or {}).items()
         )
-        root_player = ChessPlayer.WHITE if chess.Board(request.root_fen).turn else ChessPlayer.BLACK
+        root_player = ChessPlayer.WHITE if root_board.turn else ChessPlayer.BLACK
         return SearchTrace(
             root_fen=request.root_fen,
             root_player=root_player,
@@ -170,28 +181,46 @@ class Lc0RootSnapshotParser:
         match = _MOVE_STAT.match(line)
         if match is None:
             raise Lc0OutputError(f"Unsupported lc0 root move-stat line: {line!r}")
-        fields = {field["name"]: field["value"].strip() for field in _FIELD.finditer(match["fields"])}
-        if not fields or _FIELD.sub("", match["fields"]).strip():
+        fields = {
+            field["name"] or field["bare_name"]: (field["value"] or field["bare_value"]).strip()
+            for field in _FIELD.finditer(match["fields"])
+        }
+        remainder = _FIELD.sub("", match["fields"]).strip()
+        if not fields or not re.fullmatch(r"(?:\(\s*\d+\s*\))?", remainder):
             raise Lc0OutputError(f"Unsupported lc0 root move-stat fields: {line!r}")
         try:
             prior = _number(fields["P"], percent=True) if "P" in fields else None
             visits = int(fields["N"]) if "N" in fields else None
             mean = _number(fields["Q"]) if "Q" in fields else None
             exploration = _number(fields["U"]) if "U" in fields else None
+            total = _number(fields["W"]) if "W" in fields else None
             evaluation = _evaluation(fields, "WL", "D")
             leaf_evaluation = _evaluation(fields, "V")
+            pv = tuple(fields["PV"].split()) if "PV" in fields else ()
+            if pv and (pv[0] != match["move"] or not all(_is_uci(move) for move in pv)):
+                raise ValueError("PV must begin with the root move and contain UCI moves")
+            return RootAction(
+                EdgeStatistics(match["move"], ValuePerspective.ROOT_PLAYER, prior, visits, total, mean, exploration),
+                evaluation=evaluation,
+                leaf_evaluation=leaf_evaluation,
+                principal_variation=PrincipalVariation(pv) if pv else None,
+            )
         except ValueError as error:
             raise Lc0OutputError(f"Invalid lc0 root move-stat values: {line!r}") from error
-        pv = tuple(fields["PV"].split()) if "PV" in fields else ()
-        if pv and (pv[0] != match["move"] or not all(_is_uci(move) for move in pv)):
-            raise Lc0OutputError(f"Invalid lc0 principal variation: {line!r}")
-        total = mean * visits if mean is not None and visits is not None else None
-        return RootAction(
-            EdgeStatistics(match["move"], ValuePerspective.ROOT_PLAYER, prior, visits, total, mean, exploration),
-            evaluation=evaluation,
-            leaf_evaluation=leaf_evaluation,
-            principal_variation=PrincipalVariation(pv) if pv else None,
-        )
+
+
+def _normalise_priors(actions: list[RootAction]) -> list[RootAction]:
+    """Restore the unit sum lost when lc0 prints every prior independently."""
+    priors = [action.statistics.prior for action in actions]
+    if not priors or any(prior is None for prior in priors):
+        return actions
+    total = sum(prior for prior in priors if prior is not None)
+    if total <= 0:
+        raise Lc0OutputError("lc0 exposed root priors with a non-positive total.")
+    return [
+        replace(action, statistics=replace(action.statistics, prior=action.statistics.prior / total))
+        for action in actions
+    ]
 
 
 def _number(value: str, *, percent: bool = False) -> float:

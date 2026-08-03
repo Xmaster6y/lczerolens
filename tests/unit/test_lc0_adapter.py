@@ -32,10 +32,10 @@ def test_parses_versioned_lc0_root_snapshot_fixture():
         0.25,
         0.125,
     )
-    assert e4.statistics.total_value == 48.0
+    assert e4.statistics.total_value is None
     assert e4.evaluation and e4.evaluation.wdl and e4.evaluation.wdl.draw == 0.3
     assert e4.leaf_evaluation and e4.leaf_evaluation.value == 0.2
-    assert d4.principal_variation and d4.principal_variation.moves == ("d2d4", "d7d5")
+    assert d4.principal_variation is None
     with pytest.raises(SearchCapabilityError):
         trace.require(SearchCapability.FULL_EVENTS)
 
@@ -70,6 +70,11 @@ def test_search_request_rejects_invalid_budget(kwargs, message):
         Lc0SearchRequest(ROOT_FEN, **kwargs)
 
 
+def test_search_request_rejects_terminal_root_before_invoking_lc0():
+    with pytest.raises(ValueError, match="non-terminal"):
+        Lc0SearchRequest("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1", nodes=1)
+
+
 def test_parses_root_result_with_time_budget_when_move_stats_are_unavailable():
     trace = Lc0RootSnapshotParser().parse(
         ["info time 7", "bestmove e2e4"],
@@ -82,12 +87,43 @@ def test_parses_root_result_with_time_budget_when_move_stats_are_unavailable():
     assert trace.snapshots[0].actions is None
 
 
+def test_normalises_rounded_priors_and_preserves_only_reported_total_value():
+    trace = Lc0RootSnapshotParser().parse(
+        [
+            "info string e2e4 N: 1 (P: 33.33%) (Q: 0.0) (W: 0.0)",
+            "info string d2d4 N: 1 (P: 33.33%) (Q: 0.0) (W: 0.0)",
+            "info string g1f3 N: 1 (P: 33.33%) (Q: 0.0) (W: 0.0)",
+            "bestmove e2e4",
+        ],
+        request=Lc0SearchRequest(ROOT_FEN, nodes=3),
+        engine_version="test",
+        network="test",
+    )
+    actions = trace.snapshots[0].actions or ()
+    assert sum(action.statistics.prior or 0.0 for action in actions) == pytest.approx(1.0)
+    assert all(action.statistics.total_value == 0.0 for action in actions)
+
+
+def test_rejects_non_positive_priors_and_non_move_stat_records():
+    parser = Lc0RootSnapshotParser()
+    with pytest.raises(Lc0OutputError, match="non-positive"):
+        parser.parse(
+            ["e2e4 (P: 0.00%)", "bestmove e2e4"],
+            request=Lc0SearchRequest(ROOT_FEN, nodes=1),
+            engine_version="test",
+            network="test",
+        )
+    with pytest.raises(Lc0OutputError, match="move-stat line"):
+        parser._parse_action("not a move stat")
+
+
 @pytest.mark.parametrize(
     "lines, message",
     [
         (["bestmove invalid"], "bestmove"),
-        (["not-a-move (P: 100.00%)", "bestmove e2e4"], "move-stat line"),
-        (["e2e4 (P: 100.00%) (PV: d2d4)", "bestmove e2e4"], "principal variation"),
+        (["bestmove e7e5"], "bestmove"),
+        (["e2e4 (P: 100.00%) unexpected", "bestmove e2e4"], "fields"),
+        (["e2e4 (P: 100.00%) (PV: d2d4)", "bestmove e2e4"], "Invalid"),
         (["e2e4 (P: 1.0)", "bestmove e2e4"], "Invalid"),
     ],
 )
