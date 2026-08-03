@@ -10,6 +10,7 @@ lczerolens
 
     start
     scope
+    facts
     search
     features
     tutorials
