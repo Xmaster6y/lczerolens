@@ -214,6 +214,8 @@ class Evidence:
             raise ValueError("History cannot be unavailable when no history is required.")
         if not self.history_available and self.undefined_reason is not UndefinedReason.HISTORY_UNAVAILABLE:
             raise ValueError("Unavailable required history must make evidence explicitly undefined.")
+        if self.history_available and self.undefined_reason is UndefinedReason.HISTORY_UNAVAILABLE:
+            raise ValueError("History-unavailable evidence must set history_available to False.")
         for square in self.supporting_squares:
             _validate_square(square)
         if len(self.supporting_squares) != len(set(self.supporting_squares)):
@@ -303,16 +305,17 @@ def analyze_facts(board: chess.Board, *analyzers: FactAnalyzer) -> EvidenceSet:
 def history_is_available(board: chess.Board, requirement: HistoryRequirement) -> bool:
     """Report whether a board carries the history required by an analyzer.
 
-    A full stack is identifiable when its length agrees with the FEN ply count.
-    A position reconstructed from a mid-game FEN therefore does not silently
-    claim complete history.
+    A full stack must have the FEN's ply count and be rooted at the standard
+    initial position. A position reconstructed from an analysis FEN therefore
+    does not silently claim complete game history, even when its counters were
+    reset.
     """
     _validate_board(board)
     if requirement is HistoryRequirement.NONE:
         return True
     if requirement is HistoryRequirement.LAST_MOVE:
         return bool(board.move_stack)
-    return len(board.move_stack) == board.ply()
+    return len(board.move_stack) == board.ply() and board.root().fen() == chess.STARTING_FEN
 
 
 _REFERENCE_VERSION = "1"
@@ -336,6 +339,7 @@ class MaterialAnalyzer:
     }
 
     def __init__(self, perspective: FactPerspective = FactPerspective.SIDE_TO_MOVE):
+        _validate_side_perspective(perspective)
         self.perspective = perspective
 
     def analyze(self, board: chess.Board) -> Evidence:
@@ -361,6 +365,7 @@ class PiecePresenceAnalyzer:
         perspective: FactPerspective = FactPerspective.SIDE_TO_MOVE,
     ):
         _validate_piece_type(piece_type)
+        _validate_side_perspective(perspective)
         self.piece_type = piece_type
         self.perspective = perspective
 
@@ -389,6 +394,7 @@ class AttacksDefendersAnalyzer:
         perspective: FactPerspective = FactPerspective.SIDE_TO_MOVE,
     ):
         _validate_square(square)
+        _validate_side_perspective(perspective)
         self.square = square
         self.perspective = perspective
 
@@ -415,6 +421,7 @@ class CheckStatusAnalyzer:
     history_requirement = HistoryRequirement.NONE
 
     def __init__(self, perspective: FactPerspective = FactPerspective.SIDE_TO_MOVE):
+        _validate_side_perspective(perspective)
         self.perspective = perspective
 
     def analyze(self, board: chess.Board) -> Evidence:
@@ -496,11 +503,13 @@ def _pieces_for(board: chess.Board, color: chess.Color, role: str) -> tuple[Supp
 
 
 def _resolve_side(board: chess.Board, perspective: FactPerspective) -> ChessSide:
-    if perspective is FactPerspective.ABSOLUTE:
-        raise ValueError("A side-valued analyzer needs white, black, or side-to-move perspective.")
     if perspective is FactPerspective.SIDE_TO_MOVE:
         return ChessSide.from_color(board.turn)
-    return ChessSide.WHITE if perspective is FactPerspective.WHITE else ChessSide.BLACK
+    if perspective is FactPerspective.WHITE:
+        return ChessSide.WHITE
+    if perspective is FactPerspective.BLACK:
+        return ChessSide.BLACK
+    raise ValueError("A side-valued analyzer needs white, black, or side-to-move perspective.")
 
 
 def _validate_board(board: chess.Board) -> None:
@@ -509,13 +518,21 @@ def _validate_board(board: chess.Board) -> None:
 
 
 def _validate_piece_type(piece_type: chess.PieceType) -> None:
-    if isinstance(piece_type, bool) or piece_type not in chess.PIECE_TYPES:
+    if not isinstance(piece_type, int) or isinstance(piece_type, bool) or piece_type not in chess.PIECE_TYPES:
         raise ValueError("piece_type must be a python-chess piece type.")
 
 
 def _validate_square(square: chess.Square) -> None:
-    if isinstance(square, bool) or square not in chess.SQUARES:
+    if not isinstance(square, int) or isinstance(square, bool) or square not in chess.SQUARES:
         raise ValueError("square must be a python-chess square.")
+
+
+def _validate_side_perspective(perspective: FactPerspective) -> None:
+    if not any(
+        perspective is allowed
+        for allowed in (FactPerspective.WHITE, FactPerspective.BLACK, FactPerspective.SIDE_TO_MOVE)
+    ):
+        raise ValueError("A side-valued analyzer needs white, black, or side-to-move perspective.")
 
 
 __all__ = [

@@ -21,7 +21,8 @@ The bundled analyzers use only ``python-chess`` and operate on one position:
 These analyzers carry the ``exact`` guarantee. An invalid position or missing
 king is returned as explicit undefined evidence where it prevents the requested
 semantics. ``history_is_available`` distinguishes boards played forward with a
-move stack from positions reconstructed from a mid-game FEN.
+move stack rooted at the standard initial position from positions reconstructed
+from an analysis FEN, including FENs with reset move counters.
 
 Composition and guarantees
 --------------------------

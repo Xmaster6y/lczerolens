@@ -21,8 +21,12 @@ from lczerolens.facts import (
     HistoryRequirement,
     LegalMobilityAnalyzer,
     MaterialAnalyzer,
+    MoveSubject,
     PiecePresenceAnalyzer,
+    RegionSubject,
     SideSubject,
+    SquareSubject,
+    SupportingPiece,
     UndefinedReason,
     analyze_facts,
     history_is_available,
@@ -139,6 +143,15 @@ def test_history_loss_is_detectable_and_must_be_encoded_as_undefined():
     assert not history_fact.is_defined
 
 
+def test_reset_fen_counters_do_not_claim_complete_history():
+    reset_analysis_fen = chess.Board("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1")
+
+    assert reset_analysis_fen.ply() == 0
+    assert not reset_analysis_fen.move_stack
+    assert not history_is_available(reset_analysis_fen, HistoryRequirement.FULL_MOVE_STACK)
+    assert history_is_available(chess.Board(), HistoryRequirement.FULL_MOVE_STACK)
+
+
 def test_evidence_invariants_reject_ambiguous_undefined_state():
     base = CheckStatusAnalyzer().analyze(chess.Board())
 
@@ -152,6 +165,25 @@ def test_evidence_invariants_reject_ambiguous_undefined_state():
             undefined_reason=UndefinedReason.INVALID_POSITION,
             value=None,
         )
+    with pytest.raises(ValueError, match="must set history_available to False"):
+        replace(
+            base,
+            history_requirement=HistoryRequirement.LAST_MOVE,
+            undefined_reason=UndefinedReason.HISTORY_UNAVAILABLE,
+            value=None,
+        )
+    with pytest.raises(ValueError, match="no history is required"):
+        replace(
+            base,
+            value=None,
+            history_available=False,
+            undefined_reason=UndefinedReason.HISTORY_UNAVAILABLE,
+        )
+    with pytest.raises(ValueError, match="Supporting squares must be unique"):
+        replace(base, supporting_squares=(chess.E1, chess.E1))
+    move = chess.Move.from_uci("e2e4")
+    with pytest.raises(ValueError, match="Supporting moves must be unique"):
+        replace(base, supporting_moves=(move, move))
 
 
 def test_composition_and_filtering_preserve_guarantees():
@@ -165,6 +197,9 @@ def test_composition_and_filtering_preserve_guarantees():
 
     assert evidence.filter(guarantee=Guarantee.EXACT).items == (exact,)
     assert evidence.filter(guarantee=Guarantee.HEURISTIC).items == (heuristic,)
+    assert EvidenceSet((exact,)).values(guarantee=Guarantee.EXACT) == (exact.value,)
+    filtered = evidence.filter(kind=FactKind.MATERIAL, scope=FactScope.SIDE, predicate=lambda item: item.is_defined)
+    assert len(filtered) == 2
     with pytest.raises(GuaranteeMismatchError, match="other than exact"):
         evidence.values(guarantee=Guarantee.EXACT)
 
@@ -174,7 +209,43 @@ def test_analyzers_reject_malformed_inputs_and_configuration():
         MaterialAnalyzer().analyze("not a board")
     with pytest.raises(ValueError, match="piece type"):
         PiecePresenceAnalyzer(99)
+    with pytest.raises(ValueError, match="piece type"):
+        PiecePresenceAnalyzer(1.0)
     with pytest.raises(ValueError, match="square"):
         AttacksDefendersAnalyzer(99)
+    with pytest.raises(ValueError, match="square"):
+        AttacksDefendersAnalyzer(1.0)
     with pytest.raises(ValueError, match="needs white, black"):
-        MaterialAnalyzer(FactPerspective.ABSOLUTE).analyze(chess.Board())
+        MaterialAnalyzer(FactPerspective.ABSOLUTE)
+    with pytest.raises(ValueError, match="needs white, black"):
+        MaterialAnalyzer("white")
+
+    analyzer = MaterialAnalyzer()
+    analyzer.perspective = "white"
+    with pytest.raises(ValueError, match="needs white, black"):
+        analyzer.analyze(chess.Board())
+
+
+def test_subject_and_support_records_reject_malformed_configuration():
+    with pytest.raises(ValueError, match="non-empty name"):
+        RegionSubject("", (chess.A1,))
+    with pytest.raises(ValueError, match="at least one square"):
+        RegionSubject("center", ())
+    with pytest.raises(ValueError, match="must be unique"):
+        RegionSubject("center", (chess.D4, chess.D4))
+    with pytest.raises(ValueError, match="roles must not be empty"):
+        SupportingPiece(chess.A1, chess.Piece(chess.ROOK, chess.WHITE), "")
+    with pytest.raises(ValueError, match="non-negative"):
+        AttacksDefendersValue(-1, 0)
+    with pytest.raises(ValueError, match="non-negative"):
+        AttacksDefendersValue(0, -1)
+    with pytest.raises(ValueError, match="non-empty analyzer and version"):
+        AnalyzerProvenance("", "1")
+    with pytest.raises(ValueError, match="non-empty analyzer and version"):
+        AnalyzerProvenance("test", "")
+    with pytest.raises(ValueError, match="square"):
+        SquareSubject(1.0)
+
+    assert RegionSubject("center", (chess.D4, chess.E4)).squares == (chess.D4, chess.E4)
+    assert MoveSubject(chess.Move.from_uci("e2e4")).move.uci() == "e2e4"
+    assert history_is_available(chess.Board(), HistoryRequirement.NONE)
