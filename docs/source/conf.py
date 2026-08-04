@@ -24,7 +24,11 @@ extensions = [
 ]
 
 templates_path = ["_templates"]
-exclude_patterns = []  # type: ignore
+# ``nbsphinx`` writes conversion checkpoints next to notebooks.  They are build
+# artifacts, not pages in the documentation source tree.
+exclude_patterns = [
+    "**/*.nbconvert.ipynb",
+]  # type: ignore
 fixed_sidebar = True
 
 
@@ -103,9 +107,23 @@ html_css_files = [
 
 # Nbsphinx
 nbsphinx_execute = "never"
+nbsphinx_codecell_lexer = "none"
+nbsphinx_widgets_path = "https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js"
 
 # Autoapi
 autoapi_dirs = ["../../src"]
 autoapi_root = "api"
-autoapi_keep_files = True  # Weird rtd fail
+# AutoAPI sources are generated for the build and must not become checkout
+# artifacts.  Keeping them also made a documentation build leave ``api/``
+# untracked.
+autoapi_keep_files = False
+autoapi_template_dir = "_templates/autoapi"
+autoapi_python_class_content = "both"
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "special-members",
+]
 autodoc_typehints = "description"

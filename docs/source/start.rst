@@ -1,68 +1,39 @@
 Getting Started
 ===============
 
-**lczerolens** makes lc0-family models portable and operable in PyTorch, then
-expresses their evaluator and search behavior as chess-domain evidence. It owns
-the model and chess-analysis boundary, not a neural-interpretability method.
-Tools such as ``tdhook``, ``captum``, ``zennit``, and ``nnsight`` can instrument
-that boundary without lczerolens depending on or abstracting over them. See
-:doc:`scope` for the supported surface and compatibility policy.
-
-.. _installation:
+``lczerolens`` makes lc0-family models portable and operable in PyTorch, then
+expresses evaluator and search behaviour as chess-domain evidence. It owns the
+model and chess-analysis boundary, not a neural-interpretability method.
+External tools such as ``tdhook``, ``captum``, ``zennit``, and ``nnsight`` can
+instrument that boundary without becoming lczerolens dependencies.
 
 Installation
 ------------
-
-To get started with lczerolens, install it with ``pip``.
 
 .. code-block:: console
 
    pip install lczerolens
 
-.. note::
+Use the ``hub`` extra for Hugging Face model loading, ``backends`` for optional
+lc0 bindings, ``viz`` for rendering helpers, and ``datasets`` for dataset
+adapters and concept metrics.
 
-   Core dependencies are light: mainly ``torch``, ``onnx2torch``, ``tensordict``, and ``python-chess``. Optional extras include ``matplotlib`` and ``graphviz`` (extra ``viz``) and lc0 bindings (extra ``backends``).
-   Also, loading models from the Hugging Face Hub requires the ``hub`` extra.
+Supported user path
+-------------------
 
-First Steps
------------
+* :doc:`scope` defines the board, evaluator, and compatibility contract.
+* :doc:`facts` covers exact facts, move/variation evidence, and constrained
+  counterfactual positions.
+* :doc:`search` defines typed, capability-aware traces. ``ReferenceMCTS`` is
+  an auditable reference implementation, not production lc0 search.
+* :doc:`behavior` covers evaluator, counterfactual, and search comparisons.
+* :doc:`api/index` contains generated reference documentation for every
+  importable module.
 
-.. grid:: 2
-   :gutter: 2
+Notebook status
+---------------
 
-   .. grid-item-card:: Walkthrough
-      :link: notebooks/walkthrough.ipynb
-
-      Walk through a basic usage of the package.
-
-   .. grid-item-card:: Features
-      :link: features
-      :link-type: doc
-
-      Review the basic features provided by :bdg-primary:`lczerolens`.
-
-.. note::
-
-   Check out the :bdg-secondary:`walkthrough` to get a better understanding of the package.
-
-Advanced Features
------------------
-
-.. warning::
-
-   This following section is under construction, not yet stable nor fully functional.
-
-.. grid:: 2
-   :gutter: 2
-
-   .. grid-item-card:: Tutorials
-      :link: tutorials
-      :link-type: doc
-
-      See implementations of :bdg-primary:`lczerolens` through common interpretability techniques.
-
-   .. grid-item-card:: API Reference
-      :link: api/index
-      :link-type: doc
-
-      See the full API reference for :bdg-primary:`lczerolens` to extend its functionality.
+The repository retains older notebooks as historical examples, but they are
+not a rendered or supported tutorial path. Their optional dependencies, runtime
+assumptions, and completion status vary; use the maintained pages above for
+current behaviour and compatibility commitments.

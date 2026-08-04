@@ -15,7 +15,7 @@ variations, and search decisions.
 Supported use cases
 -------------------
 
-Current v0.4 capabilities are:
+The currently shipped public surface includes:
 
 * loading or converting lc0-family weights and evaluating one position or a
   batch in PyTorch;
@@ -23,11 +23,17 @@ Current v0.4 capabilities are:
 * consuming a standardized policy, WDL, value, and MLH evaluator result;
 * passing an evaluator through arbitrary external instrumentation while
   retaining the same input/output contract.
+* recording exact position facts, legal move deltas, and variation evidence;
+* constructing constrained sibling, structural, and piece-relocation
+  counterfactual records with explicit validity and reachability guarantees;
+* producing typed search traces from deterministic reference search or exposed
+  lc0 root snapshots; and
+* comparing observable evaluator, counterfactual, and search behaviour without
+  upgrading a source's available evidence.
 
-The planned in-scope public surface will add chess-domain evidence for position
-facts, moves, variations, counterfactual positions, and search traces and
-comparisons. Search records follow the capability-aware schema in
-:doc:`search`; counterfactual facilities do not yet have a public API in v0.4.
+Search records follow the capability-aware schema in :doc:`search`.
+Counterfactual and comparison facilities are merged public APIs, with their
+guarantees and limitations defined by :doc:`facts` and :doc:`behavior`.
 
 Evaluator contract
 ------------------
@@ -112,9 +118,10 @@ announced compatibility release.
      - Disposition
      - Rationale
    * - ``__init__``
-     - ``LczeroBoard``, ``LczeroModel``
+     - Board/model imports plus facts, counterfactual, trace-adapter, reference
+       search, move-evidence, and behavior-comparison entry points
      - Retain
-     - Small stable entry point for positions and evaluators.
+     - Stable convenience entry point for the documented chess-decision surface.
    * - ``board``
      - ``InputEncoding``, ``LczeroBoard``
      - Retain
@@ -160,6 +167,30 @@ announced compatibility release.
      - Typed provenance, budget, snapshot, edge-statistic, event, and capability records
      - Retain
      - Engine-independent public evidence boundary for reference and production search adapters.
+   * - ``reference_search``
+     - ``ReferenceMCTS``, ``replay_root_events``
+     - Retain
+     - Deterministic, replayable analysis oracle; explicitly not production lc0 search.
+   * - ``lc0_adapter``
+     - ``Lc0RootSnapshotParser``, ``Lc0ProcessAdapter``, ``Lc0SearchRequest``
+     - Retain
+     - Optional root-snapshot adapter. Root-only evidence is not a full event trace or replayable trace.
+   * - ``facts``
+     - Evidence records, guarantees, analyzers, and ``FactAnalyzer``
+     - Retain
+     - Exact chess observations with provenance before a consumer derives labels or claims.
+   * - ``move_evidence``
+     - ``MoveDelta``, ``VariationEvidence``, ``analyze_move_delta``, ``analyze_variation``
+     - Retain
+     - Legal-move and ordered-variation evidence built from exact facts.
+   * - ``counterfactuals``
+     - Constraints, validity/result records, and sibling/structural operators
+     - Retain
+     - Constrained position pairs that state rule validity and historical reachability separately.
+   * - ``behavior``
+     - Behaviour records, metric definitions, and evaluator/search/counterfactual comparison helpers
+     - Retain
+     - Observable comparisons with explicit missing-data and capability boundaries.
 
 Compatibility policy
 --------------------
