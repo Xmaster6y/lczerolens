@@ -13,3 +13,13 @@ material and is not published as a finished tutorial series. In particular,
 the automated-interpretability and learned-look-ahead notebooks remain
 incomplete. Neural-method examples are external integrations, not an
 lczerolens-owned API or methodological guarantee.
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   notebooks/walkthrough.ipynb
+   notebooks/tutorials/framework-agnostic-interpretability.ipynb
+   notebooks/tutorials/automated-interpretability.ipynb
+   notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
+   notebooks/tutorials/piece-value-estimation-using-lrp.ipynb

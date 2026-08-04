@@ -28,8 +28,6 @@ templates_path = ["_templates"]
 # artifacts, not pages in the documentation source tree.
 exclude_patterns = [
     "**/*.nbconvert.ipynb",
-    # Historical notebooks have optional runtimes and are not maintained pages.
-    "notebooks/**",
 ]  # type: ignore
 fixed_sidebar = True
 
@@ -109,6 +107,8 @@ html_css_files = [
 
 # Nbsphinx
 nbsphinx_execute = "never"
+nbsphinx_codecell_lexer = "none"
+nbsphinx_widgets_path = "https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js"
 
 # Autoapi
 autoapi_dirs = ["../../src"]
@@ -117,7 +117,8 @@ autoapi_root = "api"
 # artifacts.  Keeping them also made a documentation build leave ``api/``
 # untracked.
 autoapi_keep_files = False
-autoapi_python_class_content = "init"
+autoapi_template_dir = "_templates/autoapi"
+autoapi_python_class_content = "both"
 autoapi_options = [
     "members",
     "undoc-members",

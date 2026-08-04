@@ -14,3 +14,17 @@ than treating notebooks as API guarantees.
 
 Historical notebook examples remain in the source repository but are not
 published as finished tutorials or compatibility commitments.
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   notebooks/features/encode-boards.ipynb
+   notebooks/features/load-models.ipynb
+   notebooks/features/move-prediction.ipynb
+   notebooks/features/run-models-on-gpu.ipynb
+   notebooks/features/evaluate-models-on-puzzles.ipynb
+   notebooks/features/convert-official-weights.ipynb
+   notebooks/features/visualise-heatmaps.ipynb
+   notebooks/features/probe-concepts.ipynb
+   notebooks/features/selfplay-mcts-nn.ipynb
