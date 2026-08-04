@@ -26,6 +26,8 @@ from .counterfactuals import (
     sibling_counterfactual,
 )
 from .facts import Evidence, EvidenceSet, FactAnalyzer
+from .evaluation import Evaluation, EvaluationBatch
+from .evaluator import LczeroEvaluator
 from .lc0_adapter import Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from .model import LczeroModel
 from .move_evidence import MoveDelta, VariationEvidence, analyze_move_delta, analyze_variation
@@ -49,6 +51,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "LczeroBoard",
+    "LczeroEvaluator",
     "LczeroModel",
     "BehaviorMetric",
     "ControlKind",
@@ -59,6 +62,8 @@ __all__ = [
     "DecisionComparison",
     "Evidence",
     "EvidenceSet",
+    "Evaluation",
+    "EvaluationBatch",
     "EvaluatorBehavior",
     "FactAnalyzer",
     "Lc0ProcessAdapter",
