@@ -100,12 +100,12 @@ def run_tutorial() -> TutorialResult:
 
     counterfactual = sibling_counterfactual(board, chess.Move.from_uci("g1f3"), chess.Move.from_uci("b1c3"))
     assert counterfactual.modified is not None
-    original = evaluator_behavior(
-        LczeroBoard(counterfactual.original.fen), evaluate(model, LczeroBoard(counterfactual.original.fen))
-    )
-    modified = evaluator_behavior(
-        LczeroBoard(counterfactual.modified.fen), evaluate(model, LczeroBoard(counterfactual.modified.fen))
-    )
+    original_board = board.copy(stack=True)
+    original_board.push_uci("g1f3")
+    modified_board = board.copy(stack=True)
+    modified_board.push_uci("b1c3")
+    original = evaluator_behavior(original_board, evaluate(model, original_board))
+    modified = evaluator_behavior(modified_board, evaluate(model, modified_board))
     comparison = compare_counterfactual_behavior(
         original,
         modified,
@@ -113,7 +113,7 @@ def run_tutorial() -> TutorialResult:
         counterfactual=counterfactual,
         variation_evidence={
             "e7e5": analyze_variation(
-                LczeroBoard(counterfactual.original.fen),
+                original_board,
                 (chess.Move.from_uci("e7e5"),),
                 MaterialAnalyzer(FactPerspective.WHITE),
             )
