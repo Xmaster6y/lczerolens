@@ -1,9 +1,11 @@
 """Canonical persistence contracts for search traces."""
 
 from dataclasses import replace
+import math
 
 import pytest
 
+import lczerolens.search_trace as search_trace_module
 from lczerolens.search_trace import (
     BackupUpdate,
     ChessPlayer,
@@ -209,6 +211,63 @@ def test_incompatible_or_unknown_records_are_rejected(old, new, message):
     malformed = serialize_search_trace(_full_trace()).replace(old, new, 1)
 
     with pytest.raises(SearchTraceFormatError, match=message):
+        deserialize_search_trace(malformed)
+
+
+@pytest.mark.parametrize("value", [math.inf, object()])
+def test_unsupported_canonical_values_are_rejected(value):
+    with pytest.raises(SearchTraceFormatError, match="non-finite|Unsupported"):
+        search_trace_module._canonical_record(value)
+
+
+@pytest.mark.parametrize(
+    ("record", "message"),
+    [
+        ({"$enum": "ChessPlayer", "value": "white", "extra": None}, "exactly"),
+        ({"$enum": 1, "value": "white"}, "enum names"),
+        ({"$enum": "FutureEnum", "value": "white"}, "Unknown search-trace enum"),
+        ({"$enum": "ChessPlayer", "value": "green"}, "Invalid ChessPlayer"),
+        ({"value": "white"}, "require a '\\$type'"),
+        ({"$type": 1}, "type names"),
+        ({"$type": "SearchParameter", "name": "fixture"}, "missing"),
+        ({"$type": "SearchParameter", "name": "", "value": 1}, "Invalid SearchParameter"),
+    ],
+)
+def test_malformed_nested_records_are_rejected(record, message):
+    with pytest.raises(SearchTraceFormatError, match=message):
+        search_trace_module._decode_record(record)
+
+
+@pytest.mark.parametrize(
+    ("data", "message"),
+    [
+        (b"\xff", "Invalid search-trace JSON"),
+        (b"{", "Invalid search-trace JSON"),
+        (b"null", "envelopes require"),
+        (b"{}", "envelopes require"),
+        (
+            b'{"format":"another-format","format_version":1,"trace":null}',
+            "Unsupported search-trace format",
+        ),
+        (
+            b'{"format":"lczerolens.search-trace","format_version":true,"trace":null}',
+            "format version",
+        ),
+        (
+            b'{"format":"lczerolens.search-trace","format_version":1,"trace":null}',
+            "must contain a SearchTrace",
+        ),
+    ],
+)
+def test_malformed_envelopes_are_rejected(data, message):
+    with pytest.raises(SearchTraceFormatError, match=message):
+        deserialize_search_trace(data)
+
+
+def test_boolean_schema_version_is_rejected():
+    malformed = serialize_search_trace(_full_trace()).replace(b'"schema_version":1', b'"schema_version":true', 1)
+
+    with pytest.raises(SearchTraceFormatError, match="schema version"):
         deserialize_search_trace(malformed)
 
 
