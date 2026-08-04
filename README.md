@@ -99,9 +99,31 @@ then follow the [facts](https://lczerolens.readthedocs.io/en/latest/facts.html),
 [search](https://lczerolens.readthedocs.io/en/latest/search.html), and
 [behavior](https://lczerolens.readthedocs.io/en/latest/behavior.html) guides.
 
-The repository retains older notebooks as exploratory or legacy material; they
-are not promoted as a supported tutorial path. Interpretability techniques
-remain external integrations rather than lczerolens APIs.
+Interpretability techniques remain external integrations rather than
+lczerolens APIs.
+
+### Example notebooks
+
+The following maintained examples live in the repository and can be opened in
+Colab:
+
+- [Encode Boards](docs/source/notebooks/features/encode-boards.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/encode-boards.ipynb)
+- [Load Models](docs/source/notebooks/features/load-models.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/load-models.ipynb)
+- [Move Prediction](docs/source/notebooks/features/move-prediction.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/move-prediction.ipynb)
+- [Run Models on GPU](docs/source/notebooks/features/run-models-on-gpu.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/run-models-on-gpu.ipynb)
+- [Evaluate Models on Puzzles](docs/source/notebooks/features/evaluate-models-on-puzzles.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/evaluate-models-on-puzzles.ipynb)
+- [Convert Official Weights](docs/source/notebooks/features/convert-official-weights.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/convert-official-weights.ipynb)
+- [Visualise Heatmaps](docs/source/notebooks/features/visualise-heatmaps.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/visualise-heatmaps.ipynb)
+- [Probe Concepts](docs/source/notebooks/features/probe-concepts.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/probe-concepts.ipynb)
+
+### Tutorials
+
+- [Walkthrough](docs/source/notebooks/walkthrough.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/walkthrough.ipynb)
+- [Framework-Agnostic Interpretability](docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb)
+
+The automated-interpretability and learned-look-ahead notebooks are incomplete
+and intentionally not listed as tutorials. Their techniques remain external
+integrations rather than lczerolens API guarantees.
 
 ## Full Documentation
 
