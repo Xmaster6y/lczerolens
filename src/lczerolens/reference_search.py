@@ -409,20 +409,15 @@ def replay_retained_events(trace: SearchTrace, event_ids: tuple[str, ...] | None
     )
     result = RetainedEventReplayResult(root_statistics, root_policy, selected_move, plan, costs)
     if len(plan.events) == len(events):
-        semantic = replay_search_trace(trace)
+        final = trace.snapshots[-1]
+        final_statistics = tuple(action.statistics for action in final.actions or ())
         if (
-            len(result.root_statistics) != len(semantic.root_statistics)
-            or any(
-                not _same_edge(left, right) for left, right in zip(result.root_statistics, semantic.root_statistics)
-            )
-            or len(result.root_policy) != len(semantic.root_policy)
-            or any(
-                left[0] != right[0] or not _close(left[1], right[1])
-                for left, right in zip(result.root_policy, semantic.root_policy)
-            )
-            or result.selected_move != semantic.selected_move
+            len(result.root_statistics) != len(final_statistics)
+            or any(not _same_edge(left, right) for left, right in zip(result.root_statistics, final_statistics))
+            or final.selection is None
+            or result.selected_move != final.selection.move
         ):
-            raise SemanticReplayError("full retained-event replay diverges from semantic replay.", phase="result")
+            raise ValueError("Full retained-event replay diverges from the recorded root result.")
     return result
 
 

@@ -26,6 +26,7 @@ from lczerolens.search_trace import (
     LeafRecord,
     PositionEvaluation,
     SearchCapability,
+    SearchProvenance,
     SimulationEvent,
     ValuePerspective,
     Wdl,
@@ -141,6 +142,16 @@ def test_retained_event_plan_preserves_trace_order_and_rejects_ambiguous_selecti
         plan_retained_events(trace, (first, first))
     with pytest.raises(ValueError, match="Unknown retained"):
         plan_retained_events(trace, (second, "missing"))
+
+
+def test_full_retained_replay_is_not_limited_to_reference_mcts_provenance():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    other_provider = replace(trace, provenance=SearchProvenance(source="external-search", engine="external"))
+
+    result = replay_retained_events(other_provider)
+
+    assert result.root_statistics == tuple(action.statistics for action in other_provider.snapshots[-1].actions)
+    assert result.selected_move == other_provider.snapshots[-1].selection.move
 
 
 def test_retained_event_replay_rejects_missing_or_malformed_retained_evidence():
