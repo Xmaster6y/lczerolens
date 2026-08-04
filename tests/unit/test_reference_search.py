@@ -11,6 +11,8 @@ from lczerolens.reference_search import (
     ReferenceMCTS,
     SemanticReplayError,
     _Node,
+    plan_retained_events,
+    replay_retained_events,
     _replay_path,
     replay_root_events,
     replay_search_trace,
@@ -98,6 +100,44 @@ def test_semantic_replay_reconstructs_representative_search_results(fen, simulat
     assert result.root_statistics == tuple(action.statistics for action in trace.snapshots[-1].actions)
     assert sum(probability for _, probability in result.root_policy) == pytest.approx(1.0)
     assert result.selected_move == trace.snapshots[-1].selection.move
+
+
+def test_retained_event_replay_supports_full_prefix_sparse_singleton_empty_and_complement_selections():
+    trace = ReferenceMCTS(c_puct=1.5).search(LczeroBoard(), FixedEvaluator(), simulations=8)
+    event_ids = tuple(event.event_id for event in trace.events)
+
+    full = replay_retained_events(trace)
+    prefix = replay_retained_events(trace, event_ids[:3])
+    sparse = replay_retained_events(trace, event_ids[::2])
+    singleton = replay_retained_events(trace, (event_ids[4],))
+    empty = replay_retained_events(trace, ())
+    complement = replay_retained_events(trace, event_ids[1::2])
+
+    assert full.root_statistics == pytest.approx(replay_search_trace(trace).root_statistics)
+    assert full.selected_move == trace.snapshots[-1].selection.move
+    assert prefix.costs.simulations == 3
+    assert sparse.costs.simulations == 4
+    assert singleton.costs.simulations == 1
+    assert empty.costs.simulations == 0
+    assert sum(edge.visits or 0 for edge in empty.root_statistics) == 0
+    assert tuple(event.event_id for event in sparse.plan.events) == event_ids[::2]
+    assert [edge.visits for edge in full.root_statistics] == [
+        (left.visits or 0) + (right.visits or 0)
+        for left, right in zip(sparse.root_statistics, complement.root_statistics)
+    ]
+
+
+def test_retained_event_plan_preserves_trace_order_and_rejects_ambiguous_selections():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=3)
+    first, second, third = (event.event_id for event in trace.events)
+
+    plan = plan_retained_events(trace, (third, first))
+
+    assert plan.retained_event_ids == (first, third)
+    with pytest.raises(ValueError, match="must be unique"):
+        plan_retained_events(trace, (first, first))
+    with pytest.raises(ValueError, match="Unknown retained"):
+        plan_retained_events(trace, (second, "missing"))
 
 
 def test_semantic_replay_preserves_root_history_for_fivefold_repetition():
