@@ -41,12 +41,12 @@ def test_history_encoding_does_not_mutate_the_callers_board():
 def test_move_vocabulary_round_trips_both_perspectives_and_promotions():
     white = chess.Board()
     white_move = chess.Move.from_uci("e2e4")
-    assert decode_move(white, encode_move(white_move, white.turn)) == white_move
+    assert decode_move(white, encode_move(white, white_move)) == white_move
 
     black = chess.Board()
     black.push_uci("e2e4")
     black_move = chess.Move.from_uci("e7e5")
-    assert decode_move(black, encode_move(black_move, black.turn)) == black_move
+    assert decode_move(black, encode_move(black, black_move)) == black_move
 
     for fen, uci in (
         ("4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8n"),
@@ -55,7 +55,7 @@ def test_move_vocabulary_round_trips_both_perspectives_and_promotions():
     ):
         board = chess.Board(fen)
         move = chess.Move.from_uci(uci)
-        assert decode_move(board, encode_move(move, board.turn)) == move
+        assert decode_move(board, encode_move(board, move)) == move
 
 
 def test_legal_indices_and_mask_share_the_fixed_policy_vocabulary():
@@ -87,6 +87,6 @@ def test_codec_rejects_wrong_types_and_policy_indices():
     with pytest.raises(TypeError, match="InputFormat"):
         encode_input(chess.Board(), input_format="classical")
     with pytest.raises(TypeError, match="chess.Move"):
-        encode_move("e2e4", chess.WHITE)
+        encode_move(chess.Board(), "e2e4")
     with pytest.raises(ValueError, match="Policy index"):
         decode_move(chess.Board(), 1858)

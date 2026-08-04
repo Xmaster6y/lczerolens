@@ -43,6 +43,7 @@ from .reference_search import (
     replay_root_events,
     replay_search_trace,
 )
+from .schema import LczeroKeys
 
 try:
     __version__ = version("lczerolens")
@@ -52,6 +53,7 @@ except PackageNotFoundError:
 __all__ = [
     "LczeroBoard",
     "LczeroEvaluator",
+    "LczeroKeys",
     "LczeroModel",
     "BehaviorMetric",
     "ControlKind",

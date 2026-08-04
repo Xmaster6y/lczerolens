@@ -38,7 +38,7 @@ The system has two connected planes::
    chess.Board sequence
        --> stateless Lczero codec
        --> TensorDict inputs
-       --> LczeroModel
+       --> evaluator.model
        --> TensorDict network heads
        --> evaluator transforms / external instrumentation
        --> TensorDict standardized outputs
@@ -55,13 +55,14 @@ Public vocabulary
    reimplement it.
 
 ``LczeroModel``
-   A :class:`tensordict.nn.TensorDictModule` that maps documented input keys to
-   exactly the heads emitted by a network.  It owns loading and tensor
-   execution, not chess semantics.
+   The network-format adapter.  It owns loading, declared native heads, and raw
+   network execution, not chess semantics.
 
 ``LczeroEvaluator``
    The chess-aware facade that prepares boards, invokes ``LczeroModel``,
-   standardizes output tensors, and constructs ``Evaluation`` views.
+   standardizes output tensors, and constructs ``Evaluation`` views.  Its
+   ``model`` attribute is the canonical :class:`tensordict.nn.TensorDictModule`
+   instrumentation boundary using the documented nested keys.
 
 ``Evaluation``
    One position bound to one row of evaluator tensors, with a legal-move policy
@@ -102,9 +103,10 @@ Ownership boundaries
    * - ``lczerolens._codec``
      - Lczero input planes, policy vocabulary, move mapping, and legal masks.
    * - ``LczeroModel``
-     - Network loading, head mapping, and TensorDict execution.
+     - Network loading, native head declarations, and raw network execution.
    * - ``LczeroEvaluator``
-     - Chess-aware preparation and standardized evaluation semantics.
+     - Canonical TensorDict execution keys, chess-aware preparation, and
+       standardized evaluation semantics.
    * - lczerolens analysis records
      - Exact facts, move and line effects, validity, provenance, search evidence,
        comparisons, and canonical persistence.
@@ -128,6 +130,13 @@ The evaluator uses nested keys with stable meanings::
 
    ("evaluation", "policy")         float [B, 1858]
    ("evaluation", "value")          float [B, 1] optional
+
+The corresponding public constants live on ``LczeroKeys`` so integrations do
+not duplicate string tuples::
+
+   td[LczeroKeys.INPUT_PLANES]
+   td[LczeroKeys.NETWORK_POLICY_LOGITS]
+   td[LczeroKeys.EVALUATION_POLICY]
 
 ``network`` keys contain exactly what the model emitted.  ``evaluation`` keys
 contain standardized or explicitly derived values.  A derived value does not
@@ -189,6 +198,7 @@ The target source layout is organized by user action::
 
    lczerolens/
        model.py
+       schema.py
        evaluator.py
        evaluation.py
        moves.py

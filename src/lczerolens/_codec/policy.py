@@ -11,15 +11,14 @@ from lczerolens.constants import INVERTED_POLICY_INDEX, POLICY_INDEX
 POLICY_SIZE = len(POLICY_INDEX)
 
 
-def encode_move(move: chess.Move, turn: chess.Color) -> int:
-    """Return the fixed Lczero policy index for ``move`` and side to move."""
+def encode_move(board: chess.Board, move: chess.Move) -> int:
+    """Return the fixed Lczero policy index for ``move`` in ``board`` context."""
+    _validate_board(board)
     if not isinstance(move, chess.Move):
         raise TypeError(f"Expected chess.Move, got {type(move).__name__}.")
-    if not isinstance(turn, bool):
-        raise TypeError("turn must be chess.WHITE or chess.BLACK.")
 
-    from_square = _relative_square(move.from_square, turn)
-    to_square = _relative_square(move.to_square, turn)
+    from_square = _relative_square(move.from_square, board.turn)
+    to_square = _relative_square(move.to_square, board.turn)
     label = chess.square_name(from_square) + chess.square_name(to_square)
     if move.promotion == chess.BISHOP:
         label += "b"
@@ -52,7 +51,7 @@ def decode_move(board: chess.Board, index: int) -> chess.Move:
 def legal_indices(board: chess.Board) -> torch.Tensor:
     """Return policy indices for legal moves in python-chess iteration order."""
     _validate_board(board)
-    return torch.tensor([encode_move(move, board.turn) for move in board.legal_moves], dtype=torch.long)
+    return torch.tensor([encode_move(board, move) for move in board.legal_moves], dtype=torch.long)
 
 
 def legal_mask(board: chess.Board) -> torch.Tensor:

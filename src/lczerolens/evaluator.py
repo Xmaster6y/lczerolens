@@ -2,35 +2,32 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 import chess
 import torch
 from tensordict import TensorDict, TensorDictBase
 from tensordict.nn import TensorDictModule
+from torch import nn
 
 from lczerolens._codec import InputFormat, POLICY_SIZE, encode_input, legal_mask
-from lczerolens.evaluation import (
-    EVALUATION_POLICY,
-    EVALUATION_VALUE,
-    INPUT_LEGAL_MASK,
-    INPUT_PLANES,
-    NETWORK_MLH,
-    NETWORK_POLICY_LOGITS,
-    NETWORK_VALUE,
-    NETWORK_WDL,
-    Evaluation,
-    EvaluationBatch,
-)
+from lczerolens.evaluation import Evaluation, EvaluationBatch
 from lczerolens.model import LczeroModel
+from lczerolens.schema import LczeroKeys, _NETWORK_HEAD_KEYS
 
 
-_NETWORK_KEYS = {
-    "policy": NETWORK_POLICY_LOGITS,
-    "wdl": NETWORK_WDL,
-    "value": NETWORK_VALUE,
-    "mlh": NETWORK_MLH,
-}
+class _ModelExecutionAdapter(nn.Module):
+    """Expose an existing LczeroModel through the canonical evaluator keys."""
+
+    def __init__(self, model: LczeroModel, heads: tuple[str, ...]):
+        super().__init__()
+        self.model = model
+        self.heads = heads
+
+    def forward(self, planes: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        inputs = TensorDict({"board": planes}, batch_size=planes.shape[0], device=planes.device)
+        outputs = self.model(inputs)
+        return tuple(outputs[head] for head in self.heads)
 
 
 class LczeroEvaluator:
@@ -47,20 +44,26 @@ class LczeroEvaluator:
         if not isinstance(input_format, InputFormat):
             raise TypeError("input_format must be an InputFormat.")
         heads = tuple(key for key in model.out_keys if isinstance(key, str) and key != "_")
-        if "policy" not in heads or any(head not in _NETWORK_KEYS for head in heads):
+        if "policy" not in heads or any(head not in _NETWORK_HEAD_KEYS for head in heads):
             raise ValueError("LczeroEvaluator requires a policy head and only supports policy, wdl, value, and mlh.")
         self._source_model = model
         self.model = TensorDictModule(
-            model.module,
-            in_keys=[INPUT_PLANES],
-            out_keys=[_NETWORK_KEYS[head] for head in heads],
+            _ModelExecutionAdapter(model, heads),
+            in_keys=[LczeroKeys.INPUT_PLANES],
+            out_keys=[_NETWORK_HEAD_KEYS[head] for head in heads],
         )
         self.input_format = input_format
 
     @classmethod
-    def from_path(cls, model_path: str, **kwargs) -> "LczeroEvaluator":
+    def from_path(
+        cls,
+        model_path: str,
+        *,
+        input_format: InputFormat = InputFormat.CLASSICAL_112,
+        **model_kwargs,
+    ) -> "LczeroEvaluator":
         """Load a model using the current Lczero model-format adapters."""
-        return cls(LczeroModel.from_path(model_path), **kwargs)
+        return cls(LczeroModel.from_path(model_path, **model_kwargs), input_format=input_format)
 
     @property
     def device(self) -> torch.device:
@@ -75,7 +78,9 @@ class LczeroEvaluator:
         )
         masks = torch.stack([legal_mask(board) for board in resolved]).to(self.device)
         return TensorDict(
-            {INPUT_PLANES: planes, INPUT_LEGAL_MASK: masks}, batch_size=[len(resolved)], device=self.device
+            {LczeroKeys.INPUT_PLANES: planes, LczeroKeys.INPUT_LEGAL_MASK: masks},
+            batch_size=[len(resolved)],
+            device=self.device,
         )
 
     def finish(self, boards: Sequence[chess.Board], tensors: TensorDictBase) -> EvaluationBatch:
@@ -85,26 +90,49 @@ class LczeroEvaluator:
             raise TypeError("tensors must be a TensorDictBase.")
         if tensors.batch_dims != 1 or tensors.batch_size[0] != len(resolved):
             raise ValueError("TensorDict must have one batch dimension matching the board count.")
-        _require_shape(tensors, INPUT_PLANES, (len(resolved), 112, 8, 8))
-        _require_shape(tensors, INPUT_LEGAL_MASK, (len(resolved), POLICY_SIZE), dtype=torch.bool)
-        _require_shape(tensors, NETWORK_POLICY_LOGITS, (len(resolved), POLICY_SIZE), finite=True)
+        _require_shape(
+            tensors,
+            LczeroKeys.INPUT_PLANES,
+            (len(resolved), 112, 8, 8),
+            floating=True,
+            finite=True,
+        )
+        _require_shape(
+            tensors,
+            LczeroKeys.INPUT_LEGAL_MASK,
+            (len(resolved), POLICY_SIZE),
+            dtype=torch.bool,
+        )
+        _require_shape(
+            tensors,
+            LczeroKeys.NETWORK_POLICY_LOGITS,
+            (len(resolved), POLICY_SIZE),
+            floating=True,
+            finite=True,
+        )
 
         expected_masks = torch.stack([legal_mask(board) for board in resolved]).to(tensors.device)
-        if not torch.equal(tensors[INPUT_LEGAL_MASK], expected_masks):
+        if not torch.equal(tensors[LczeroKeys.INPUT_LEGAL_MASK], expected_masks):
             raise ValueError("input/legal_mask does not match the supplied positions.")
 
-        logits = tensors[NETWORK_POLICY_LOGITS]
-        masks = tensors[INPUT_LEGAL_MASK]
+        logits = tensors[LczeroKeys.NETWORK_POLICY_LOGITS]
+        masks = tensors[LczeroKeys.INPUT_LEGAL_MASK]
         probabilities = torch.zeros_like(logits)
         for row in range(len(resolved)):
             if masks[row].any():
                 probabilities[row, masks[row]] = torch.softmax(logits[row, masks[row]], dim=0)
-        tensors[EVALUATION_POLICY] = probabilities
+        tensors[LczeroKeys.EVALUATION_POLICY] = probabilities
 
         leaves = set(tensors.keys(include_nested=True, leaves_only=True))
-        if NETWORK_WDL in leaves:
-            _require_shape(tensors, NETWORK_WDL, (len(resolved), 3), finite=True)
-            wdl = tensors[NETWORK_WDL]
+        if LczeroKeys.NETWORK_WDL in leaves:
+            _require_shape(
+                tensors,
+                LczeroKeys.NETWORK_WDL,
+                (len(resolved), 3),
+                floating=True,
+                finite=True,
+            )
+            wdl = tensors[LczeroKeys.NETWORK_WDL]
             if (
                 (wdl < 0).any()
                 or (wdl > 1).any()
@@ -114,24 +142,24 @@ class LczeroEvaluator:
             ):
                 raise ValueError("network/wdl must contain probabilities in [0, 1] that sum to one.")
 
-        if NETWORK_VALUE in leaves:
-            value = _column(tensors[NETWORK_VALUE], len(resolved), "network/value")
+        if LczeroKeys.NETWORK_VALUE in leaves:
+            value = _column(tensors[LczeroKeys.NETWORK_VALUE], len(resolved), "network/value")
             if not torch.isfinite(value).all() or (value.abs() > 1).any():
                 raise ValueError("network/value must be finite and in [-1, 1].")
-            tensors[NETWORK_VALUE] = value
-            tensors[EVALUATION_VALUE] = value.clone()
-        elif NETWORK_WDL in leaves:
-            wdl = tensors[NETWORK_WDL]
-            tensors[EVALUATION_VALUE] = (wdl[:, 0] - wdl[:, 2]).unsqueeze(-1)
+            tensors[LczeroKeys.NETWORK_VALUE] = value
+            tensors[LczeroKeys.EVALUATION_VALUE] = value.clone()
+        elif LczeroKeys.NETWORK_WDL in leaves:
+            wdl = tensors[LczeroKeys.NETWORK_WDL]
+            tensors[LczeroKeys.EVALUATION_VALUE] = (wdl[:, 0] - wdl[:, 2]).unsqueeze(-1)
 
-        if NETWORK_MLH in leaves:
-            mlh = _column(tensors[NETWORK_MLH], len(resolved), "network/mlh")
+        if LczeroKeys.NETWORK_MLH in leaves:
+            mlh = _column(tensors[LczeroKeys.NETWORK_MLH], len(resolved), "network/mlh")
             if not torch.isfinite(mlh).all():
                 raise ValueError("network/mlh must be finite.")
-            tensors[NETWORK_MLH] = mlh
+            tensors[LczeroKeys.NETWORK_MLH] = mlh
         return EvaluationBatch(resolved, tensors)
 
-    def evaluate(self, boards: chess.Board | Sequence[chess.Board]) -> Evaluation | EvaluationBatch:
+    def evaluate(self, boards: chess.Board | Iterable[chess.Board]) -> Evaluation | EvaluationBatch:
         """Evaluate one position or a batch through the canonical TensorDict path."""
         single = isinstance(boards, chess.Board)
         resolved = (boards,) if single else tuple(boards)
@@ -158,6 +186,7 @@ def _require_shape(
     shape: tuple[int, ...],
     *,
     dtype: torch.dtype | None = None,
+    floating: bool = False,
     finite: bool = False,
 ) -> None:
     leaves = set(tensors.keys(include_nested=True, leaves_only=True))
@@ -168,6 +197,8 @@ def _require_shape(
         raise ValueError(f"TensorDict key {key!r} must have shape {shape}.")
     if dtype is not None and value.dtype is not dtype:
         raise ValueError(f"TensorDict key {key!r} must have dtype {dtype}.")
+    if floating and not value.is_floating_point():
+        raise ValueError(f"TensorDict key {key!r} must have a floating-point dtype.")
     if finite and not torch.isfinite(value).all():
         raise ValueError(f"TensorDict key {key!r} must be finite.")
 

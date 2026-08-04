@@ -8,7 +8,7 @@ from torch import nn
 
 from lczerolens import LczeroModel
 from lczerolens._codec import encode_move
-from lczerolens.evaluation import ValueOrigin
+from lczerolens.evaluation import EvaluationBatch, ValueOrigin
 from lczerolens.evaluator import LczeroEvaluator
 
 
@@ -20,16 +20,33 @@ class FixtureNetwork(nn.Module):
     def forward(self, planes):
         batch = planes.shape[0]
         policy = torch.zeros((batch, 1858), device=planes.device)
-        policy[:, encode_move(chess.Move.from_uci("e2e4"), chess.WHITE)] = 4
-        policy[:, encode_move(chess.Move.from_uci("d2d4"), chess.WHITE)] = 2
+        board = chess.Board()
+        policy[:, encode_move(board, chess.Move.from_uci("e2e4"))] = 4
+        policy[:, encode_move(board, chess.Move.from_uci("d2d4"))] = 2
         if self.wdl:
             return policy, torch.tensor([[0.6, 0.3, 0.1]], device=planes.device).repeat(batch, 1)
         return policy, torch.full((batch,), 0.25, device=planes.device)
 
 
+class ShiftPolicyModel(LczeroModel):
+    """Fixture proving that evaluator execution preserves model behavior."""
+
+    def _call_module(self, tensors, **kwargs):
+        policy, value = super()._call_module(tensors, **kwargs)
+        return policy + 1, value
+
+
 def fixture_evaluator(*, wdl=False):
     heads = ["policy", "wdl" if wdl else "value"]
     return LczeroEvaluator(LczeroModel(FixtureNetwork(wdl=wdl), out_keys=heads))
+
+
+def test_evaluator_preserves_lczero_model_subclass_execution():
+    model = ShiftPolicyModel(FixtureNetwork(), out_keys=["policy", "value"])
+    evaluation = LczeroEvaluator(model).evaluate(chess.Board())
+
+    assert evaluation.tensors["network", "policy_logits"].min().item() == pytest.approx(1)
+    assert evaluation.policy["e2e4"].logit == pytest.approx(5)
 
 
 def test_evaluate_one_position_has_natural_legal_policy_and_native_value():
@@ -42,6 +59,7 @@ def test_evaluate_one_position_has_natural_legal_policy_and_native_value():
     assert evaluation.value is not None
     assert evaluation.value.value == pytest.approx(0.25)
     assert evaluation.value.origin is ValueOrigin.NATIVE
+    assert evaluation.value.perspective == chess.WHITE
     assert evaluation.wdl is None
 
 
@@ -50,6 +68,7 @@ def test_wdl_value_is_derived_without_overwriting_the_network_head():
 
     assert evaluation.wdl is not None
     assert evaluation.wdl.win == pytest.approx(0.6)
+    assert evaluation.wdl.perspective == chess.WHITE
     assert evaluation.value is not None
     assert evaluation.value.value == pytest.approx(0.5)
     assert evaluation.value.origin is ValueOrigin.DERIVED_FROM_WDL
@@ -70,6 +89,7 @@ def test_prepare_and_finish_preserve_batch_device_and_instrumentation_keys():
     evaluations = evaluator.finish(boards, tensors)
 
     assert len(evaluations) == 2
+    assert isinstance(evaluations[1:], EvaluationBatch)
     assert len(evaluations[1:]) == 1
     assert evaluations.tensors is tensors
     assert ("attr", "input", "planes") in tensors.keys(include_nested=True, leaves_only=True)
@@ -111,3 +131,33 @@ def test_finish_rejects_malformed_or_position_incompatible_tensors():
     )
     with pytest.raises(ValueError, match="policy_logits"):
         evaluator.finish([board], missing)
+
+
+def test_policy_view_reflects_explicit_runtime_tensor_changes():
+    evaluation = fixture_evaluator().evaluate(chess.Board())
+    d4 = evaluation.policy["d2d4"].index
+    evaluation.tensors["network", "policy_logits"][d4] = 10
+    evaluation.tensors["evaluation", "policy"] = torch.softmax(
+        evaluation.tensors["network", "policy_logits"].masked_fill(
+            ~evaluation.tensors["input", "legal_mask"], float("-inf")
+        ),
+        dim=0,
+    )
+
+    assert evaluation.policy.best_move == chess.Move.from_uci("d2d4")
+
+
+def test_finish_rejects_non_floating_inputs_and_outputs():
+    evaluator = fixture_evaluator()
+    board = chess.Board()
+    tensors = evaluator.model(evaluator.prepare([board]))
+
+    integer_planes = tensors.clone()
+    integer_planes["input", "planes"] = integer_planes["input", "planes"].to(torch.int64)
+    with pytest.raises(ValueError, match="floating-point"):
+        evaluator.finish([board], integer_planes)
+
+    integer_policy = tensors.clone()
+    integer_policy["network", "policy_logits"] = integer_policy["network", "policy_logits"].to(torch.int64)
+    with pytest.raises(ValueError, match="floating-point"):
+        evaluator.finish([board], integer_policy)

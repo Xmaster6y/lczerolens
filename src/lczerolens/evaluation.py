@@ -10,16 +10,7 @@ import chess
 from tensordict import TensorDictBase
 
 from lczerolens._codec import decode_move
-
-
-INPUT_PLANES = ("input", "planes")
-INPUT_LEGAL_MASK = ("input", "legal_mask")
-NETWORK_POLICY_LOGITS = ("network", "policy_logits")
-NETWORK_WDL = ("network", "wdl")
-NETWORK_VALUE = ("network", "value")
-NETWORK_MLH = ("network", "mlh")
-EVALUATION_POLICY = ("evaluation", "policy")
-EVALUATION_VALUE = ("evaluation", "value")
+from lczerolens.schema import LczeroKeys
 
 
 class ValueOrigin(str, Enum):
@@ -35,6 +26,7 @@ class ScalarEvaluation:
 
     value: float
     origin: ValueOrigin
+    perspective: chess.Color
 
 
 @dataclass(frozen=True)
@@ -44,6 +36,7 @@ class WdlEvaluation:
     win: float
     draw: float
     loss: float
+    perspective: chess.Color
 
 
 @dataclass(frozen=True)
@@ -63,9 +56,9 @@ class PolicyEvaluation:
     def __init__(self, board: chess.Board, tensors: TensorDictBase):
         self._board = board.copy(stack=True)
         self._tensors = tensors
-        mask = tensors[INPUT_LEGAL_MASK]
-        logits = tensors[NETWORK_POLICY_LOGITS]
-        probabilities = tensors[EVALUATION_POLICY]
+        mask = tensors[LczeroKeys.INPUT_LEGAL_MASK]
+        logits = tensors[LczeroKeys.NETWORK_POLICY_LOGITS]
+        probabilities = tensors[LczeroKeys.EVALUATION_POLICY]
         indices = mask.nonzero(as_tuple=False).reshape(-1).tolist()
         ranked = sorted(indices, key=lambda index: (-float(logits[index].item()), decode_move(board, index).uci()))
         ranks: dict[int, int] = {}
@@ -130,7 +123,6 @@ class Evaluation:
             raise ValueError("Evaluation requires one unbatched TensorDict row.")
         self._position = board.copy(stack=True)
         self._tensors = tensors
-        self._policy = PolicyEvaluation(self._position, tensors)
 
     @property
     def position(self) -> chess.Board:
@@ -144,31 +136,36 @@ class Evaluation:
 
     @property
     def policy(self) -> PolicyEvaluation:
-        return self._policy
+        """Legal policy view over the current evaluator tensors."""
+        return PolicyEvaluation(self._position, self._tensors)
 
     @property
     def wdl(self) -> WdlEvaluation | None:
-        if NETWORK_WDL not in self._tensors.keys(include_nested=True, leaves_only=True):
+        if LczeroKeys.NETWORK_WDL not in self._tensors.keys(include_nested=True, leaves_only=True):
             return None
-        values = self._tensors[NETWORK_WDL].reshape(-1).tolist()
-        return WdlEvaluation(*(float(value) for value in values))
+        values = self._tensors[LczeroKeys.NETWORK_WDL].reshape(-1).tolist()
+        return WdlEvaluation(*(float(value) for value in values), perspective=self._position.turn)
 
     @property
     def value(self) -> ScalarEvaluation | None:
-        if EVALUATION_VALUE not in self._tensors.keys(include_nested=True, leaves_only=True):
+        if LczeroKeys.EVALUATION_VALUE not in self._tensors.keys(include_nested=True, leaves_only=True):
             return None
         origin = (
             ValueOrigin.NATIVE
-            if NETWORK_VALUE in self._tensors.keys(include_nested=True, leaves_only=True)
+            if LczeroKeys.NETWORK_VALUE in self._tensors.keys(include_nested=True, leaves_only=True)
             else ValueOrigin.DERIVED_FROM_WDL
         )
-        return ScalarEvaluation(float(self._tensors[EVALUATION_VALUE].reshape(-1)[0]), origin)
+        return ScalarEvaluation(
+            float(self._tensors[LczeroKeys.EVALUATION_VALUE].reshape(-1)[0]),
+            origin,
+            self._position.turn,
+        )
 
     @property
     def mlh(self) -> float | None:
-        if NETWORK_MLH not in self._tensors.keys(include_nested=True, leaves_only=True):
+        if LczeroKeys.NETWORK_MLH not in self._tensors.keys(include_nested=True, leaves_only=True):
             return None
-        return float(self._tensors[NETWORK_MLH].reshape(-1)[0])
+        return float(self._tensors[LczeroKeys.NETWORK_MLH].reshape(-1)[0])
 
 
 class EvaluationBatch(Sequence[Evaluation]):
@@ -191,12 +188,12 @@ class EvaluationBatch(Sequence[Evaluation]):
     def __getitem__(self, index: int) -> Evaluation: ...
 
     @overload
-    def __getitem__(self, index: slice) -> tuple[Evaluation, ...]: ...
+    def __getitem__(self, index: slice) -> "EvaluationBatch": ...
 
-    def __getitem__(self, index: int | slice) -> Evaluation | tuple[Evaluation, ...]:
+    def __getitem__(self, index: int | slice) -> Evaluation | "EvaluationBatch":
         if isinstance(index, slice):
             positions = range(*index.indices(len(self)))
-            return tuple(Evaluation(self._boards[position], self._tensors[position]) for position in positions)
+            return EvaluationBatch(tuple(self._boards[position] for position in positions), self._tensors[index])
         return Evaluation(self._boards[index], self._tensors[index])
 
     def __iter__(self) -> Iterator[Evaluation]:
@@ -205,16 +202,8 @@ class EvaluationBatch(Sequence[Evaluation]):
 
 __all__ = [
     "ActionEvaluation",
-    "EVALUATION_POLICY",
-    "EVALUATION_VALUE",
     "Evaluation",
     "EvaluationBatch",
-    "INPUT_LEGAL_MASK",
-    "INPUT_PLANES",
-    "NETWORK_MLH",
-    "NETWORK_POLICY_LOGITS",
-    "NETWORK_VALUE",
-    "NETWORK_WDL",
     "PolicyEvaluation",
     "ScalarEvaluation",
     "ValueOrigin",
