@@ -3,6 +3,19 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from .board import LczeroBoard
+from .behavior import (
+    BehaviorMetric,
+    ControlKind,
+    CounterfactualBehaviorComparison,
+    DecisionComparison,
+    EvaluatorBehavior,
+    SearchBehaviorComparison,
+    compare_counterfactual_behavior,
+    compare_evaluator_to_search,
+    compare_search_decision,
+    compare_search_events,
+    evaluator_behavior,
+)
 from .counterfactuals import (
     CounterfactualConstraints,
     CounterfactualResult,
@@ -26,11 +39,16 @@ except PackageNotFoundError:
 __all__ = [
     "LczeroBoard",
     "LczeroModel",
+    "BehaviorMetric",
+    "ControlKind",
     "CounterfactualConstraints",
+    "CounterfactualBehaviorComparison",
     "CounterfactualResult",
     "CounterfactualValidity",
+    "DecisionComparison",
     "Evidence",
     "EvidenceSet",
+    "EvaluatorBehavior",
     "FactAnalyzer",
     "Lc0ProcessAdapter",
     "Lc0RootSnapshotParser",
@@ -38,9 +56,15 @@ __all__ = [
     "MoveDelta",
     "PositionAttribute",
     "ReferenceMCTS",
+    "SearchBehaviorComparison",
     "VariationEvidence",
     "analyze_move_delta",
     "analyze_variation",
+    "compare_counterfactual_behavior",
+    "compare_evaluator_to_search",
+    "compare_search_decision",
+    "compare_search_events",
+    "evaluator_behavior",
     "relocate_piece_counterfactual",
     "remove_piece_counterfactual",
     "replay_root_events",
