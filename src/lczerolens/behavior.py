@@ -348,22 +348,30 @@ def compare_evaluator_to_search(evaluator: EvaluatorBehavior, trace: SearchTrace
         for action in final_actions
     )
     divergence = 0.5 * sum(abs(conditional[move] - shares[move]) for move in conditional) if shares else None
-    snapshots = tuple(
-        _snapshot_behavior(
-            snapshot.sequence,
-            snapshot.budget,
-            snapshot.selection.move if snapshot.selection else None,
-            snapshot.actions or (),
+    if trace.supports(SearchCapability.ROOT_SNAPSHOTS):
+        snapshots = tuple(
+            _snapshot_behavior(
+                snapshot.sequence,
+                snapshot.budget,
+                snapshot.selection.move if snapshot.selection else None,
+                snapshot.actions or (),
+            )
+            for snapshot in trace.snapshots
         )
-        for snapshot in trace.snapshots
-    )
-    changes = tuple(
-        (current.sequence, previous.selected_move, current.selected_move)
-        for previous, current in zip(snapshots, snapshots[1:])
-        if previous.selected_move is not None
-        and current.selected_move is not None
-        and previous.selected_move != current.selected_move
-    )
+        changes = tuple(
+            (current.sequence, previous.selected_move, current.selected_move)
+            for previous, current in zip(snapshots, snapshots[1:])
+            if previous.selected_move is not None
+            and current.selected_move is not None
+            and previous.selected_move != current.selected_move
+        )
+        discovery_budgets = _discovery_budgets(trace)
+        pv_stability = _pv_stability(trace)
+    else:
+        snapshots = ()
+        changes = ()
+        discovery_budgets = ()
+        pv_stability = ()
     return SearchBehaviorComparison(
         source=trace.provenance.source,
         capability=trace.capability,
@@ -375,8 +383,8 @@ def compare_evaluator_to_search(evaluator: EvaluatorBehavior, trace: SearchTrace
         actions=comparisons,
         snapshots=snapshots,
         selected_move_changes=changes,
-        discovery_budgets=_discovery_budgets(trace),
-        pv_stability=_pv_stability(trace),
+        discovery_budgets=discovery_budgets,
+        pv_stability=pv_stability,
     )
 
 
@@ -400,9 +408,9 @@ def compare_search_events(trace: SearchTrace, *, validate_replay: bool = False) 
     replay_validated = None
     if validate_replay:
         trace.require(SearchCapability.REPLAYABLE)
-        replay_validated = replay_root_events(events) == tuple(
-            action.statistics for action in trace.snapshots[-1].actions or ()
-        )
+        replayed = {edge.move: edge for edge in replay_root_events(events)}
+        final = {action.statistics.move: action.statistics for action in trace.snapshots[-1].actions or ()}
+        replay_validated = replayed == final
     return SearchEventBehavior(
         event_count=len(events),
         maximum_path_depth=max(depths, default=0),
@@ -512,6 +520,8 @@ def compare_counterfactual_behavior(
     for move, variation in evidence:
         if not variation.moves or variation.moves[0].uci() != move:
             raise ValueError("Variation evidence must begin with the move named by its key.")
+        if variation.initial.fen not in (original.fen, modified.fen):
+            raise ValueError("Variation evidence must begin at the original or modified evaluator FEN.")
     return CounterfactualBehaviorComparison(
         control_kind,
         original,
@@ -650,8 +660,6 @@ def _snapshot_behavior(
 
 
 def _discovery_budgets(trace: SearchTrace) -> tuple[tuple[str, SearchBudget | None], ...]:
-    if not trace.supports(SearchCapability.ROOT_SNAPSHOTS):
-        return ()
     moves = sorted({action.statistics.move for snapshot in trace.snapshots for action in snapshot.actions or ()})
     result = []
     for move in moves:
@@ -669,8 +677,6 @@ def _discovery_budgets(trace: SearchTrace) -> tuple[tuple[str, SearchBudget | No
 
 
 def _pv_stability(trace: SearchTrace) -> tuple[tuple[str, float | None], ...]:
-    if not trace.supports(SearchCapability.ROOT_SNAPSHOTS):
-        return ()
     moves = sorted({action.statistics.move for snapshot in trace.snapshots for action in snapshot.actions or ()})
     result = []
     for move in moves:

@@ -152,6 +152,11 @@ def test_raw_evaluator_preference_compares_separately_with_reference_and_officia
     assert official_comparison.capability is SearchCapability.ROOT_SNAPSHOTS
     assert official_comparison.evaluator_probability_coverage < 1.0
     assert compare_search_events(reference, validate_replay=True).replay_validated
+    reordered = replace(
+        reference,
+        snapshots=(replace(reference.snapshots[-1], actions=tuple(reversed(reference.snapshots[-1].actions or ()))),),
+    )
+    assert compare_search_events(reordered, validate_replay=True).replay_validated
     with pytest.raises(SearchCapabilityError):
         compare_search_events(official)
 
@@ -326,6 +331,21 @@ def test_root_comparisons_reject_mismatches_and_retain_unavailable_statistics():
     assert comparison.action("e2e4").visit_share is None
     assert comparison.discovery_budgets == comparison.pv_stability == ()
 
+    unbudgeted_evolution = SearchTrace(
+        ROOT_FEN,
+        ChessPlayer.WHITE,
+        SearchCapability.ROOT_ACTION_STATS,
+        SearchProvenance("synthetic-unbudgeted-evolution"),
+        (
+            RootSnapshot(0, RootSelection("e2e4", "fixture", "fixture"), actions=(root_action,)),
+            RootSnapshot(1, RootSelection("e2e4", "fixture", "fixture"), actions=(root_action,)),
+        ),
+    )
+    no_evolution = compare_evaluator_to_search(evaluator, unbudgeted_evolution)
+    assert no_evolution.snapshots == ()
+    assert no_evolution.selected_move_changes == ()
+    assert no_evolution.discovery_budgets == no_evolution.pv_stability == ()
+
     empty_actions = SearchTrace(
         ROOT_FEN,
         ChessPlayer.WHITE,
@@ -393,6 +413,12 @@ def test_counterfactual_comparison_rejects_invalid_controls_links_and_evidence()
     with pytest.raises(ValueError, match="begin with"):
         compare_counterfactual_behavior(
             behavior, behavior, ("e2e4",), variation_evidence={"e2e4": replace(variation, deltas=())}
+        )
+    unrelated = LczeroBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 12 7")
+    unrelated_variation = analyze_variation(unrelated, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
+    with pytest.raises(ValueError, match="original or modified evaluator FEN"):
+        compare_counterfactual_behavior(
+            behavior, behavior, ("e2e4",), variation_evidence={"e2e4": unrelated_variation}
         )
 
 
