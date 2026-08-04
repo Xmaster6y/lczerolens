@@ -267,8 +267,64 @@ def test_malformed_envelopes_are_rejected(data, message):
 def test_boolean_schema_version_is_rejected():
     malformed = serialize_search_trace(_full_trace()).replace(b'"schema_version":1', b'"schema_version":true', 1)
 
-    with pytest.raises(SearchTraceFormatError, match="schema version"):
+    with pytest.raises(SearchTraceFormatError, match="SearchTrace.schema_version"):
         deserialize_search_trace(malformed)
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "field"),
+    [
+        (b'"terminal":false', b'"terminal":"false"', "LeafRecord.terminal"),
+        (
+            b'{"$enum":"SearchBudgetUnit","value":"simulations"}',
+            b'"simulations"',
+            "SearchBudget.unit",
+        ),
+        (b'"simulation":0', b'"simulation":true', "SimulationEvent.simulation"),
+        (
+            b'{"$type":"SearchParameter","name":"enabled","value":true}',
+            b"null",
+            "SearchProvenance.parameters",
+        ),
+    ],
+)
+def test_declared_field_types_cannot_be_bypassed(old, new, field):
+    malformed = serialize_search_trace(_full_trace()).replace(old, new, 1)
+
+    with pytest.raises(SearchTraceFormatError, match=field):
+        deserialize_search_trace(malformed)
+
+
+def test_integral_json_numbers_are_restored_to_declared_float_fields():
+    loaded = deserialize_search_trace(serialize_search_trace(_full_trace()))
+
+    assert type(loaded.events[0].root_before[0].total_value) is float
+    assert type(loaded.snapshots[0].budget.requested) is int
+
+
+@pytest.mark.parametrize(
+    ("value", "annotation"),
+    [
+        (None, tuple[str, ...]),
+        (("only-one",), tuple[str, int]),
+        ("not-numeric", float | None),
+        (1, str),
+    ],
+)
+def test_annotation_validation_fails_closed_for_every_supported_shape(value, annotation):
+    with pytest.raises(TypeError):
+        search_trace_module._coerce_annotation(value, annotation)
+
+
+def test_lone_surrogates_are_rejected_at_the_utf8_boundary():
+    trace = _full_trace()
+    malformed_trace = replace(trace, provenance=replace(trace.provenance, source="\ud800"))
+    with pytest.raises(SearchTraceFormatError, match="valid UTF-8"):
+        serialize_search_trace(malformed_trace)
+
+    malformed_bytes = serialize_search_trace(trace).replace(b'"source":"reference-search"', b'"source":"\\ud800"')
+    with pytest.raises(SearchTraceFormatError, match="valid UTF-8"):
+        deserialize_search_trace(malformed_bytes)
 
 
 def test_duplicate_and_noncanonical_json_are_rejected():

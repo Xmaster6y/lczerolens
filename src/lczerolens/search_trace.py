@@ -12,7 +12,9 @@ import json
 import math
 from dataclasses import dataclass, field, fields, is_dataclass
 from enum import Enum
-from typing import Any, TypeAlias
+from functools import cache
+from types import UnionType
+from typing import Any, TypeAlias, Union, get_args, get_origin, get_type_hints
 
 import chess
 
@@ -604,6 +606,63 @@ def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return record
 
 
+@cache
+def _record_type_hints(record_type: type[Any]) -> dict[str, Any]:
+    """Resolve one record's annotations once for strict persisted-data validation."""
+    return get_type_hints(record_type)
+
+
+def _coerce_annotation(value: Any, annotation: Any) -> Any:
+    """Validate and minimally coerce a decoded JSON value to one field annotation."""
+    origin = get_origin(annotation)
+    if origin in (Union, UnionType):
+        options = get_args(annotation)
+        for option in options:
+            option_origin = get_origin(option)
+            if (option_origin is tuple and isinstance(value, tuple)) or (
+                isinstance(option, type) and type(value) is option
+            ):
+                return _coerce_annotation(value, option)
+        for option in options:
+            try:
+                return _coerce_annotation(value, option)
+            except TypeError:
+                continue
+        raise TypeError
+    if origin is tuple:
+        if not isinstance(value, tuple):
+            raise TypeError
+        arguments = get_args(annotation)
+        if len(arguments) == 2 and arguments[1] is Ellipsis:
+            return tuple(_coerce_annotation(item, arguments[0]) for item in value)
+        if len(value) != len(arguments):
+            raise TypeError
+        return tuple(_coerce_annotation(item, item_type) for item, item_type in zip(value, arguments))
+    if annotation is type(None):
+        if value is not None:
+            raise TypeError
+        return None
+    if annotation is float:
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise TypeError
+        return float(value)
+    if annotation is int:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError
+        return value
+    if annotation is bool:
+        if not isinstance(value, bool):
+            raise TypeError
+        return value
+    if annotation is str:
+        if not isinstance(value, str):
+            raise TypeError
+        return value
+    if isinstance(annotation, type) and isinstance(value, annotation):
+        return value
+    raise TypeError
+
+
 def _decode_record(value: Any) -> Any:
     """Decode one typed canonical record without supplying schema defaults."""
     if isinstance(value, list):
@@ -638,13 +697,21 @@ def _decode_record(value: Any) -> Any:
         unexpected = sorted(actual_fields - expected_fields)
         raise SearchTraceFormatError(f"Invalid {type_name} fields: missing={missing!r}, unexpected={unexpected!r}.")
     values = {name: _decode_record(value[name]) for name in expected_fields}
+    annotations = _record_type_hints(record_type)
+    for name in expected_fields:
+        try:
+            values[name] = _coerce_annotation(values[name], annotations[name])
+        except TypeError as error:
+            raise SearchTraceFormatError(
+                f"Invalid {type_name}.{name}: value does not match its declared field type."
+            ) from error
     if record_type is SearchTrace:
         schema_version = values.pop("schema_version")
         if isinstance(schema_version, bool) or schema_version != 1:
             raise SearchTraceFormatError(f"Unsupported SearchTrace schema version {schema_version!r}.")
     try:
         return record_type(**values)
-    except (TypeError, ValueError) as error:
+    except (AttributeError, TypeError, ValueError) as error:
         raise SearchTraceFormatError(f"Invalid {type_name} record: {error}") from error
 
 
@@ -657,13 +724,16 @@ def serialize_search_trace(trace: SearchTrace) -> bytes:
         "format_version": _SEARCH_TRACE_FORMAT_VERSION,
         "trace": _canonical_record(trace),
     }
-    return json.dumps(
-        envelope,
-        allow_nan=False,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
+    try:
+        return json.dumps(
+            envelope,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise SearchTraceFormatError("Canonical search traces must contain valid UTF-8 strings.") from error
 
 
 def deserialize_search_trace(data: bytes) -> SearchTrace:
