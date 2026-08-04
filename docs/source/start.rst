@@ -21,7 +21,12 @@ adapters and concept metrics.
 Supported user path
 -------------------
 
-* :doc:`scope` defines the board, evaluator, and compatibility contract.
+* :doc:`use-cases` defines the concrete workflows that gate the breaking
+  ``0.5`` refactor and release.
+* :doc:`architecture` defines the target TensorDict execution contract,
+  chess-facing objects, ownership boundaries, and deletion policy.
+* :doc:`scope` documents the currently implemented pre-refactor surface; the
+  architecture page supersedes its compatibility policy for the ``0.5`` work.
 * :doc:`facts` covers exact facts, move/variation evidence, and constrained
   counterfactual positions.
 * :doc:`search` defines typed, capability-aware traces. ``ReferenceMCTS`` is

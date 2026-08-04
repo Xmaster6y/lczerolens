@@ -9,6 +9,8 @@ lczerolens
     :hidden:
 
     start
+    use-cases
+    architecture
     scope
     facts
     search
