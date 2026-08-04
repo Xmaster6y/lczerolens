@@ -86,3 +86,47 @@ compensation. Terminal result metadata uses rule-exact ``python-chess``
 outcomes. ``VariationTerminal.claimable_draw`` separately records a threefold
 or fifty-move draw that can be claimed when complete history is available; it
 does not turn a legally continuable position into a terminal result.
+
+Constraint-aware counterfactuals
+--------------------------------
+
+``lczerolens.counterfactuals`` creates position pairs without treating every
+board edit as a reachable game state. ``sibling_counterfactual`` compares a
+factual legal move with a different legal move from the same parent. If the
+parent has a complete standard-game move stack, both children receive the
+``history_consistent`` tier; otherwise the result records only the
+``sibling_legal_move`` guarantee. Omitting the alternative selects the first
+satisfying legal move in stable UCI order.
+
+``remove_piece_counterfactual`` and ``relocate_piece_counterfactual`` are
+structural operators. They reject king edits, occupied relocation targets, and
+invalid resulting positions. They normalize affected castling and en-passant
+metadata and can establish only ``rule_valid``. They always state that
+historical reachability is unproven.
+
+Constraints independently request changed or preserved turn, kings, material,
+castling rights, en-passant square, halfmove clock, and complete-history
+availability. Every successful result also reports the observed relation for
+all seven attributes, including unconstrained metadata. Fact constraints accept
+any ``FactAnalyzer`` and retain the original and modified ``Evidence`` records
+in ``FactVerification``. A request that cannot be met returns
+``CounterfactualResult.succeeded == False`` with
+stable ``CounterfactualFailureReason`` values instead of a malformed or
+mischaracterized position.
+
+For example, removing White's a1 rook can require changed material and castling
+rights while preserving turn and kings::
+
+   constraints = CounterfactualConstraints(
+       changed_attributes=frozenset({
+           PositionAttribute.MATERIAL,
+           PositionAttribute.CASTLING_RIGHTS,
+       }),
+       preserved_attributes=frozenset({
+           PositionAttribute.TURN,
+           PositionAttribute.KINGS,
+       }),
+   )
+   result = remove_piece_counterfactual(chess.Board(), chess.A1, constraints=constraints)
+   assert result.validity is CounterfactualValidity.RULE_VALID
+   assert not result.history.reachability_proven
