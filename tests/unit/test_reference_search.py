@@ -21,6 +21,7 @@ from lczerolens.search_trace import (
     SearchCapability,
     SimulationEvent,
     ValuePerspective,
+    Wdl,
 )
 
 
@@ -153,6 +154,256 @@ def test_semantic_replay_rejects_recorded_post_state_instead_of_returning_it():
 
     with pytest.raises(SemanticReplayError, match=r"Event simulation-0 backup: backup 0"):
         replay_search_trace(invalid)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    (
+        (lambda trace: replace(trace, provenance=replace(trace.provenance, source="other")), "provenance: semantic"),
+        (
+            lambda trace: replace(
+                trace, provenance=replace(trace.provenance, parameters=trace.provenance.parameters[1:])
+            ),
+            "provenance: provenance needs",
+        ),
+        (
+            lambda trace: replace(
+                trace,
+                provenance=replace(
+                    trace.provenance,
+                    parameters=(replace(trace.provenance.parameters[0], value=-1.0), *trace.provenance.parameters[1:]),
+                ),
+            ),
+            "provenance: c_puct",
+        ),
+        (lambda trace: replace(trace, events=()), "events: at least one"),
+        (
+            lambda trace: replace(trace, events=(replace(trace.events[0], path=()),)),
+            "Event simulation-0 path: a non-terminal root simulation needs a path",
+        ),
+        (
+            lambda trace: replace(trace, events=(replace(trace.events[0], simulation=1),)),
+            "Event simulation-0 sequence: expected simulation 0",
+        ),
+        (lambda trace: replace(trace, root_expansion=None), "root_expansion: reference trace needs"),
+        (
+            lambda trace: replace(
+                trace,
+                root_evaluator=replace(
+                    trace.root_evaluator,
+                    legal_policy_logits=trace.root_evaluator.legal_policy_logits[:-1],
+                ),
+            ),
+            "root_expansion: expanded root edges",
+        ),
+        (
+            lambda trace: replace(
+                trace,
+                root_expansion=replace(
+                    trace.root_expansion,
+                    edges=(
+                        replace(trace.root_expansion.edges[0], perspective=ValuePerspective.SIDE_TO_MOVE),
+                        *trace.root_expansion.edges[1:],
+                    ),
+                ),
+            ),
+            "root_expansion: root edge",
+        ),
+        (
+            lambda trace: replace(
+                trace,
+                root_evaluator=replace(trace.root_evaluator, dtype="int64"),
+            ),
+            "expansion: unsupported evaluator dtype",
+        ),
+    ),
+)
+def test_semantic_replay_rejects_invalid_trace_level_evidence(mutation, message):
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+
+    with pytest.raises(SemanticReplayError, match=message):
+        replay_search_trace(mutation(trace))
+
+
+@pytest.mark.parametrize(
+    ("mutate_event", "message"),
+    (
+        (
+            lambda event, trace: replace(event, leaf=replace(event.leaf, node_id="wrong-node")),
+            "Event simulation-0 leaf: path ends",
+        ),
+        (
+            lambda event, trace: replace(event, leaf=replace(event.leaf, terminal=True)),
+            "Event simulation-0 leaf: terminal flag",
+        ),
+        (
+            lambda event, trace: replace(event, expansion=None),
+            "Event simulation-0 expansion: non-terminal first visits",
+        ),
+        (
+            lambda event, trace: replace(event, expansion=replace(event.expansion, node_id="wrong-node")),
+            "Event simulation-0 expansion: expansion node",
+        ),
+        (
+            lambda event, trace: replace(
+                event,
+                leaf=replace(
+                    event.leaf,
+                    evaluator=replace(
+                        event.leaf.evaluator,
+                        legal_policy_logits=event.leaf.evaluator.legal_policy_logits[:-1],
+                    ),
+                ),
+            ),
+            "Event simulation-0 expansion: expanded edges",
+        ),
+        (
+            lambda event, trace: replace(
+                event,
+                expansion=replace(
+                    event.expansion,
+                    edges=(
+                        replace(event.expansion.edges[0], perspective=ValuePerspective.ROOT_PLAYER),
+                        *event.expansion.edges[1:],
+                    ),
+                ),
+            ),
+            "Event simulation-0 expansion: edge",
+        ),
+        (
+            lambda event, trace: replace(event, backups=(*event.backups, event.backups[0])),
+            "Event simulation-0 backup: expected 1 backups, got 2",
+        ),
+    ),
+)
+def test_semantic_replay_rejects_invalid_event_evidence(mutate_event, message):
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    invalid_event = mutate_event(trace.events[0], trace)
+    invalid = replace(trace, events=(invalid_event,))
+
+    with pytest.raises(SemanticReplayError, match=message):
+        replay_search_trace(invalid)
+
+
+def test_semantic_replay_rejects_terminal_evaluator_and_value_divergences():
+    board = LczeroBoard("8/8/8/8/8/8/4Q3/K1k5 w - - 0 1")
+    trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    with_evaluator = replace(event, leaf=replace(event.leaf, evaluator=trace.root_evaluator))
+    wrong_value = replace(
+        event,
+        leaf=replace(event.leaf, evaluation=replace(event.leaf.evaluation, value=0.5)),
+    )
+
+    with pytest.raises(SemanticReplayError, match="terminal leaves cannot have"):
+        replay_search_trace(replace(trace, events=(with_evaluator,)))
+    with pytest.raises(SemanticReplayError, match="terminal value should be"):
+        replay_search_trace(replace(trace, events=(wrong_value,)))
+
+
+def test_semantic_replay_rejects_reused_or_changed_child_identity():
+    trace = ReferenceMCTS(c_puct=0.0).search(LczeroBoard(), FixedEvaluator(-0.4), simulations=2)
+    first, second = trace.events
+    reused_root = replace(first.path[0], child_id=first.path[0].node_id)
+    changed_child = replace(second.path[0], child_id="other-child")
+
+    with pytest.raises(SemanticReplayError, match="new child ID .* already in use"):
+        replay_search_trace(replace(trace, events=(replace(first, path=(reused_root,)), second)))
+    with pytest.raises(SemanticReplayError, match="edge .* points to"):
+        replay_search_trace(replace(trace, events=(first, replace(second, path=(changed_child, *second.path[1:])))))
+
+
+def test_semantic_replay_rejects_wrong_selected_move():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    final = trace.snapshots[-1]
+    other_move = next(
+        action.statistics.move for action in final.actions if action.statistics.move != final.selection.move
+    )
+    invalid_selection = replace(final.selection, move=other_move)
+
+    with pytest.raises(SemanticReplayError, match="result: selected move diverges"):
+        replay_search_trace(replace(trace, snapshots=(replace(final, selection=invalid_selection),)))
+
+
+@pytest.mark.parametrize(
+    ("root_before", "message"),
+    (
+        (lambda edges: edges[:-1], "initial root edges do not match"),
+        (
+            lambda edges: (
+                replace(edges[0], perspective=ValuePerspective.SIDE_TO_MOVE),
+                *edges[1:],
+            ),
+            "root edge .* has perspective",
+        ),
+        (
+            lambda edges: (replace(edges[0], visits=1, total_value=0.0, mean_value=0.0), *edges[1:]),
+            "root edge .* is not an unvisited",
+        ),
+    ),
+)
+def test_semantic_replay_rejects_corrupt_initial_root_state(root_before, message):
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    # Model corruption that can arrive from untrusted persisted trace data.
+    object.__setattr__(event, "root_before", root_before(event.root_before))
+
+    with pytest.raises(SemanticReplayError, match=message):
+        replay_search_trace(trace)
+
+
+def test_semantic_replay_rejects_path_past_first_unexpanded_node():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    extra = replace(event.path[0], node_id=event.path[0].child_id, child_id="extra-child")
+
+    with pytest.raises(SemanticReplayError, match="path continues after first unexpanded node"):
+        replay_search_trace(replace(trace, events=(replace(event, path=(*event.path, extra)),)))
+
+
+def test_semantic_replay_requires_scalar_leaf_value_for_backup():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    perspective = event.leaf.evaluation.perspective
+    wdl_only = PositionEvaluation(perspective, wdl=Wdl(0.5, 0.25, 0.25, perspective))
+    invalid_leaf = replace(event.leaf, evaluation=wdl_only)
+
+    with pytest.raises(SemanticReplayError, match="backup: scalar leaf value is required"):
+        replay_search_trace(replace(trace, events=(replace(event, leaf=invalid_leaf),)))
+
+
+def test_semantic_replay_rejects_backup_post_state_divergence():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    backup = event.backups[0]
+    altered_after = replace(backup.after, exploration=0.1)
+    altered_backup = replace(backup, after=altered_after)
+    altered_root_after = tuple(altered_after if edge.move == altered_after.move else edge for edge in event.root_after)
+    altered_actions = tuple(
+        replace(action, statistics=altered_after) if action.statistics.move == altered_after.move else action
+        for action in trace.snapshots[-1].actions
+    )
+    invalid = replace(
+        trace,
+        events=(replace(event, backups=(altered_backup,), root_after=altered_root_after),),
+        snapshots=(replace(trace.snapshots[-1], actions=altered_actions),),
+    )
+
+    with pytest.raises(SemanticReplayError, match="backup 0 post-state diverges"):
+        replay_search_trace(invalid)
+
+
+def test_semantic_replay_rejects_root_and_final_action_state_divergence():
+    root_trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    object.__setattr__(root_trace.events[1], "root_before", None)
+    with pytest.raises(SemanticReplayError, match="root_before: recorded root state diverges"):
+        replay_search_trace(root_trace)
+
+    result_trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    final = result_trace.snapshots[-1]
+    object.__setattr__(final, "actions", final.actions[:-1])
+    with pytest.raises(SemanticReplayError, match="result: final root action statistics diverge"):
+        replay_search_trace(result_trace)
 
 
 def test_reference_search_accepts_the_canonical_singleton_evaluator_batch():
