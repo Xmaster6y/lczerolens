@@ -1,11 +1,18 @@
 """Hermetic checks for the deterministic, replayable MCTS reference core."""
 
+from dataclasses import replace
+
 import pytest
 import torch
 from tensordict import TensorDict
 
 from lczerolens import LczeroBoard
-from lczerolens.reference_search import ReferenceMCTS, replay_root_events
+from lczerolens.reference_search import (
+    ReferenceMCTS,
+    SemanticReplayError,
+    replay_root_events,
+    replay_search_trace,
+)
 from lczerolens.search_trace import (
     BackupUpdate,
     EdgeStatistics,
@@ -68,6 +75,84 @@ def test_reference_search_revisits_a_child_and_alternates_backup_signs():
 
     assert len(trace.events[1].path) == 2
     assert [backup.signed_value for backup in trace.events[1].backups] == pytest.approx((0.4, -0.4))
+
+
+@pytest.mark.parametrize(
+    ("fen", "simulations", "c_puct"),
+    (
+        ("8/8/8/8/8/8/4Q3/K1k5 w - - 0 1", 1, 0.0),  # terminal leaf
+        ("7k/8/8/8/8/8/6r1/7K w - - 0 1", 3, 1.0),  # forced root move
+        (None, 2, 0.0),  # repeated visit
+        (None, 32, 1.5),  # competitive root
+    ),
+)
+def test_semantic_replay_reconstructs_representative_search_results(fen, simulations, c_puct):
+    board = LczeroBoard(fen) if fen is not None else LczeroBoard()
+    trace = ReferenceMCTS(c_puct=c_puct).search(board, FixedEvaluator(), simulations)
+
+    result = replay_search_trace(trace)
+
+    assert result.root_statistics == tuple(action.statistics for action in trace.snapshots[-1].actions)
+    assert sum(probability for _, probability in result.root_policy) == pytest.approx(1.0)
+    assert result.selected_move == trace.snapshots[-1].selection.move
+
+
+def test_semantic_replay_reports_first_path_divergence():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    event = trace.events[0]
+    wrong_move = next(edge.move for edge in event.root_before if edge.move != event.path[0].move)
+    wrong_step = replace(event.path[0], move=wrong_move)
+    invalid = replace(trace, events=(replace(event, path=(wrong_step,)), *trace.events[1:]))
+
+    with pytest.raises(SemanticReplayError, match=r"Event simulation-0 path: depth 0 expected"):
+        replay_search_trace(invalid)
+
+
+def test_semantic_replay_reports_first_expansion_divergence():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    evaluator = event.leaf.evaluator
+    altered_logits = ((evaluator.legal_policy_logits[0][0], 100.0), *evaluator.legal_policy_logits[1:])
+    invalid_leaf = replace(event.leaf, evaluator=replace(evaluator, legal_policy_logits=altered_logits))
+    invalid = replace(trace, events=(replace(event, leaf=invalid_leaf),))
+
+    with pytest.raises(SemanticReplayError, match=r"Event simulation-0 expansion: edge"):
+        replay_search_trace(invalid)
+
+
+def test_semantic_replay_reports_first_perspective_divergence():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    wrong_evaluation = replace(event.leaf.evaluation, perspective=ValuePerspective.ROOT_PLAYER)
+    invalid = replace(trace, events=(replace(event, leaf=replace(event.leaf, evaluation=wrong_evaluation)),))
+
+    with pytest.raises(SemanticReplayError, match=r"Event simulation-0 leaf: expected side_to_move"):
+        replay_search_trace(invalid)
+
+
+def test_semantic_replay_rejects_recorded_post_state_instead_of_returning_it():
+    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    backup = event.backups[-1]
+    altered_after = replace(
+        backup.after,
+        total_value=-backup.after.total_value,
+        mean_value=-backup.after.mean_value,
+    )
+    altered_backup = replace(backup, signed_value=-backup.signed_value, after=altered_after)
+    altered_root_after = tuple(altered_after if edge.move == altered_after.move else edge for edge in event.root_after)
+    altered_actions = tuple(
+        replace(action, statistics=altered_after) if action.statistics.move == altered_after.move else action
+        for action in trace.snapshots[-1].actions
+    )
+    invalid = replace(
+        trace,
+        events=(replace(event, backups=(altered_backup,), root_after=altered_root_after),),
+        snapshots=(replace(trace.snapshots[-1], actions=altered_actions),),
+    )
+
+    with pytest.raises(SemanticReplayError, match=r"Event simulation-0 backup: backup 0"):
+        replay_search_trace(invalid)
 
 
 def test_reference_search_accepts_the_canonical_singleton_evaluator_batch():

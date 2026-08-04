@@ -433,6 +433,8 @@ class SearchTrace:
     provenance: SearchProvenance
     snapshots: tuple[RootSnapshot, ...]
     events: tuple[SimulationEvent, ...] | None = None
+    root_expansion: NodeExpansion | None = None
+    root_evaluator: EvaluatorCall | None = None
     schema_version: int = field(default=1, init=False)
 
     def __post_init__(self) -> None:

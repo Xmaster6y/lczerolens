@@ -224,6 +224,16 @@ The public :func:`~lczerolens.reference_search.replay_root_events` helper
 reconstructs final root statistics using events alone; it neither reads mutable
 tree state nor calls the search backup routine.
 
+For the stronger trace-faithfulness guarantee,
+:func:`~lczerolens.reference_search.replay_search_trace` independently rebuilds
+the deterministic reference tree from ``root_fen`` and the semantic event
+records. It redoes PUCT path selection, legal expansion, terminal evaluation,
+perspective-aware backups, root visit policy, and final move selection. Recorded
+root pre/post states and the final snapshot are divergence checks, not the state
+returned by replay. :class:`~lczerolens.reference_search.SemanticReplayError`
+identifies the first event and replay phase that disagree. This capability is
+specific to ``ReferenceMCTS`` and does not imply production-lc0 equivalence.
+
 The reference PUCT score is ``Q + c_puct * P * sqrt(sum(N)) / (1 + N)``.
 Exact score ties and zero-visit root selection use UCI lexicographic order;
 final root selection is maximum visit count at temperature zero. Search is
