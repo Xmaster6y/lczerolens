@@ -25,6 +25,7 @@ from lczerolens.search_trace import (
     EdgeStatistics,
     LeafRecord,
     PositionEvaluation,
+    RootAction,
     SearchCapability,
     SearchProvenance,
     SimulationEvent,
@@ -152,6 +153,36 @@ def test_full_retained_replay_is_not_limited_to_reference_mcts_provenance():
 
     assert result.root_statistics == tuple(action.statistics for action in other_provider.snapshots[-1].actions)
     assert result.selected_move == other_provider.snapshots[-1].selection.move
+
+
+def test_retained_event_replay_clears_provider_specific_exploration_evidence():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    before = tuple(replace(edge, exploration=0.5) for edge in event.root_before)
+    after = tuple(replace(edge, exploration=0.5) for edge in event.root_after)
+    before_by_move = {edge.move: edge for edge in before}
+    after_by_move = {edge.move: edge for edge in after}
+    root_backup = event.backups[0]
+    explored_event = replace(
+        event,
+        root_before=before,
+        root_after=after,
+        backups=(
+            replace(
+                root_backup,
+                before=before_by_move[root_backup.before.move],
+                after=after_by_move[root_backup.after.move],
+            ),
+        ),
+    )
+    snapshot = replace(trace.snapshots[-1], actions=tuple(RootAction(edge) for edge in after))
+    explored_trace = replace(trace, events=(explored_event,), snapshots=(snapshot,))
+
+    full = replay_retained_events(explored_trace)
+    empty = replay_retained_events(explored_trace, ())
+
+    assert all(edge.exploration is None for edge in full.root_statistics)
+    assert all(edge.exploration is None for edge in empty.root_statistics)
 
 
 def test_retained_event_replay_rejects_missing_or_malformed_retained_evidence():

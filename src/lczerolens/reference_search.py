@@ -7,7 +7,7 @@ reuse, transpositions, pruning, or FPU behaviour.  It emits the public
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import math
 from typing import Callable, Protocol
 
@@ -394,7 +394,7 @@ def replay_retained_events(trace: SearchTrace, event_ids: tuple[str, ...] | None
     for event in plan.events:
         move, before, after = _retained_root_transition(event, set(state))
         state[move] = _apply_retained_root_delta(state[move], before, after, event)
-    root_statistics = tuple(state[move] for move in sorted(state))
+    root_statistics = tuple(replace(state[move], exploration=None) for move in sorted(state))
     total_visits = sum(edge.visits or 0 for edge in root_statistics)
     root_policy = tuple(
         (edge.move, 0.0 if total_visits == 0 else (edge.visits or 0) / total_visits) for edge in root_statistics
@@ -413,7 +413,9 @@ def replay_retained_events(trace: SearchTrace, event_ids: tuple[str, ...] | None
         final_statistics = tuple(action.statistics for action in final.actions or ())
         if (
             len(result.root_statistics) != len(final_statistics)
-            or any(not _same_edge(left, right) for left, right in zip(result.root_statistics, final_statistics))
+            or any(
+                not _same_retained_edge(left, right) for left, right in zip(result.root_statistics, final_statistics)
+            )
             or final.selection is None
             or result.selected_move != final.selection.move
         ):
@@ -828,6 +830,18 @@ def _same_edge(left: EdgeStatistics, right: EdgeStatistics) -> bool:
         and _close(left.total_value, right.total_value)
         and _close(left.mean_value, right.mean_value)
         and _close(left.exploration, right.exploration)
+    )
+
+
+def _same_retained_edge(left: EdgeStatistics, right: EdgeStatistics) -> bool:
+    """Compare replayed root statistics without producer-specific U evidence."""
+    return (
+        left.move == right.move
+        and left.perspective is right.perspective
+        and _close(left.prior, right.prior)
+        and left.visits == right.visits
+        and _close(left.total_value, right.total_value)
+        and _close(left.mean_value, right.mean_value)
     )
 
 
