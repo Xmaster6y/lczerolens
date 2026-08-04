@@ -31,8 +31,13 @@ from .model import LczeroModel
 from .move_evidence import MoveDelta, VariationEvidence, analyze_move_delta, analyze_variation
 from .reference_search import (
     ReferenceMCTS,
+    RetainedEventReplayCosts,
+    RetainedEventReplayPlan,
+    RetainedEventReplayResult,
     SemanticReplayError,
     SemanticReplayResult,
+    plan_retained_events,
+    replay_retained_events,
     replay_root_events,
     replay_search_trace,
 )
@@ -62,6 +67,9 @@ __all__ = [
     "MoveDelta",
     "PositionAttribute",
     "ReferenceMCTS",
+    "RetainedEventReplayCosts",
+    "RetainedEventReplayPlan",
+    "RetainedEventReplayResult",
     "SemanticReplayError",
     "SemanticReplayResult",
     "SearchBehaviorComparison",
@@ -73,9 +81,11 @@ __all__ = [
     "compare_search_decision",
     "compare_search_events",
     "evaluator_behavior",
+    "plan_retained_events",
     "relocate_piece_counterfactual",
     "remove_piece_counterfactual",
     "replay_root_events",
+    "replay_retained_events",
     "replay_search_trace",
     "sibling_counterfactual",
 ]

@@ -7,7 +7,7 @@ reuse, transpositions, pruning, or FPU behaviour.  It emits the public
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import math
 from typing import Callable, Protocol
 
@@ -83,6 +83,41 @@ class SemanticReplayError(ValueError):
         self.phase = phase
         location = f"Event {event_id} {phase}" if event_id is not None else phase
         super().__init__(f"{location}: {message}")
+
+
+@dataclass(frozen=True)
+class RetainedEventReplayPlan:
+    """An ordered, explicit selection of events from one replayable trace.
+
+    ``events`` always follows the trace's original order, irrespective of the
+    order in which callers supplied event IDs.  Events outside this plan make
+    no contribution to the replayed result.
+    """
+
+    retained_event_ids: tuple[str, ...]
+    omitted_event_ids: tuple[str, ...]
+    events: tuple[SimulationEvent, ...]
+
+
+@dataclass(frozen=True)
+class RetainedEventReplayCosts:
+    """Observed work represented by a retained-event replay plan."""
+
+    simulations: int
+    evaluator_calls: int
+    expansions: int
+    backup_updates: int
+
+
+@dataclass(frozen=True)
+class RetainedEventReplayResult:
+    """Root decision evidence reconstructed from a retained-event plan."""
+
+    root_statistics: tuple[EdgeStatistics, ...]
+    root_policy: tuple[tuple[str, float], ...]
+    selected_move: str
+    plan: RetainedEventReplayPlan
+    costs: RetainedEventReplayCosts
 
 
 class ReferenceMCTS:
@@ -313,6 +348,132 @@ def replay_root_events(events: tuple[SimulationEvent, ...]) -> tuple[EdgeStatist
             raise ValueError(f"Event {event.event_id} has no matching root backup.")
         state = after
     return tuple(state[move] for move in sorted(state))
+
+
+def plan_retained_events(trace: SearchTrace, event_ids: tuple[str, ...] | None = None) -> RetainedEventReplayPlan:
+    """Resolve an explicit retained-event selection in original trace order.
+
+    An empty tuple is an intentional empty selection; ``None`` selects every
+    event.  The plan does not add structural events: each selected event must
+    carry the root transition needed to account for its own backup.
+    """
+    trace.require(SearchCapability.REPLAYABLE)
+    events = trace.events or ()
+    known = {event.event_id: event for event in events}
+    if len(known) != len(events):
+        raise ValueError("Replayable traces require unique event IDs.")
+    requested = tuple(known) if event_ids is None else tuple(event_ids)
+    if len(requested) != len(set(requested)):
+        raise ValueError("Retained event IDs must be unique.")
+    unknown = sorted(set(requested) - known.keys())
+    if unknown:
+        raise ValueError(f"Unknown retained event IDs: {', '.join(unknown)}.")
+    retained = frozenset(requested)
+    selected = tuple(event for event in events if event.event_id in retained)
+    return RetainedEventReplayPlan(
+        retained_event_ids=tuple(event.event_id for event in selected),
+        omitted_event_ids=tuple(event.event_id for event in events if event.event_id not in retained),
+        events=selected,
+    )
+
+
+def replay_retained_events(trace: SearchTrace, event_ids: tuple[str, ...] | None = None) -> RetainedEventReplayResult:
+    """Replay only retained root-backup contributions from a trace.
+
+    Each retained event contributes its recorded root backup delta to the
+    initialized root state.  Omitted events are neither replayed as structural
+    prerequisites nor used to restore visits or values, which lets sparse and
+    non-contiguous selections remain explicit counterfactuals.
+    """
+    plan = plan_retained_events(trace, event_ids)
+    events = trace.events or ()
+    if not events:
+        raise ValueError("Replayable traces require at least one simulation event.")
+    initial = _retained_initial_root_state(events[0])
+    state = {edge.move: edge for edge in initial}
+    for event in plan.events:
+        move, before, after = _retained_root_transition(event, set(state))
+        state[move] = _apply_retained_root_delta(state[move], before, after, event)
+    root_statistics = tuple(replace(state[move], exploration=None) for move in sorted(state))
+    total_visits = sum(edge.visits or 0 for edge in root_statistics)
+    root_policy = tuple(
+        (edge.move, 0.0 if total_visits == 0 else (edge.visits or 0) / total_visits) for edge in root_statistics
+    )
+    best_visits = max(edge.visits or 0 for edge in root_statistics)
+    selected_move = min(edge.move for edge in root_statistics if (edge.visits or 0) == best_visits)
+    costs = RetainedEventReplayCosts(
+        simulations=len(plan.events),
+        evaluator_calls=sum(event.leaf.evaluator is not None for event in plan.events),
+        expansions=sum(event.expansion is not None for event in plan.events),
+        backup_updates=sum(len(event.backups) for event in plan.events),
+    )
+    result = RetainedEventReplayResult(root_statistics, root_policy, selected_move, plan, costs)
+    if len(plan.events) == len(events):
+        final = trace.snapshots[-1]
+        final_statistics = tuple(action.statistics for action in final.actions or ())
+        if (
+            len(result.root_statistics) != len(final_statistics)
+            or any(
+                not _same_retained_edge(left, right) for left, right in zip(result.root_statistics, final_statistics)
+            )
+            or final.selection is None
+            or result.selected_move != final.selection.move
+        ):
+            raise ValueError("Full retained-event replay diverges from the recorded root result.")
+    return result
+
+
+def _retained_initial_root_state(event: SimulationEvent) -> tuple[EdgeStatistics, ...]:
+    initial = event.root_before
+    if not initial:
+        raise ValueError(f"Event {event.event_id} needs a non-empty initial root state.")
+    state = {edge.move: edge for edge in initial}
+    if len(state) != len(initial):
+        raise ValueError(f"Event {event.event_id} has duplicate root moves.")
+    return initial
+
+
+def _retained_root_transition(
+    event: SimulationEvent, expected_moves: set[str]
+) -> tuple[str, EdgeStatistics, EdgeStatistics]:
+    before = {edge.move: edge for edge in event.root_before or ()}
+    after = {edge.move: edge for edge in event.root_after or ()}
+    if len(before) != len(event.root_before or ()) or len(after) != len(event.root_after or ()):
+        raise ValueError(f"Event {event.event_id} has duplicate root moves.")
+    if before.keys() != after.keys() or before.keys() != expected_moves:
+        raise ValueError(f"Event {event.event_id} changes the root move set.")
+    changed = [move for move in before if before[move] != after[move]]
+    if len(changed) != 1:
+        raise ValueError(f"Event {event.event_id} must change exactly one root edge.")
+    move = changed[0]
+    if not any(update.before == before[move] and update.after == after[move] for update in event.backups):
+        raise ValueError(f"Event {event.event_id} has no matching root backup.")
+    return move, before[move], after[move]
+
+
+def _apply_retained_root_delta(
+    current: EdgeStatistics, before: EdgeStatistics, after: EdgeStatistics, event: SimulationEvent
+) -> EdgeStatistics:
+    if current.move != before.move or current.perspective is not before.perspective:
+        raise ValueError(f"Event {event.event_id} has incompatible root-edge evidence.")
+    if current.prior != before.prior or after.prior != before.prior:
+        raise ValueError(f"Event {event.event_id} changes a root prior.")
+    before_visits, after_visits = before.visits, after.visits
+    before_value, after_value = before.total_value, after.total_value
+    if before_visits is None or after_visits is None or before_value is None or after_value is None:
+        raise ValueError(f"Event {event.event_id} needs root visit and value evidence.")
+    visits = (current.visits or 0) + after_visits - before_visits
+    total_value = (current.total_value or 0.0) + after_value - before_value
+    if visits < 0:
+        raise ValueError(f"Event {event.event_id} would make root visits negative.")
+    return EdgeStatistics(
+        move=current.move,
+        perspective=current.perspective,
+        prior=current.prior,
+        visits=visits,
+        total_value=total_value,
+        mean_value=0.0 if visits == 0 else total_value / visits,
+    )
 
 
 def replay_search_trace(trace: SearchTrace) -> SemanticReplayResult:
@@ -672,6 +833,18 @@ def _same_edge(left: EdgeStatistics, right: EdgeStatistics) -> bool:
     )
 
 
+def _same_retained_edge(left: EdgeStatistics, right: EdgeStatistics) -> bool:
+    """Compare replayed root statistics without producer-specific U evidence."""
+    return (
+        left.move == right.move
+        and left.perspective is right.perspective
+        and _close(left.prior, right.prior)
+        and left.visits == right.visits
+        and _close(left.total_value, right.total_value)
+        and _close(left.mean_value, right.mean_value)
+    )
+
+
 def _close(left: float | None, right: float | None) -> bool:
     if left is None or right is None:
         return left is right
@@ -681,8 +854,13 @@ def _close(left: float | None, right: float | None) -> bool:
 __all__ = [
     "Evaluator",
     "ReferenceMCTS",
+    "RetainedEventReplayCosts",
+    "RetainedEventReplayPlan",
+    "RetainedEventReplayResult",
     "SemanticReplayError",
     "SemanticReplayResult",
+    "plan_retained_events",
     "replay_root_events",
+    "replay_retained_events",
     "replay_search_trace",
 ]

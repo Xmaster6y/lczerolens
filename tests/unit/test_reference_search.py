@@ -11,6 +11,11 @@ from lczerolens.reference_search import (
     ReferenceMCTS,
     SemanticReplayError,
     _Node,
+    _apply_retained_root_delta,
+    _retained_initial_root_state,
+    _retained_root_transition,
+    plan_retained_events,
+    replay_retained_events,
     _replay_path,
     replay_root_events,
     replay_search_trace,
@@ -20,7 +25,9 @@ from lczerolens.search_trace import (
     EdgeStatistics,
     LeafRecord,
     PositionEvaluation,
+    RootAction,
     SearchCapability,
+    SearchProvenance,
     SimulationEvent,
     ValuePerspective,
     Wdl,
@@ -98,6 +105,133 @@ def test_semantic_replay_reconstructs_representative_search_results(fen, simulat
     assert result.root_statistics == tuple(action.statistics for action in trace.snapshots[-1].actions)
     assert sum(probability for _, probability in result.root_policy) == pytest.approx(1.0)
     assert result.selected_move == trace.snapshots[-1].selection.move
+
+
+def test_retained_event_replay_supports_full_prefix_sparse_singleton_empty_and_complement_selections():
+    trace = ReferenceMCTS(c_puct=1.5).search(LczeroBoard(), FixedEvaluator(), simulations=8)
+    event_ids = tuple(event.event_id for event in trace.events)
+
+    full = replay_retained_events(trace)
+    prefix = replay_retained_events(trace, event_ids[:3])
+    sparse = replay_retained_events(trace, event_ids[::2])
+    singleton = replay_retained_events(trace, (event_ids[4],))
+    empty = replay_retained_events(trace, ())
+    complement = replay_retained_events(trace, event_ids[1::2])
+
+    assert full.root_statistics == pytest.approx(replay_search_trace(trace).root_statistics)
+    assert full.selected_move == trace.snapshots[-1].selection.move
+    assert prefix.costs.simulations == 3
+    assert sparse.costs.simulations == 4
+    assert singleton.costs.simulations == 1
+    assert empty.costs.simulations == 0
+    assert sum(edge.visits or 0 for edge in empty.root_statistics) == 0
+    assert tuple(event.event_id for event in sparse.plan.events) == event_ids[::2]
+    assert [edge.visits for edge in full.root_statistics] == [
+        (left.visits or 0) + (right.visits or 0)
+        for left, right in zip(sparse.root_statistics, complement.root_statistics)
+    ]
+
+
+def test_retained_event_plan_preserves_trace_order_and_rejects_ambiguous_selections():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=3)
+    first, second, third = (event.event_id for event in trace.events)
+
+    plan = plan_retained_events(trace, (third, first))
+
+    assert plan.retained_event_ids == (first, third)
+    with pytest.raises(ValueError, match="must be unique"):
+        plan_retained_events(trace, (first, first))
+    with pytest.raises(ValueError, match="Unknown retained"):
+        plan_retained_events(trace, (second, "missing"))
+
+
+def test_full_retained_replay_is_not_limited_to_reference_mcts_provenance():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    other_provider = replace(trace, provenance=SearchProvenance(source="external-search", engine="external"))
+
+    result = replay_retained_events(other_provider)
+
+    assert result.root_statistics == tuple(action.statistics for action in other_provider.snapshots[-1].actions)
+    assert result.selected_move == other_provider.snapshots[-1].selection.move
+
+
+def test_retained_event_replay_clears_provider_specific_exploration_evidence():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    before = tuple(replace(edge, exploration=0.5) for edge in event.root_before)
+    after = tuple(replace(edge, exploration=0.5) for edge in event.root_after)
+    before_by_move = {edge.move: edge for edge in before}
+    after_by_move = {edge.move: edge for edge in after}
+    root_backup = event.backups[0]
+    explored_event = replace(
+        event,
+        root_before=before,
+        root_after=after,
+        backups=(
+            replace(
+                root_backup,
+                before=before_by_move[root_backup.before.move],
+                after=after_by_move[root_backup.after.move],
+            ),
+        ),
+    )
+    snapshot = replace(trace.snapshots[-1], actions=tuple(RootAction(edge) for edge in after))
+    explored_trace = replace(trace, events=(explored_event,), snapshots=(snapshot,))
+
+    full = replay_retained_events(explored_trace)
+    empty = replay_retained_events(explored_trace, ())
+
+    assert all(edge.exploration is None for edge in full.root_statistics)
+    assert all(edge.exploration is None for edge in empty.root_statistics)
+
+
+def test_retained_event_replay_rejects_missing_or_malformed_retained_evidence():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    event = trace.events[0]
+    before = event.root_before
+    after = event.root_after
+    assert before is not None and after is not None
+
+    with pytest.raises(ValueError, match="at least one"):
+        replay_retained_events(replace(trace, events=()))
+    with pytest.raises(ValueError, match="non-empty initial"):
+        _retained_initial_root_state(replace(event, root_before=()))
+    with pytest.raises(ValueError, match="duplicate root"):
+        _retained_initial_root_state(replace(event, root_before=(before[0], before[0])))
+    with pytest.raises(ValueError, match="duplicate root"):
+        _retained_root_transition(replace(event, root_before=(before[0], before[0])), set())
+    with pytest.raises(ValueError, match="changes the root move set"):
+        _retained_root_transition(replace(event, root_after=after[:-1]), {edge.move for edge in before})
+    with pytest.raises(ValueError, match="exactly one root edge"):
+        _retained_root_transition(replace(event, root_after=before), {edge.move for edge in before})
+    with pytest.raises(ValueError, match="no matching root backup"):
+        _retained_root_transition(replace(event, backups=()), {edge.move for edge in before})
+
+
+def test_retained_root_delta_rejects_incompatible_or_incomplete_updates():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    event = trace.events[0]
+    before = event.root_before
+    after = event.root_after
+    assert before is not None and after is not None
+    after_by_move = {edge.move: edge for edge in after}
+    move = next(edge.move for edge in before if edge != after_by_move[edge.move])
+    event_before = next(edge for edge in before if edge.move == move)
+    event_after = next(edge for edge in after if edge.move == move)
+
+    with pytest.raises(ValueError, match="incompatible"):
+        _apply_retained_root_delta(before[1], event_before, event_after, event)
+    with pytest.raises(ValueError, match="changes a root prior"):
+        _apply_retained_root_delta(event_before, event_before, replace(event_after, prior=1.0), event)
+    with pytest.raises(ValueError, match="root visit and value"):
+        _apply_retained_root_delta(event_before, replace(event_before, visits=None), event_after, event)
+    with pytest.raises(ValueError, match="root visits negative"):
+        _apply_retained_root_delta(
+            event_before,
+            replace(event_before, visits=1, total_value=0.0, mean_value=0.0),
+            replace(event_after, visits=0, total_value=0.0, mean_value=0.0),
+            event,
+        )
 
 
 def test_semantic_replay_preserves_root_history_for_fivefold_repetition():
