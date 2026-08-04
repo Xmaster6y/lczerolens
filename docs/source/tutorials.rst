@@ -1,34 +1,15 @@
 Tutorials
 =========
 
-.. grid:: 2
-   :gutter: 2
+The maintained user path is organised around the contract pages:
 
-   .. grid-item-card:: Walkthrough
-      :link: notebooks/walkthrough.ipynb
+* :doc:`start` gives the evaluator and board entry point;
+* :doc:`facts` explains evidence and counterfactual records;
+* :doc:`search` explains trace capabilities and replay boundaries; and
+* :doc:`behavior` explains observable comparisons.
 
-      :bdg-primary:`Main Features`
-
-   .. grid-item-card:: Framework-Agnostic Interpretability
-      :link: notebooks/tutorials/framework-agnostic-interpretability.ipynb
-
-      :bdg-primary:`Main Features`
-
-   .. grid-item-card:: Automated Interpretability
-      :link: notebooks/tutorials/automated-interpretability.ipynb
-
-   .. grid-item-card:: Evidence of Learned Look-Ahead
-      :link: notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
-
-   .. grid-item-card:: Piece Value Estimation Using LRP
-      :link: notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
-
-.. toctree::
-   :hidden:
-   :maxdepth: 2
-
-   notebooks/walkthrough.ipynb
-   notebooks/tutorials/framework-agnostic-interpretability.ipynb
-   notebooks/tutorials/automated-interpretability.ipynb
-   notebooks/tutorials/evidence-of-learned-look-ahead.ipynb
-   notebooks/tutorials/piece-value-estimation-using-lrp.ipynb
+The repository's notebook collection is retained as legacy or exploratory
+material and is not published as a finished tutorial series. In particular,
+the automated-interpretability and learned-look-ahead notebooks remain
+incomplete. Neural-method examples are external integrations, not an
+lczerolens-owned API or methodological guarantee.

@@ -54,17 +54,7 @@ def rows_to_columns(rows: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
 
 @dataclass
 class GameData:
-    """Data class representing a chess game with moves and metadata.
-
-    Attributes
-    ----------
-    gameid : str
-        Unique identifier for the game.
-    moves : List[str]
-        List of moves in the game in standard algebraic notation.
-    book_exit : Optional[int]
-        Move number where the game exits book theory, if applicable.
-    """
+    """Data class representing a chess game with moves and metadata."""
 
     gameid: str
     moves: List[str]
@@ -221,19 +211,7 @@ class GameData:
 
 @dataclass
 class BoardData:
-    """Data class representing a single chess board position with metadata.
-
-    Attributes
-    ----------
-    gameid : str
-        Unique identifier for the game this board belongs to.
-    moves : List[str]
-        List of moves that led to this board position.
-    fen : str
-        FEN string representation of the board position.
-    label : Optional[Any]
-        Optional label for the board position (e.g., concept-based label).
-    """
+    """Data class representing a single chess board position with metadata."""
 
     gameid: str
     moves: List[str]
@@ -349,33 +327,7 @@ class BoardData:
 
 @dataclass
 class PuzzleData:
-    """Data class representing a chess puzzle with solution and metadata.
-
-    Attributes
-    ----------
-    puzzle_id : str
-        Unique identifier for the puzzle.
-    fen : str
-        FEN string representation of the puzzle's starting position.
-    initial_move : chess.Move
-        The first move that must be played to solve the puzzle.
-    moves : List[chess.Move]
-        List of moves in the solution sequence.
-    rating : int
-        Puzzle rating indicating difficulty.
-    rating_deviation : int
-        Statistical deviation of the rating.
-    popularity : int
-        Popularity score of the puzzle.
-    nb_plays : int
-        Number of times the puzzle has been played.
-    themes : List[str]
-        List of chess themes/tactics present in the puzzle.
-    game_url : str
-        URL to the original game where the puzzle occurred.
-    opening_tags : List[str]
-        List of opening tags associated with the puzzle.
-    """
+    """Data class representing a chess puzzle with solution and metadata."""
 
     puzzle_id: str
     fen: str
