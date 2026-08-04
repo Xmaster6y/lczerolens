@@ -99,7 +99,8 @@ def run_tutorial() -> TutorialResult:
     decision = compare_search_decision(evaluator, search, variation_evidence=variations)
 
     counterfactual = sibling_counterfactual(board, chess.Move.from_uci("g1f3"), chess.Move.from_uci("b1c3"))
-    assert counterfactual.modified is not None
+    if not counterfactual.succeeded or counterfactual.modified is None:
+        raise RuntimeError("The tutorial's legal sibling counterfactual unexpectedly failed.")
     original_board = board.copy(stack=True)
     original_board.push_uci("g1f3")
     modified_board = board.copy(stack=True)
