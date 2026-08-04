@@ -572,6 +572,18 @@ def test_search_trace_validation_errors():
                 }
             )
         )
+    with pytest.raises(ValueError, match="Every root expansion edge"):
+        SearchTrace(
+            **(
+                trace_args
+                | {
+                    "root_expansion": NodeExpansion(
+                        "root",
+                        (EdgeStatistics("e2e5", ValuePerspective.ROOT_PLAYER, prior=1.0),),
+                    ),
+                }
+            )
+        )
     for variation, message in (
         (("e2e4", "not-a-move"), "valid UCI"),
         (("e2e4", "e2e4"), "legal in sequence"),

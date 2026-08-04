@@ -464,6 +464,8 @@ class SearchTrace:
             if history_board.fen() != self.root_fen:
                 raise ValueError("root history must reconstruct root_fen.")
         legal_moves = {move.uci() for move in board.legal_moves}
+        if self.root_expansion is not None and any(edge.move not in legal_moves for edge in self.root_expansion.edges):
+            raise ValueError("Every root expansion edge must be legal in root_fen.")
         for snapshot in self.snapshots:
             if snapshot.selection is not None and snapshot.selection.move not in legal_moves:
                 raise ValueError("The selected root move must be legal in root_fen.")
