@@ -3,6 +3,15 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from .board import LczeroBoard
+from .counterfactuals import (
+    CounterfactualConstraints,
+    CounterfactualResult,
+    CounterfactualValidity,
+    PositionAttribute,
+    relocate_piece_counterfactual,
+    remove_piece_counterfactual,
+    sibling_counterfactual,
+)
 from .facts import Evidence, EvidenceSet, FactAnalyzer
 from .lc0_adapter import Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from .model import LczeroModel
@@ -17,6 +26,9 @@ except PackageNotFoundError:
 __all__ = [
     "LczeroBoard",
     "LczeroModel",
+    "CounterfactualConstraints",
+    "CounterfactualResult",
+    "CounterfactualValidity",
     "Evidence",
     "EvidenceSet",
     "FactAnalyzer",
@@ -24,9 +36,13 @@ __all__ = [
     "Lc0RootSnapshotParser",
     "Lc0SearchRequest",
     "MoveDelta",
+    "PositionAttribute",
     "ReferenceMCTS",
     "VariationEvidence",
     "analyze_move_delta",
     "analyze_variation",
+    "relocate_piece_counterfactual",
+    "remove_piece_counterfactual",
     "replay_root_events",
+    "sibling_counterfactual",
 ]
