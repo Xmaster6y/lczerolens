@@ -14,10 +14,15 @@ the automated-interpretability and learned-look-ahead notebooks remain
 incomplete. Neural-method examples are external integrations, not an
 lczerolens-owned API or methodological guarantee.
 
+The maintained :doc:`decision-analysis-tutorial` is the one reproducible
+end-to-end product-validation workflow. It uses a small versioned fixture and
+is executed in the explicit integration test tier.
+
 .. toctree::
    :hidden:
    :maxdepth: 2
 
+   decision-analysis-tutorial
    notebooks/walkthrough.ipynb
    notebooks/tutorials/framework-agnostic-interpretability.ipynb
    notebooks/tutorials/automated-interpretability.ipynb
