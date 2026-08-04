@@ -10,6 +10,8 @@ from lczerolens import LczeroBoard
 from lczerolens.reference_search import (
     ReferenceMCTS,
     SemanticReplayError,
+    _Node,
+    _replay_path,
     replay_root_events,
     replay_search_trace,
 )
@@ -96,6 +98,56 @@ def test_semantic_replay_reconstructs_representative_search_results(fen, simulat
     assert result.root_statistics == tuple(action.statistics for action in trace.snapshots[-1].actions)
     assert sum(probability for _, probability in result.root_policy) == pytest.approx(1.0)
     assert result.selected_move == trace.snapshots[-1].selection.move
+
+
+def test_semantic_replay_preserves_root_history_for_fivefold_repetition():
+    board = LczeroBoard("8/8/6r1/8/6R1/8/K6k/8 b - - 0 1")
+    cycle = ("h2h3", "a2a1", "h3h2", "a1a2")
+    for _ in range(3):
+        for move in cycle:
+            board.push_uci(move)
+    for move in cycle[:3]:
+        board.push_uci(move)
+
+    trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
+    result = replay_search_trace(trace)
+
+    assert trace.root_start_fen == "8/8/6r1/8/6R1/8/K6k/8 b - - 0 1"
+    assert trace.root_move_history == tuple(board_move.uci() for board_move in board.move_stack)
+    assert trace.events[0].leaf.terminal
+    assert result.selected_move == trace.snapshots[-1].selection.move
+
+
+def test_semantic_replay_requires_complete_and_consistent_root_history():
+    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
+
+    with pytest.raises(ValueError, match="both a starting FEN and move sequence"):
+        replace(trace, root_start_fen=None)
+    with pytest.raises(ValueError, match="root history must reconstruct root_fen"):
+        replace(trace, root_move_history=("e2e4",))
+    with pytest.raises(ValueError, match="root history must be a legal sequence"):
+        replace(trace, root_move_history=("e2e5",))
+
+    legacy = replace(trace, root_start_fen=None, root_move_history=None)
+    with pytest.raises(SemanticReplayError, match="root_history: reference traces need root history"):
+        replay_search_trace(legacy)
+
+    object.__setattr__(trace, "root_move_history", ("e2e4",))
+    with pytest.raises(SemanticReplayError, match="root_history: root history does not reconstruct"):
+        replay_search_trace(trace)
+
+
+def test_semantic_replay_path_rejects_unreachable_internal_states():
+    trace = ReferenceMCTS(c_puct=0.0).search(LczeroBoard(), FixedEvaluator(-0.4), simulations=2)
+    first, second = trace.events
+    unexpanded_root = _Node(LczeroBoard(), "node-0")
+
+    with pytest.raises(SemanticReplayError, match="path continues beyond unexpanded"):
+        _replay_path(unexpanded_root, {"node-0": unexpanded_root}, first, c_puct=0.0)
+    with pytest.raises(SemanticReplayError, match="simulation path is empty"):
+        _replay_path(unexpanded_root, {"node-0": unexpanded_root}, replace(first, path=()), c_puct=0.0)
+    with pytest.raises(SemanticReplayError, match="path ends early at already expanded"):
+        replay_search_trace(replace(trace, events=(first, replace(second, path=second.path[:1]))))
 
 
 def test_semantic_replay_reports_first_path_divergence():

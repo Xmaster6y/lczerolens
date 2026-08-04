@@ -435,6 +435,8 @@ class SearchTrace:
     events: tuple[SimulationEvent, ...] | None = None
     root_expansion: NodeExpansion | None = None
     root_evaluator: EvaluatorCall | None = None
+    root_start_fen: str | None = None
+    root_move_history: tuple[str, ...] | None = None
     schema_version: int = field(default=1, init=False)
 
     def __post_init__(self) -> None:
@@ -447,6 +449,20 @@ class SearchTrace:
         fen_player = ChessPlayer.WHITE if board.turn is chess.WHITE else ChessPlayer.BLACK
         if self.root_player is not fen_player:
             raise ValueError("root_player must match the side to move in root_fen.")
+        if (self.root_start_fen is None) != (self.root_move_history is None):
+            raise ValueError("root history requires both a starting FEN and move sequence.")
+        if self.root_start_fen is not None and self.root_move_history is not None:
+            try:
+                history_board = chess.Board(self.root_start_fen)
+                for move_uci in self.root_move_history:
+                    move = chess.Move.from_uci(move_uci)
+                    if move not in history_board.legal_moves:
+                        raise ValueError("Root history moves must be legal from root_start_fen.")
+                    history_board.push(move)
+            except ValueError as error:
+                raise ValueError("root history must be a legal sequence from root_start_fen.") from error
+            if history_board.fen() != self.root_fen:
+                raise ValueError("root history must reconstruct root_fen.")
         legal_moves = {move.uci() for move in board.legal_moves}
         for snapshot in self.snapshots:
             if snapshot.selection is not None and snapshot.selection.move not in legal_moves:

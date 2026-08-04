@@ -227,7 +227,9 @@ tree state nor calls the search backup routine.
 For the stronger trace-faithfulness guarantee,
 :func:`~lczerolens.reference_search.replay_search_trace` independently rebuilds
 the deterministic reference tree from ``root_fen`` and the semantic event
-records. It redoes PUCT path selection, legal expansion, terminal evaluation,
+records. Reference traces retain the starting FEN and full root move history so
+history-dependent terminality, including fivefold repetition, is replayed from
+the same board state. It redoes PUCT path selection, legal expansion, terminal evaluation,
 perspective-aware backups, root visit policy, and final move selection. Recorded
 root pre/post states and the final snapshot are divergence checks, not the state
 returned by replay. :class:`~lczerolens.reference_search.SemanticReplayError`

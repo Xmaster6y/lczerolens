@@ -179,6 +179,8 @@ class ReferenceMCTS:
             events=tuple(events),
             root_expansion=root_expansion,
             root_evaluator=root_evaluator,
+            root_start_fen=root.board.root().fen(),
+            root_move_history=tuple(move.uci() for move in root.board.move_stack),
         )
 
     def _expand(
@@ -330,7 +332,7 @@ def replay_search_trace(trace: SearchTrace) -> SemanticReplayResult:
     if not events:
         raise SemanticReplayError("at least one simulation event is required.", phase="events")
     c_puct = _replay_c_puct(trace)
-    root_board = LczeroBoard(trace.root_fen)
+    root_board = _replay_root_board(trace)
     first = events[0]
     if not first.path:
         raise SemanticReplayError(
@@ -359,8 +361,6 @@ def replay_search_trace(trace: SearchTrace) -> SemanticReplayResult:
 
     root_statistics = _replay_edge_stats(root, ValuePerspective.ROOT_PLAYER)
     total_visits = sum(edge.visits or 0 for edge in root_statistics)
-    if total_visits <= 0:
-        raise SemanticReplayError("replayed root has no visits.", phase="result")
     root_policy = tuple((edge.move, (edge.visits or 0) / total_visits) for edge in root_statistics)
     best_visits = max(edge.visits or 0 for edge in root_statistics)
     selected_move = min(edge.move for edge in root_statistics if (edge.visits or 0) == best_visits)
@@ -376,6 +376,20 @@ def _replay_c_puct(trace: SearchTrace) -> float:
     if not math.isfinite(value) or value < 0:
         raise SemanticReplayError("c_puct must be finite and non-negative.", phase="provenance")
     return value
+
+
+def _replay_root_board(trace: SearchTrace) -> LczeroBoard:
+    if trace.root_start_fen is None or trace.root_move_history is None:
+        raise SemanticReplayError(
+            "reference traces need root history to replay history-dependent terminality.",
+            phase="root_history",
+        )
+    board = LczeroBoard(trace.root_start_fen)
+    for move_uci in trace.root_move_history:
+        board.push_uci(move_uci)
+    if board.fen() != trace.root_fen:
+        raise SemanticReplayError("root history does not reconstruct root_fen.", phase="root_history")
+    return board
 
 
 def _initialize_replay_root(root: _Node, trace: SearchTrace, event: SimulationEvent) -> None:
