@@ -27,6 +27,8 @@ Supported user path
 * :doc:`search` defines typed, capability-aware traces. ``ReferenceMCTS`` is
   an auditable reference implementation, not production lc0 search.
 * :doc:`behavior` covers evaluator, counterfactual, and search comparisons.
+* :doc:`decision-analysis-tutorial` runs those public boundaries together with
+  a small versioned fixture; its output is a demonstration, not a result.
 * :doc:`api/index` contains generated reference documentation for every
   importable module.
 
