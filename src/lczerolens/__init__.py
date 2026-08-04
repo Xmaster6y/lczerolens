@@ -29,7 +29,13 @@ from .facts import Evidence, EvidenceSet, FactAnalyzer
 from .lc0_adapter import Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from .model import LczeroModel
 from .move_evidence import MoveDelta, VariationEvidence, analyze_move_delta, analyze_variation
-from .reference_search import ReferenceMCTS, replay_root_events
+from .reference_search import (
+    ReferenceMCTS,
+    SemanticReplayError,
+    SemanticReplayResult,
+    replay_root_events,
+    replay_search_trace,
+)
 
 try:
     __version__ = version("lczerolens")
@@ -56,6 +62,8 @@ __all__ = [
     "MoveDelta",
     "PositionAttribute",
     "ReferenceMCTS",
+    "SemanticReplayError",
+    "SemanticReplayResult",
     "SearchBehaviorComparison",
     "VariationEvidence",
     "analyze_move_delta",
@@ -68,5 +76,6 @@ __all__ = [
     "relocate_piece_counterfactual",
     "remove_piece_counterfactual",
     "replay_root_events",
+    "replay_search_trace",
     "sibling_counterfactual",
 ]

@@ -66,6 +66,25 @@ class _Node:
     expanded: bool = False
 
 
+@dataclass(frozen=True)
+class SemanticReplayResult:
+    """Root result independently reconstructed from reference-search events."""
+
+    root_statistics: tuple[EdgeStatistics, ...]
+    root_policy: tuple[tuple[str, float], ...]
+    selected_move: str
+
+
+class SemanticReplayError(ValueError):
+    """The first semantic divergence found while replaying a search trace."""
+
+    def __init__(self, message: str, *, event_id: str | None = None, phase: str):
+        self.event_id = event_id
+        self.phase = phase
+        location = f"Event {event_id} {phase}" if event_id is not None else phase
+        super().__init__(f"{location}: {message}")
+
+
 class ReferenceMCTS:
     """Sequential PUCT search whose output is a replayable :class:`SearchTrace`.
 
@@ -93,7 +112,7 @@ class ReferenceMCTS:
 
         root = _Node(board.copy(stack=True), "node-0")
         node_count = 1
-        root_evaluation, _, _ = self._expand(root, evaluator, ValuePerspective.ROOT_PLAYER)
+        root_evaluation, root_expansion, root_evaluator = self._expand(root, evaluator, ValuePerspective.ROOT_PLAYER)
         events: list[SimulationEvent] = []
 
         for simulation in range(simulations):
@@ -158,6 +177,10 @@ class ReferenceMCTS:
                 ),
             ),
             events=tuple(events),
+            root_expansion=root_expansion,
+            root_evaluator=root_evaluator,
+            root_start_fen=root.board.root().fen(),
+            root_move_history=tuple(move.uci() for move in root.board.move_stack),
         )
 
     def _expand(
@@ -292,4 +315,374 @@ def replay_root_events(events: tuple[SimulationEvent, ...]) -> tuple[EdgeStatist
     return tuple(state[move] for move in sorted(state))
 
 
-__all__ = ["Evaluator", "ReferenceMCTS", "replay_root_events"]
+def replay_search_trace(trace: SearchTrace) -> SemanticReplayResult:
+    """Independently replay a deterministic-reference full trace.
+
+    Unlike :func:`replay_root_events`, this reconstructs tree state from the
+    root position and semantic event records. Recorded ``root_after`` states
+    are checked for divergence, but are never used as the replay result.
+    """
+    trace.require(SearchCapability.REPLAYABLE)
+    if trace.provenance.source != "lczerolens-reference-mcts" or trace.provenance.engine != "deterministic-reference":
+        raise SemanticReplayError(
+            "semantic replay is limited to deterministic ReferenceMCTS traces.",
+            phase="provenance",
+        )
+    events = trace.events or ()
+    if not events:
+        raise SemanticReplayError("at least one simulation event is required.", phase="events")
+    c_puct = _replay_c_puct(trace)
+    root_board = _replay_root_board(trace)
+    first = events[0]
+    if not first.path:
+        raise SemanticReplayError(
+            "a non-terminal root simulation needs a path.", event_id=first.event_id, phase="path"
+        )
+    root_id = first.path[0].node_id
+    root = _Node(root_board, root_id)
+    _initialize_replay_root(root, trace, first)
+    nodes = {root_id: root}
+
+    for expected_simulation, event in enumerate(events):
+        if event.simulation != expected_simulation:
+            raise SemanticReplayError(
+                f"expected simulation {expected_simulation}, got {event.simulation}.",
+                event_id=event.event_id,
+                phase="sequence",
+            )
+        before = _replay_edge_stats(root, ValuePerspective.ROOT_PLAYER)
+        _check_edge_sequence(event.root_before, before, event, "root_before")
+        path = _replay_path(root, nodes, event, c_puct)
+        leaf_node = path[-1][2]
+        _replay_leaf(leaf_node, event, root.board.turn)
+        _replay_backups(path, event)
+        after = _replay_edge_stats(root, ValuePerspective.ROOT_PLAYER)
+        _check_edge_sequence(event.root_after, after, event, "root_after")
+
+    root_statistics = _replay_edge_stats(root, ValuePerspective.ROOT_PLAYER)
+    total_visits = sum(edge.visits or 0 for edge in root_statistics)
+    root_policy = tuple((edge.move, (edge.visits or 0) / total_visits) for edge in root_statistics)
+    best_visits = max(edge.visits or 0 for edge in root_statistics)
+    selected_move = min(edge.move for edge in root_statistics if (edge.visits or 0) == best_visits)
+    _check_replay_result(trace, root_statistics, selected_move)
+    return SemanticReplayResult(root_statistics, root_policy, selected_move)
+
+
+def _replay_c_puct(trace: SearchTrace) -> float:
+    values = [parameter.value for parameter in trace.provenance.parameters if parameter.name == "c_puct"]
+    if len(values) != 1 or isinstance(values[0], bool) or not isinstance(values[0], (int, float)):
+        raise SemanticReplayError("provenance needs one numeric c_puct parameter.", phase="provenance")
+    value = float(values[0])
+    if not math.isfinite(value) or value < 0:
+        raise SemanticReplayError("c_puct must be finite and non-negative.", phase="provenance")
+    return value
+
+
+def _replay_root_board(trace: SearchTrace) -> LczeroBoard:
+    if trace.root_start_fen is None or trace.root_move_history is None:
+        raise SemanticReplayError(
+            "reference traces need root history to replay history-dependent terminality.",
+            phase="root_history",
+        )
+    board = LczeroBoard(trace.root_start_fen)
+    for move_uci in trace.root_move_history:
+        board.push_uci(move_uci)
+    if board.fen() != trace.root_fen:
+        raise SemanticReplayError("root history does not reconstruct root_fen.", phase="root_history")
+    return board
+
+
+def _initialize_replay_root(root: _Node, trace: SearchTrace, event: SimulationEvent) -> None:
+    initial = event.root_before or ()
+    legal = {move.uci(): move for move in root.board.legal_moves}
+    expansion = trace.root_expansion
+    evaluator = trace.root_evaluator
+    if expansion is None or evaluator is None or expansion.node_id != root.node_id:
+        raise SemanticReplayError(
+            "reference trace needs matching root expansion and evaluator evidence.", phase="root_expansion"
+        )
+    expanded = {edge.move: edge for edge in expansion.edges}
+    logits = dict(evaluator.legal_policy_logits or ())
+    if expanded.keys() != legal.keys() or logits.keys() != legal.keys():
+        raise SemanticReplayError(
+            "expanded root edges and evaluator logits must match the legal moves.", phase="root_expansion"
+        )
+    priors = _priors_from_logits(logits, evaluator.dtype)
+    if {edge.move for edge in initial} != legal.keys():
+        raise SemanticReplayError(
+            "initial root edges do not match the legal moves.", event_id=event.event_id, phase="root_before"
+        )
+    for move in sorted(legal):
+        edge = expanded[move]
+        if (
+            edge.perspective is not ValuePerspective.ROOT_PLAYER
+            or edge.prior is None
+            or (edge.visits, edge.total_value, edge.mean_value) != (0, 0.0, 0.0)
+            or not _close(edge.prior, priors[move])
+        ):
+            raise SemanticReplayError(
+                f"root edge {move} does not match the evaluator-derived initial state.", phase="root_expansion"
+            )
+        root.edges[move] = _Edge(legal[move], priors[move])
+    for edge in initial:
+        if edge.perspective is not ValuePerspective.ROOT_PLAYER:
+            raise SemanticReplayError(
+                f"root edge {edge.move} has perspective {edge.perspective.value}.",
+                event_id=event.event_id,
+                phase="root_before",
+            )
+        if (
+            edge.prior is None
+            or (edge.visits, edge.total_value, edge.mean_value) != (0, 0.0, 0.0)
+            or not _close(edge.prior, root.edges[edge.move].prior)
+        ):
+            raise SemanticReplayError(
+                f"root edge {edge.move} is not an unvisited initialized edge.",
+                event_id=event.event_id,
+                phase="root_before",
+            )
+    root.expanded = True
+
+
+def _replay_path(
+    root: _Node, nodes: dict[str, _Node], event: SimulationEvent, c_puct: float
+) -> list[tuple[_Node, _Edge, _Node]]:
+    node = root
+    replayed: list[tuple[_Node, _Edge, _Node]] = []
+    for depth, recorded in enumerate(event.path):
+        if not node.expanded or not node.edges:
+            raise SemanticReplayError(
+                f"path continues beyond unexpanded node {node.node_id} at depth {depth}.",
+                event_id=event.event_id,
+                phase="path",
+            )
+        expected_edge = _replay_select(node, c_puct)
+        if recorded.node_id != node.node_id or recorded.move != expected_edge.move.uci():
+            raise SemanticReplayError(
+                f"depth {depth} expected {node.node_id}:{expected_edge.move.uci()}, "
+                f"got {recorded.node_id}:{recorded.move}.",
+                event_id=event.event_id,
+                phase="path",
+            )
+        if expected_edge.child is None:
+            if recorded.child_id in nodes:
+                raise SemanticReplayError(
+                    f"new child ID {recorded.child_id!r} is already in use.",
+                    event_id=event.event_id,
+                    phase="path",
+                )
+            child_board = node.board.copy(stack=True)
+            child_board.push(expected_edge.move)
+            expected_edge.child = _Node(child_board, recorded.child_id)
+            nodes[recorded.child_id] = expected_edge.child
+        elif expected_edge.child.node_id != recorded.child_id:
+            raise SemanticReplayError(
+                f"edge {recorded.move} points to {expected_edge.child.node_id!r}, not {recorded.child_id!r}.",
+                event_id=event.event_id,
+                phase="path",
+            )
+        child = expected_edge.child
+        replayed.append((node, expected_edge, child))
+        node = child
+        if not node.expanded:
+            if depth != len(event.path) - 1:
+                raise SemanticReplayError(
+                    f"path continues after first unexpanded node {node.node_id}.",
+                    event_id=event.event_id,
+                    phase="path",
+                )
+            break
+    if not replayed:
+        raise SemanticReplayError("simulation path is empty.", event_id=event.event_id, phase="path")
+    if node.expanded:
+        raise SemanticReplayError(
+            f"path ends early at already expanded node {node.node_id}.",
+            event_id=event.event_id,
+            phase="path",
+        )
+    return replayed
+
+
+def _replay_select(node: _Node, c_puct: float) -> _Edge:
+    scale = math.sqrt(sum(edge.visits for edge in node.edges.values()))
+    scores = {
+        move: edge.mean_value + c_puct * edge.prior * scale / (1 + edge.visits) for move, edge in node.edges.items()
+    }
+    best = max(scores.values())
+    return node.edges[min(move for move, score in scores.items() if score == best)]
+
+
+def _replay_leaf(node: _Node, event: SimulationEvent, root_turn: chess.Color) -> None:
+    if event.leaf.node_id != node.node_id:
+        raise SemanticReplayError(
+            f"path ends at {node.node_id!r}, but leaf is {event.leaf.node_id!r}.",
+            event_id=event.event_id,
+            phase="leaf",
+        )
+    terminal = node.board.is_game_over()
+    if event.leaf.terminal is not terminal:
+        raise SemanticReplayError(
+            "terminal flag disagrees with the replayed board.", event_id=event.event_id, phase="leaf"
+        )
+    perspective = ValuePerspective.ROOT_PLAYER if node.board.turn == root_turn else ValuePerspective.SIDE_TO_MOVE
+    if event.leaf.evaluation.perspective is not perspective:
+        raise SemanticReplayError(
+            f"expected {perspective.value} evaluation perspective.", event_id=event.event_id, phase="leaf"
+        )
+    if terminal:
+        if event.expansion is not None or event.leaf.evaluator is not None:
+            raise SemanticReplayError(
+                "terminal leaves cannot have an expansion or evaluator call.", event_id=event.event_id, phase="leaf"
+            )
+        outcome = node.board.outcome()
+        expected = (
+            0.0 if outcome is None or outcome.winner is None else 1.0 if outcome.winner == node.board.turn else -1.0
+        )
+        if not _close(event.leaf.evaluation.value, expected):
+            raise SemanticReplayError(f"terminal value should be {expected}.", event_id=event.event_id, phase="leaf")
+        return
+    if event.expansion is None or event.leaf.evaluator is None:
+        raise SemanticReplayError(
+            "non-terminal first visits need expansion and evaluator evidence.",
+            event_id=event.event_id,
+            phase="expansion",
+        )
+    _replay_expansion(node, event, perspective)
+
+
+def _replay_expansion(node: _Node, event: SimulationEvent, perspective: ValuePerspective) -> None:
+    expansion = event.expansion
+    evaluator = event.leaf.evaluator
+    assert expansion is not None and evaluator is not None
+    if expansion.node_id != node.node_id:
+        raise SemanticReplayError(
+            "expansion node does not match the leaf.", event_id=event.event_id, phase="expansion"
+        )
+    legal = {move.uci(): move for move in node.board.legal_moves}
+    edges = {edge.move: edge for edge in expansion.edges}
+    logits = dict(evaluator.legal_policy_logits or ())
+    if edges.keys() != legal.keys() or logits.keys() != legal.keys():
+        raise SemanticReplayError(
+            "expanded edges and evaluator logits must match the legal moves.",
+            event_id=event.event_id,
+            phase="expansion",
+        )
+    priors = _priors_from_logits(logits, evaluator.dtype)
+    ordered = sorted(legal)
+    for move in ordered:
+        edge = edges[move]
+        if edge.perspective is not perspective or edge.prior is None:
+            raise SemanticReplayError(
+                f"edge {move} has the wrong perspective or no prior.",
+                event_id=event.event_id,
+                phase="expansion",
+            )
+        if (edge.visits, edge.total_value, edge.mean_value) != (0, 0.0, 0.0) or not _close(edge.prior, priors[move]):
+            raise SemanticReplayError(
+                f"edge {move} does not match the evaluator-derived initial state.",
+                event_id=event.event_id,
+                phase="expansion",
+            )
+        node.edges[move] = _Edge(legal[move], priors[move])
+    node.expanded = True
+
+
+def _priors_from_logits(logits: dict[str, float], dtype_name: str) -> dict[str, float]:
+    ordered = sorted(logits)
+    dtype = getattr(torch, dtype_name, None)
+    if not isinstance(dtype, torch.dtype) or not dtype.is_floating_point:
+        raise SemanticReplayError(f"unsupported evaluator dtype {dtype_name!r}.", phase="expansion")
+    probabilities = torch.tensor([logits[move] for move in ordered], dtype=dtype).softmax(0).tolist()
+    return dict(zip(ordered, probabilities))
+
+
+def _replay_backups(path: list[tuple[_Node, _Edge, _Node]], event: SimulationEvent) -> None:
+    if event.leaf.evaluation.value is None:
+        raise SemanticReplayError("scalar leaf value is required.", event_id=event.event_id, phase="backup")
+    if len(event.backups) != len(path):
+        raise SemanticReplayError(
+            f"expected {len(path)} backups, got {len(event.backups)}.",
+            event_id=event.event_id,
+            phase="backup",
+        )
+    value = event.leaf.evaluation.value
+    for index, ((parent, edge, _), recorded) in enumerate(zip(reversed(path), event.backups)):
+        value = -value
+        perspective = ValuePerspective.ROOT_PLAYER if parent is path[0][0] else ValuePerspective.SIDE_TO_MOVE
+        before = ReferenceMCTS._edge_stat(edge, perspective)
+        if (
+            recorded.node_id != parent.node_id
+            or not _close(recorded.signed_value, value)
+            or not _same_edge(recorded.before, before)
+        ):
+            raise SemanticReplayError(
+                f"backup {index} does not match reconstructed node, value, or pre-state.",
+                event_id=event.event_id,
+                phase="backup",
+            )
+        edge.visits += 1
+        edge.total_value += value
+        after = ReferenceMCTS._edge_stat(edge, perspective)
+        if not _same_edge(recorded.after, after):
+            raise SemanticReplayError(
+                f"backup {index} post-state diverges from the reconstructed update.",
+                event_id=event.event_id,
+                phase="backup",
+            )
+
+
+def _replay_edge_stats(node: _Node, perspective: ValuePerspective) -> tuple[EdgeStatistics, ...]:
+    return tuple(ReferenceMCTS._edge_stat(node.edges[move], perspective) for move in sorted(node.edges))
+
+
+def _check_edge_sequence(
+    recorded: tuple[EdgeStatistics, ...] | None,
+    replayed: tuple[EdgeStatistics, ...],
+    event: SimulationEvent,
+    phase: str,
+) -> None:
+    if (
+        recorded is None
+        or len(recorded) != len(replayed)
+        or any(not _same_edge(left, right) for left, right in zip(recorded, replayed))
+    ):
+        raise SemanticReplayError("recorded root state diverges from replay.", event_id=event.event_id, phase=phase)
+
+
+def _check_replay_result(trace: SearchTrace, root_statistics: tuple[EdgeStatistics, ...], selected_move: str) -> None:
+    final = trace.snapshots[-1]
+    actions = tuple(action.statistics for action in final.actions or ())
+    if len(actions) != len(root_statistics) or any(
+        not _same_edge(left, right) for left, right in zip(actions, root_statistics)
+    ):
+        raise SemanticReplayError("final root action statistics diverge from replay.", phase="result")
+    if final.selection is None or final.selection.move != selected_move:
+        raise SemanticReplayError("selected move diverges from replay.", phase="result")
+
+
+def _same_edge(left: EdgeStatistics, right: EdgeStatistics) -> bool:
+    return (
+        left.move == right.move
+        and left.perspective is right.perspective
+        and _close(left.prior, right.prior)
+        and left.visits == right.visits
+        and _close(left.total_value, right.total_value)
+        and _close(left.mean_value, right.mean_value)
+        and _close(left.exploration, right.exploration)
+    )
+
+
+def _close(left: float | None, right: float | None) -> bool:
+    if left is None or right is None:
+        return left is right
+    return math.isclose(left, right, rel_tol=1e-6, abs_tol=1e-6)
+
+
+__all__ = [
+    "Evaluator",
+    "ReferenceMCTS",
+    "SemanticReplayError",
+    "SemanticReplayResult",
+    "replay_root_events",
+    "replay_search_trace",
+]
