@@ -3,6 +3,8 @@
 import chess
 import pytest
 
+import lczerolens.counterfactuals as counterfactuals
+
 from lczerolens.counterfactuals import (
     ConstraintRelation,
     CounterfactualConstraints,
@@ -238,6 +240,9 @@ def test_invalid_source_positions_and_malformed_configuration_are_rejected():
     relocation = relocate_piece_counterfactual(invalid, chess.E2, chess.E3)
 
     assert sibling.failures[0].reason is CounterfactualFailureReason.INVALID_POSITION
+    assert not sibling.history.shared_parent
+    assert not sibling.history.legal_from_shared_parent
+    assert not sibling.history.reachability_proven
     assert removal.failures[0].reason is CounterfactualFailureReason.INVALID_POSITION
     assert relocation.failures[0].reason is CounterfactualFailureReason.INVALID_POSITION
     with pytest.raises(TypeError, match="python-chess Board"):
@@ -255,6 +260,8 @@ def test_invalid_source_positions_and_malformed_configuration_are_rejected():
         CounterfactualConstraints(changed_attributes=frozenset(("turn",)))
     with pytest.raises(TypeError, match="FactAnalyzer"):
         CounterfactualConstraints(changed_facts=("material",))
+    with pytest.raises(AssertionError, match="Unhandled position attribute"):
+        counterfactuals._attribute_value(chess.Board(), object())
 
 
 def test_sibling_failures_distinguish_illegal_moves_and_no_alternative():
@@ -267,7 +274,10 @@ def test_sibling_failures_distinguish_illegal_moves_and_no_alternative():
     no_alternative = sibling_counterfactual(forced, only_move)
 
     assert illegal_factual.failures[0].reason is CounterfactualFailureReason.ILLEGAL_FACTUAL_MOVE
+    assert not illegal_factual.history.shared_parent
+    assert not illegal_factual.history.legal_from_shared_parent
     assert illegal_alternative.failures[0].reason is CounterfactualFailureReason.ILLEGAL_ALTERNATIVE_MOVE
+    assert len(illegal_alternative.failures) == 1
     assert no_alternative.failures[0].reason is CounterfactualFailureReason.NO_ALTERNATIVE
 
 

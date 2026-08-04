@@ -219,12 +219,12 @@ def sibling_counterfactual(
     resolved = constraints or CounterfactualConstraints()
     operator = SiblingMoveOperator(factual_move, alternative_move)
     parent_snapshot = _snapshot(parent)
-    empty_history = _history_guarantee(parent, None, shared_parent=True, legal=True)
+    failure_history = _history_guarantee(parent, None, shared_parent=False, legal=False)
     if not parent.is_valid():
         return _failure_result(
             parent_snapshot,
             operator,
-            empty_history,
+            failure_history,
             CounterfactualFailureReason.INVALID_POSITION,
             f"The supplied parent position has invalid python-chess status {int(parent.status())}.",
         )
@@ -232,7 +232,7 @@ def sibling_counterfactual(
         return _failure_result(
             parent_snapshot,
             operator,
-            empty_history,
+            failure_history,
             CounterfactualFailureReason.ILLEGAL_FACTUAL_MOVE,
             "The factual move is not legal in the supplied parent position.",
             candidate_move=factual_move if isinstance(factual_move, chess.Move) else None,
@@ -284,19 +284,19 @@ def sibling_counterfactual(
             modified_move_delta=analyze_move_delta(parent, candidate),
         )
 
-    if alternative_move is not None and candidate_failures:
-        reason = candidate_failures[0].reason
-        message = candidate_failures[0].message
+    if alternative_move is not None:
+        failures = tuple(candidate_failures)
     else:
         reason = CounterfactualFailureReason.NO_SATISFYING_COUNTERFACTUAL
         message = f"None of {len(candidates)} deterministic legal alternatives satisfied the constraints."
+        failures = (CounterfactualFailure(reason, message), *candidate_failures)
     return CounterfactualResult(
         original=original,
         modified=None,
         operator=operator,
         validity=CounterfactualValidity.NO_COUNTERFACTUAL,
         history=_history_guarantee(factual_board, None, shared_parent=True, legal=True),
-        failures=(CounterfactualFailure(reason, message), *tuple(candidate_failures)),
+        failures=failures,
     )
 
 
