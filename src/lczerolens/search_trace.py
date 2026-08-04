@@ -7,10 +7,12 @@ must stay ``None`` rather than being reconstructed or guessed by an adapter.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from enum import Enum
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 import chess
 
@@ -44,6 +46,10 @@ _CAPABILITY_LEVEL = {
 
 class SearchCapabilityError(RuntimeError):
     """Raised when a consumer asks a trace for evidence it does not contain."""
+
+
+class SearchTraceFormatError(ValueError):
+    """Raised when persisted search-trace bytes do not match the canonical format."""
 
 
 class ValuePerspective(str, Enum):
@@ -90,6 +96,8 @@ class SearchParameter:
     def __post_init__(self) -> None:
         if not self.name:
             raise ValueError("Search parameter names must not be empty.")
+        if self.value is not None and not isinstance(self.value, str | int | float | bool):
+            raise ValueError(f"Search parameter {self.name!r} has an unsupported value type.")
         if isinstance(self.value, float) and not math.isfinite(self.value):
             raise ValueError(f"Search parameter {self.name!r} must be finite.")
 
@@ -532,6 +540,161 @@ class SearchTrace:
         return self
 
 
+_SEARCH_TRACE_FORMAT = "lczerolens.search-trace"
+_SEARCH_TRACE_FORMAT_VERSION = 1
+_SEARCH_TRACE_TYPES = {
+    record_type.__name__: record_type
+    for record_type in (
+        BackupUpdate,
+        EdgeStatistics,
+        EvaluatorCall,
+        LeafRecord,
+        NodeExpansion,
+        PathStep,
+        PositionEvaluation,
+        PrincipalVariation,
+        RootAction,
+        RootSelection,
+        RootSnapshot,
+        SearchBudget,
+        SearchParameter,
+        SearchProvenance,
+        SearchTrace,
+        SimulationEvent,
+        Wdl,
+    )
+}
+_SEARCH_TRACE_ENUMS = {
+    enum_type.__name__: enum_type
+    for enum_type in (
+        ChessPlayer,
+        SearchBudgetUnit,
+        SearchCapability,
+        ValuePerspective,
+    )
+}
+
+
+def _canonical_record(value: Any) -> Any:
+    """Convert supported trace values to a JSON-compatible typed record."""
+    if is_dataclass(value) and not isinstance(value, type):
+        return {
+            "$type": type(value).__name__,
+            **{item.name: _canonical_record(getattr(value, item.name)) for item in fields(value)},
+        }
+    if isinstance(value, Enum):
+        return {"$enum": type(value).__name__, "value": value.value}
+    if isinstance(value, tuple):
+        return [_canonical_record(item) for item in value]
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise SearchTraceFormatError("Canonical search traces cannot contain non-finite floats.")
+        return int(value) if value.is_integer() else value
+    if value is None or isinstance(value, str | int | bool):
+        return value
+    raise SearchTraceFormatError(f"Unsupported search-trace value {type(value).__name__!r}.")
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    record: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in record:
+            raise SearchTraceFormatError(f"Duplicate JSON field {key!r}.")
+        record[key] = value
+    return record
+
+
+def _decode_record(value: Any) -> Any:
+    """Decode one typed canonical record without supplying schema defaults."""
+    if isinstance(value, list):
+        return tuple(_decode_record(item) for item in value)
+    if not isinstance(value, dict):
+        return value
+    if "$enum" in value:
+        if set(value) != {"$enum", "value"}:
+            raise SearchTraceFormatError("Enum records must contain exactly '$enum' and 'value'.")
+        enum_name = value["$enum"]
+        if not isinstance(enum_name, str):
+            raise SearchTraceFormatError("Search-trace enum names must be strings.")
+        enum_type = _SEARCH_TRACE_ENUMS.get(enum_name)
+        if enum_type is None:
+            raise SearchTraceFormatError(f"Unknown search-trace enum {enum_name!r}.")
+        try:
+            return enum_type(value["value"])
+        except (TypeError, ValueError) as error:
+            raise SearchTraceFormatError(f"Invalid {enum_name} value {value['value']!r}.") from error
+    if "$type" not in value:
+        raise SearchTraceFormatError("Nested search-trace objects require a '$type' field.")
+    type_name = value["$type"]
+    if not isinstance(type_name, str):
+        raise SearchTraceFormatError("Search-trace record type names must be strings.")
+    record_type = _SEARCH_TRACE_TYPES.get(type_name)
+    if record_type is None:
+        raise SearchTraceFormatError(f"Unknown search-trace record type {type_name!r}.")
+    expected_fields = {item.name for item in fields(record_type)}
+    actual_fields = set(value) - {"$type"}
+    if actual_fields != expected_fields:
+        missing = sorted(expected_fields - actual_fields)
+        unexpected = sorted(actual_fields - expected_fields)
+        raise SearchTraceFormatError(f"Invalid {type_name} fields: missing={missing!r}, unexpected={unexpected!r}.")
+    values = {name: _decode_record(value[name]) for name in expected_fields}
+    if record_type is SearchTrace:
+        schema_version = values.pop("schema_version")
+        if isinstance(schema_version, bool) or schema_version != 1:
+            raise SearchTraceFormatError(f"Unsupported SearchTrace schema version {schema_version!r}.")
+    try:
+        return record_type(**values)
+    except (TypeError, ValueError) as error:
+        raise SearchTraceFormatError(f"Invalid {type_name} record: {error}") from error
+
+
+def serialize_search_trace(trace: SearchTrace) -> bytes:
+    """Return the version-1 canonical UTF-8 JSON representation of ``trace``."""
+    if not isinstance(trace, SearchTrace):
+        raise TypeError("serialize_search_trace expects a SearchTrace.")
+    envelope = {
+        "format": _SEARCH_TRACE_FORMAT,
+        "format_version": _SEARCH_TRACE_FORMAT_VERSION,
+        "trace": _canonical_record(trace),
+    }
+    return json.dumps(
+        envelope,
+        allow_nan=False,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+
+
+def deserialize_search_trace(data: bytes) -> SearchTrace:
+    """Load a trace from canonical bytes, rejecting malformed or incompatible records."""
+    if not isinstance(data, bytes):
+        raise TypeError("deserialize_search_trace expects bytes.")
+    try:
+        envelope = json.loads(data.decode("utf-8"), object_pairs_hook=_reject_duplicate_keys)
+    except SearchTraceFormatError:
+        raise
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise SearchTraceFormatError(f"Invalid search-trace JSON: {error}") from error
+    if not isinstance(envelope, dict) or set(envelope) != {"format", "format_version", "trace"}:
+        raise SearchTraceFormatError("Search-trace envelopes require exactly 'format', 'format_version', and 'trace'.")
+    if envelope["format"] != _SEARCH_TRACE_FORMAT:
+        raise SearchTraceFormatError(f"Unsupported search-trace format {envelope['format']!r}.")
+    if isinstance(envelope["format_version"], bool) or envelope["format_version"] != _SEARCH_TRACE_FORMAT_VERSION:
+        raise SearchTraceFormatError(f"Unsupported search-trace format version {envelope['format_version']!r}.")
+    trace = _decode_record(envelope["trace"])
+    if not isinstance(trace, SearchTrace):
+        raise SearchTraceFormatError("The canonical envelope must contain a SearchTrace record.")
+    if serialize_search_trace(trace) != data:
+        raise SearchTraceFormatError("Search-trace bytes are valid JSON but are not canonical.")
+    return trace
+
+
+def search_trace_digest(trace: SearchTrace) -> str:
+    """Return the lowercase SHA-256 digest of the canonical trace bytes."""
+    return hashlib.sha256(serialize_search_trace(trace)).hexdigest()
+
+
 __all__ = [
     "BackupUpdate",
     "ChessPlayer",
@@ -550,10 +713,14 @@ __all__ = [
     "SearchBudgetUnit",
     "SearchCapability",
     "SearchCapabilityError",
+    "SearchTraceFormatError",
     "SearchParameter",
     "SearchProvenance",
     "SearchTrace",
     "SimulationEvent",
     "ValuePerspective",
     "Wdl",
+    "deserialize_search_trace",
+    "search_trace_digest",
+    "serialize_search_trace",
 ]
