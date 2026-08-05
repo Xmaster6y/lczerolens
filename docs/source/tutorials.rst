@@ -1,11 +1,7 @@
 Tutorials
 =========
 
-The notebooks use small deterministic fixtures where a downloaded network or
-engine would make the documentation non-reproducible. They run offline, are
-executed while the documentation is built, and are also exercised in the
-explicit integration test tier. Their observations demonstrate API
-composition; they are not scientific claims about trained chess models.
+All notebooks use deterministic fixtures and run offline during the docs build.
 
 Feature notebooks
 -----------------

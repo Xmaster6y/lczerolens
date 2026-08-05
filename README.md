@@ -15,38 +15,17 @@
 ![publish](https://github.com/Xmaster6y/lczerolens/actions/workflows/publish.yml/badge.svg)
 [![docs](https://readthedocs.org/projects/lczerolens/badge/?version=latest)](https://lczerolens.readthedocs.io/en/latest/?badge=latest)
 
-Leela Chess Zero (lc0) Lens (`lczerolens`) makes lc0-family models portable and operable in PyTorch, then expresses their evaluator and search behavior as chess-domain evidence. It provides the model and chess-analysis boundary; interpretability methods remain external integrations. See the [scope and compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html).
+Portable PyTorch evaluation and chess-decision evidence for lc0-family models.
 
 ## Getting Started
 
-### Installs
-
-```bash
-pip install lczerolens
-```
-
-Loading or publishing models through Hugging Face Hub requires the `hub` extra:
+Install the package. Use the `hub` extra for the example below:
 
 ```bash
 pip install "lczerolens[hub]"
 ```
 
-### Tests
-
-After `just test-fixtures` has fetched and checksummed the lc0 fixtures, `just
-tests` runs the complete fast, offline suite (unit and conformance tests) and
-produces the coverage report. `just tests-unit` and `just tests-conformance`
-select either tier for diagnosis. The native Lczero bindings are a test-only
-conformance oracle, installed through the `conformance` dependency group rather
-than exposed as library API. Notebook and release checks are opt-in with
-`just tests-slow`; the notebook suite executes every maintained `.ipynb` page.
-`just tests-wheel` builds and installs the wheel in a fresh virtual
-environment before running the maintained workflow. CI retains JUnit and
-coverage artifacts to make failures inspectable.
-
-### Evaluate a position
-
-Get the best move predicted by a model:
+Evaluate a position:
 
 ```python
 import chess
@@ -54,92 +33,32 @@ from lczerolens import LczeroEvaluator, LczeroModel
 
 model = LczeroModel.from_hf("lczerolens/maia-1100")
 evaluator = LczeroEvaluator(model)
-board = chess.Board()
+evaluation = evaluator.evaluate(chess.Board())
 
-evaluation = evaluator.evaluate(board)
 print(evaluation.policy.best_move)
 print(evaluation.policy["e2e4"].probability)
 ```
 
-### External Interpretability Integrations
+## Examples
 
-Use `lczerolens` with your preferred PyTorch interpretability framework
-(`tdhook`, `captum`, `zennit`, or `nnsight`). These packages own their methods;
-they are not lczerolens abstractions or dependencies of its evaluator contract.
+- [Model inputs and loading](https://lczerolens.readthedocs.io/en/latest/notebooks/features/models-and-inputs.html)
+- [Evaluate positions and batches](https://lczerolens.readthedocs.io/en/latest/notebooks/features/evaluate-positions.html)
+- [Chess evidence: moves, lines, puzzles, and counterfactuals](https://lczerolens.readthedocs.io/en/latest/notebooks/features/chess-evidence.html)
+- [Search and replay](https://lczerolens.readthedocs.io/en/latest/notebooks/features/replayable-search.html)
+- [Complete decision-analysis tutorial](examples/decision_analysis_tutorial.py)
 
-```python
-import chess
-from lczerolens import LczeroEvaluator, LczeroKeys, LczeroModel
-from tdhook.attribution import Saliency
-from tensordict import TensorDict
+For the package boundary and detailed guides, see the [documentation](https://lczerolens.readthedocs.io).
 
-model = LczeroModel.from_hf("lczerolens/maia-1100")
-evaluator = LczeroEvaluator(model)
-board = chess.Board()
+### Documentation map
 
-def best_logit_init_targets(td: TensorDict, _):
-    policy = td[LczeroKeys.NETWORK_POLICY_LOGITS]
-    best_logit = policy.max(dim=-1).values
-    return TensorDict(out=best_logit, batch_size=td.batch_size)
-
-saliency_context = Saliency(init_attr_targets=best_logit_init_targets)
-with saliency_context.prepare(evaluator.model) as hooked_model:
-    tensors = hooked_model(evaluator.prepare([board]))
-    evaluation = evaluator.finish([board], tensors)[0]
-    attr = tensors.get(("attr", "input", "planes"))
-```
-
-### Define and grade a puzzle
-
-Puzzle correctness comes from an authored solution tree rather than from model
-preference or chess terminality:
-
-```python
-import chess
-from lczerolens import Puzzle, PuzzleContinuation, PuzzleSolution
-
-board = chess.Board("7k/8/5KQ1/8/8/8/8/8 w - - 0 1")
-solution = PuzzleSolution((PuzzleContinuation("g6g7"),))
-puzzle = Puzzle.from_board(board, solution)
-
-attempt = puzzle.grade(["g6g7"])
-print(attempt.status)  # PuzzleStatus.SOLVED
-```
-
-Solution trees can retain alternative accepted moves and authored opponent
-replies. Provider-specific dataset ingestion remains outside the core package.
-
-### Decision-analysis documentation
-
-The maintained documentation covers the evaluator and position contract, exact
-facts and move/variation evidence, authored puzzles, constrained
-counterfactuals, typed search traces, and concrete decision comparisons. Start
-with the [scope and compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html),
-then follow the [facts](https://lczerolens.readthedocs.io/en/latest/facts.html),
-[search](https://lczerolens.readthedocs.io/en/latest/search.html), and
-[use cases](https://lczerolens.readthedocs.io/en/latest/use-cases.html) guides.
-
-Interpretability techniques remain external integrations rather than
-lczerolens APIs.
-
-### Maintained demos
-
-The executable [decision-analysis tutorial](examples/decision_analysis_tutorial.py)
-composes evaluator, search, exact line analysis, and counterfactual comparison
-against a deterministic fixture. Seven maintained
-[feature and tutorial notebooks](docs/source/tutorials.rst) cover model loading
-and inputs, evaluation, chess evidence, search and replay, complete decision
-analysis, model comparison, and authored-puzzle analysis. Sphinx renders and
-executes them, and the integration tier executes the source notebooks directly.
-Historical notebooks built on removed APIs are not shipped.
-
-## Full Documentation
-
-See the full [documentation](https://lczerolens.readthedocs.io).
+- [Release use cases and required guarantees](https://lczerolens.readthedocs.io/en/latest/use-cases.html)
+- [Architecture](https://lczerolens.readthedocs.io/en/latest/architecture.html)
+- [Scope and compatibility](https://lczerolens.readthedocs.io/en/latest/scope.html)
+- [API reference](https://lczerolens.readthedocs.io/en/latest/api/index.html)
 
 ## Contribute
 
-See the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Development and test commands live there rather than in the quick-start path.
 
 ## Citation
 

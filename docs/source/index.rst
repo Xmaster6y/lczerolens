@@ -40,8 +40,7 @@ lczerolens
 
             lc0 interoperability and chess-decision analysis
 
-        **lczerolens** makes lc0-family models operable in PyTorch and turns their evaluator and search behavior into chess-domain evidence.
-        Interpretability frameworks such as `tdhook`, `captum`, `zennit`, and `nnsight` integrate at this boundary; they are not core abstractions.
+        PyTorch evaluation and chess-decision evidence for lc0-family models.
 
         .. div:: button-group
 
@@ -51,11 +50,11 @@ lczerolens
 
                   Get Started
 
-          .. button-ref:: tutorials
+          .. button-ref:: use-cases
             :color: primary
             :outline:
 
-                Tutorials
+                Use Cases
 
           .. button-ref:: api/index
             :color: primary
@@ -66,7 +65,7 @@ lczerolens
 
 .. div:: sd-fs-1 sd-font-weight-bold sd-text-center sd-text-primary sd-mb-5
 
-  Key Features
+  Find what you need
 
 .. grid:: 1 1 2 2
     :class-container: features
@@ -80,9 +79,11 @@ lczerolens
 
         .. div::
 
-          **Adaptability**
+          **Examples**
 
-          Load converted Lczero ONNX or serialized PyTorch networks through one TensorDict model boundary.
+          Start with model loading, position evaluation, chess evidence, or replayable search.
+
+          :doc:`Open examples <tutorials>`
 
     .. grid-item::
 
@@ -93,6 +94,32 @@ lczerolens
 
         .. div::
 
-          **Composable execution**
+          **Release use cases**
 
-          Run board-aware evaluation while external tools instrument the same TensorDict execution path.
+          See supported workflows and the guarantees that make their outputs usable.
+
+          :doc:`Read use cases <use-cases>`
+
+    .. grid-item::
+
+      .. div:: features-container
+
+        .. div::
+
+          **Architecture**
+
+          See the chess, model, evaluator, and evidence boundaries.
+
+          :doc:`Read architecture <architecture>`
+
+    .. grid-item::
+
+      .. div:: features-container
+
+        .. div::
+
+          **API reference**
+
+          Browse the supported package surface.
+
+          :doc:`Open API reference <api/index>`
