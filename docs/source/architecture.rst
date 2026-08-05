@@ -25,6 +25,7 @@ The system has two connected planes::
        |-- LczeroEvaluator.evaluate() --> Evaluation
        |-- analyze_move()/line() ------> MoveAnalysis / LineAnalysis
        |-- Search.run() ---------------> SearchResult + SearchTrace
+       |-- Puzzle.from_board() --------> Puzzle + PuzzleAttempt
        `-- counterfactual operator ----> CounterfactualPair
                                               |
                                               v
@@ -81,6 +82,11 @@ Public vocabulary
    Exact python-chess-derived position transitions.  These concrete names are
    preferred over a generic evidence-first interface.
 
+``Puzzle`` and ``PuzzleAttempt``
+   A reconstructable authored task and the immutable result of grading a
+   full-ply attempted prefix against its accepted solution tree. Puzzle
+   correctness is normative source evidence, not an evaluator or search claim.
+
 ``SearchResult``
    The natural final result shared by reference and official Lczero search.
 
@@ -117,8 +123,9 @@ Ownership boundaries
      - Canonical TensorDict execution keys, chess-aware preparation, and
        standardized evaluation semantics.
    * - lczerolens analysis records
-     - Exact facts, move and line effects, validity, provenance, search evidence,
-       comparisons, and canonical persistence.
+     - Exact facts, move and line effects, authored puzzle tasks and grading,
+       validity, provenance, search evidence, comparisons, and canonical
+       persistence.
    * - External interpretability packages
      - Hooks, patches, attribution, probes, and intervention methods.
    * - Downstream research
@@ -219,6 +226,7 @@ The target source layout is organized by user action::
        evaluator.py
        evaluation.py
        moves.py
+       puzzle.py
        counterfactuals.py
        decision.py
        facts.py
@@ -237,9 +245,9 @@ The target source layout is organized by user action::
 Module initialization is acyclic. The package ``__init__`` files are composition
 roots, not layers. Foundations (constants, provenance, schema, facts, codec,
 and raw model execution) do not import chess-facing orchestration. Evaluation
-may depend on those foundations; trace/result records do not depend on an
-evaluator; reference search may depend on both. The decision module composes
-completed records. Evaluation persistence is imported lazily from its
+and puzzles may depend on those foundations; trace/result records do not depend
+on an evaluator; reference search may depend on both. The decision module
+composes completed records. Evaluation persistence is imported lazily from its
 record methods so serialization does not become an initialization cycle.
 
 Exact chess analysis (facts, moves, provenance, and counterfactual
@@ -258,7 +266,7 @@ The release removes rather than deprecates:
 * samplers and general self-play;
 * generic ``Concept`` and dataset-metric abstractions;
 * ``ForceValue`` and flow subclasses;
-* generic dataset wrappers;
+* generic dataset wrappers and provider-specific puzzle datasets;
 * board-owned visualization;
 * low-level backend helpers that do not implement an evaluator or search
   boundary; and

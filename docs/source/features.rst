@@ -10,8 +10,8 @@ concrete, tested workflows.
   constrained counterfactuals.
 * :doc:`search` defines provenance, capabilities, snapshots, and the
   deterministic reference-search boundary.
-* :doc:`use-cases` defines evaluator, counterfactual, search, and decision
-  compositions through the canonical evidence records.
+* :doc:`use-cases` defines evaluator, authored-puzzle, counterfactual, search,
+  and decision compositions through concrete chess records.
 
 The old notebook collection depended on mutable MCTS, samplers, generic
 datasets, and concept abstractions. Those examples were removed with those

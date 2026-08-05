@@ -24,6 +24,8 @@ The currently shipped public surface includes:
 * passing an evaluator through arbitrary external instrumentation while
   retaining the same input/output contract.
 * recording exact position facts and legal move/line analysis;
+* defining source-authored puzzle solution trees and grading immutable
+  full-ply attempts without treating model preference as correctness;
 * constructing constrained sibling, structural, and piece-relocation
   counterfactual records with explicit validity and reachability guarantees;
 * producing typed search traces from deterministic reference search or exposed
@@ -78,7 +80,7 @@ Architecture boundary
           |                             |
           v                             v
    chess-semantic analysis          search traces and comparisons
-   position facts, move/variation,  evaluator-guided MCTS evidence
+   facts, move/variation, puzzles,  evaluator-guided MCTS evidence
    counterfactual evidence
 
 ``python-chess`` owns chess rules. External tools own neural-method semantics.
@@ -166,6 +168,12 @@ than a separate compatibility commitment.
      - ``MoveAnalysis``, ``LineAnalysis``, ``analyze_move``, ``analyze_line``
      - Retain
      - Legal-move and ordered-line analysis built from exact facts.
+   * - ``puzzle``
+     - ``Puzzle``, ``PuzzleSolution``, ``PuzzleContinuation``,
+       ``PuzzleAttempt``, and puzzle provenance/status values
+     - Retain
+     - Reconstructable authored tasks and deterministic grading, separate from
+       evaluator/search observations and provider-specific dataset ingestion.
    * - ``counterfactuals``
      - Constraints, validity/result records, and sibling/structural operators
      - Retain

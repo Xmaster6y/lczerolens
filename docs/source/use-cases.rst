@@ -154,7 +154,52 @@ Counterfactual construction and model comparison remain separate::
 Structural rule validity never implies historical reachability, and an
 observed model difference never implies a causal or strategic conclusion.
 
-6. Persist a reproducible analysis
+6. Define and grade an authored puzzle
+--------------------------------------
+
+A puzzle is a normative chess task, not merely a position or an observed best
+move. Its solution is a tree: siblings are alternative accepted moves and
+children are the accepted continuations at the next ply::
+
+   import chess
+   from lczerolens import Puzzle, PuzzleContinuation, PuzzleProvenance, PuzzleSolution
+
+   board = chess.Board("7k/8/5KQ1/8/8/8/8/8 w - - 0 1")
+
+   solution = PuzzleSolution((
+       PuzzleContinuation("g6g7"),
+       PuzzleContinuation(
+           "g6h6",
+           (PuzzleContinuation(
+               "h8g8",
+               (PuzzleContinuation("h6g7"),),
+           ),),
+       ),
+   ))
+   puzzle = Puzzle.from_board(
+       board,
+       solution,
+       provenance=PuzzleProvenance("example", "mate-tree"),
+   )
+
+   puzzle.solver
+   puzzle.accepted_moves()
+   attempt = puzzle.grade(["g6h6", "h8g8"])
+   attempt.status
+   attempt.accepted_moves
+
+Attempts contain every ply, including authored opponent replies. A solution
+leaf means that the task is solved even when the resulting board is not a
+terminal chess position. Conversely, evaluator policy, search preference, or a
+terminal position does not establish puzzle correctness unless the authored
+solution accepts that continuation.
+
+Provider-specific ingestion remains outside the core. For formats whose first
+move establishes the puzzle position, an adapter applies that move to a
+``chess.Board`` before constructing the ``Puzzle``. Ratings, themes, and bulk
+dataset operations remain provider metadata rather than grading semantics.
+
+7. Persist a reproducible analysis
 ----------------------------------
 
 Durable evidence records have canonical versioned serialization::
@@ -176,10 +221,10 @@ evidence retained by the comparison. Loading revalidates the complete object
 graph and rejects unknown versions, record types, fields, duplicate JSON keys,
 and noncanonical encodings.
 
-The release test exercises evaluation, search, exact move analysis, comparison,
-serialization, restoration, and digest stability end to end.  Mutable modules,
-engine processes, live tensors, devices, and external instrumentation contexts
-are runtime state and are not serialized as evidence.
+The release test exercises evaluation, search, exact move analysis, puzzle
+grading, comparison, serialization, restoration, and digest stability end to
+end. Mutable modules, engine processes, live tensors, devices, and external
+instrumentation contexts are runtime state and are not serialized as evidence.
 
 Explicit non-goals
 ------------------

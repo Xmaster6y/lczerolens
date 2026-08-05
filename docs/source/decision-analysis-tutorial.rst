@@ -37,6 +37,8 @@ The executable companion is :download:`examples/decision_analysis_tutorial.py
 #. attaches exact material line analysis to the evaluator and search
    candidates;
 #. makes a constrained sibling-move counterfactual (``g1f3`` versus ``b1c3``);
+#. constructs and solves an authored mate-in-one puzzle independently of model
+   or search preference;
 #. reports the target ``e7e5`` effect separately from the collateral legal
    action distribution; and
 #. records whether evaluator and reference-search candidates agree, including
@@ -86,8 +88,8 @@ Reading the result
 
 ``TutorialResult`` retains structured records instead of prose explanations:
 the raw evaluator preference, the search decision comparison, exact variation
-evidence, the counterfactual validity tier, one target-move delta, and the
-collateral distribution shift. It also retains the restored decision and its
-canonical digest. Those are observations with provenance. They can motivate a
-research question, but they do not establish a causal mechanism, model
-strength, or general chess conclusion.
+evidence, an authored puzzle attempt, the counterfactual validity tier, one
+target-move delta, and the collateral distribution shift. It also retains the
+restored decision and its canonical digest. Those are observations with
+provenance. They can motivate a research question, but they do not establish a
+causal mechanism, model strength, or general chess conclusion.

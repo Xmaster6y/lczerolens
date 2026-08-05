@@ -3,6 +3,7 @@
 import pytest
 
 from examples.decision_analysis_tutorial import TUTORIAL_DECISION_DIGEST, run_tutorial
+from lczerolens import PuzzleStatus
 from lczerolens.search.trace import SearchCapability
 
 
@@ -17,6 +18,8 @@ def test_decision_analysis_tutorial_runs_from_its_versioned_fixture(tmp_path):
     assert result.counterfactual.succeeded
     assert result.counterfactual_comparison.pair is result.counterfactual
     assert result.decision.counterfactuals == (result.counterfactual_comparison,)
+    assert result.puzzle_attempt.puzzle is result.puzzle
+    assert result.puzzle_attempt.status is PuzzleStatus.SOLVED
     assert artifact.read_bytes() == result.decision.to_bytes()
     assert result.restored_decision == result.decision
     assert result.restored_decision.digest() == result.decision_digest

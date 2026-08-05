@@ -47,6 +47,7 @@ pip install "lczerolens[hub]"      # Hugging Face Hub loading/publishing
 - `src/lczerolens/_codec/`: stateless Lczero input-plane and policy-vocabulary transport.
 - `src/lczerolens/evaluator.py`: chess-aware TensorDict preparation and standardized evaluation.
 - `src/lczerolens/model.py`: `LczeroModel`, the raw TensorDict/network-format adapter.
+- `src/lczerolens/puzzle.py`: authored solution trees and deterministic full-ply attempt grading.
 - `src/lczerolens/search/`: unified typed limits and results, engine-independent
   traces, deterministic reference search, official Lczero adapter, and replay helpers.
 - `src/lczerolens/constants.py`: 1858-policy move vocabulary (`POLICY_INDEX` and inverse).
@@ -124,6 +125,8 @@ best_move = evaluation.policy.best_move
   attribution, probing, hooks, patches, and other neural-method semantics.
 - `ReferenceSearch` is deterministic reference search for evaluation and replay;
   `LczeroSearch` translates only evidence exposed by the official engine.
+- `Puzzle` owns source-authored correctness; evaluator and search preference do
+  not establish that a puzzle move is accepted.
 
 Search consumers must call `SearchTrace.supports()` or `SearchTrace.require()`
 before making capability-dependent claims. A trace records evidence at the

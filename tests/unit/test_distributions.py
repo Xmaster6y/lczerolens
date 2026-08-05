@@ -63,7 +63,7 @@ def test_distributions_contain_only_library_release_files(tmp_path: Path) -> Non
 
 @pytest.mark.slow
 def test_built_wheel_runs_maintained_workflow_in_clean_environment(tmp_path: Path) -> None:
-    """Install only the wheel, exclude checkout imports, and run all six use cases."""
+    """Install only the wheel, exclude checkout imports, and run all seven use cases."""
     if os.environ.get("LCZEROLENS_RUN_WHEEL_TEST") != "1":
         pytest.skip("Set LCZEROLENS_RUN_WHEEL_TEST=1 to run the networked installed-wheel release gate.")
     from examples.decision_analysis_tutorial import TUTORIAL_DECISION_DIGEST

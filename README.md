@@ -88,12 +88,32 @@ with saliency_context.prepare(evaluator.model) as hooked_model:
     attr = tensors.get(("attr", "input", "planes"))
 ```
 
+### Define and grade a puzzle
+
+Puzzle correctness comes from an authored solution tree rather than from model
+preference or chess terminality:
+
+```python
+import chess
+from lczerolens import Puzzle, PuzzleContinuation, PuzzleSolution
+
+board = chess.Board("7k/8/5KQ1/8/8/8/8/8 w - - 0 1")
+solution = PuzzleSolution((PuzzleContinuation("g6g7"),))
+puzzle = Puzzle.from_board(board, solution)
+
+attempt = puzzle.grade(["g6g7"])
+print(attempt.status)  # PuzzleStatus.SOLVED
+```
+
+Solution trees can retain alternative accepted moves and authored opponent
+replies. Provider-specific dataset ingestion remains outside the core package.
+
 ### Decision-analysis documentation
 
 The maintained documentation covers the evaluator and position contract, exact
-facts and move/variation evidence, constrained counterfactuals, typed search
-traces, and concrete decision comparisons. Start with the [scope and
-compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html),
+facts and move/variation evidence, authored puzzles, constrained
+counterfactuals, typed search traces, and concrete decision comparisons. Start
+with the [scope and compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html),
 then follow the [facts](https://lczerolens.readthedocs.io/en/latest/facts.html),
 [search](https://lczerolens.readthedocs.io/en/latest/search.html), and
 [use cases](https://lczerolens.readthedocs.io/en/latest/use-cases.html) guides.

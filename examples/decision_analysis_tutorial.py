@@ -16,7 +16,15 @@ import chess
 import torch
 from torch import nn
 
-from lczerolens import ReferenceSearch, SearchResult, Simulations
+from lczerolens import (
+    Puzzle,
+    PuzzleAttempt,
+    PuzzleContinuation,
+    PuzzleSolution,
+    ReferenceSearch,
+    SearchResult,
+    Simulations,
+)
 from lczerolens._codec import encode_move
 from lczerolens.decision import (
     CounterfactualComparison,
@@ -86,6 +94,8 @@ class TutorialResult:
     counterfactual: CounterfactualPair
     counterfactual_comparison: CounterfactualComparison
     variations: dict[str, LineAnalysis]
+    puzzle: Puzzle
+    puzzle_attempt: PuzzleAttempt
     restored_decision: DecisionAnalysis
     decision_digest: str
 
@@ -111,6 +121,11 @@ def run_tutorial(artifact_path: str | PathLike[str] | None = None) -> TutorialRe
     if not counterfactual.succeeded or counterfactual.alternative is None:
         raise RuntimeError("The tutorial's legal sibling counterfactual unexpectedly failed.")
     comparison = compare_counterfactual(counterfactual, runtime.evaluator)
+    puzzle = Puzzle.from_board(
+        chess.Board("7k/8/5KQ1/8/8/8/8/8 w - - 0 1"),
+        PuzzleSolution((PuzzleContinuation("g6g7"),)),
+    )
+    puzzle_attempt = puzzle.grade(("g6g7",))
     decision = compare_decision(
         evaluation,
         search,
@@ -132,6 +147,8 @@ def run_tutorial(artifact_path: str | PathLike[str] | None = None) -> TutorialRe
         counterfactual,
         comparison,
         variations,
+        puzzle,
+        puzzle_attempt,
         restored,
         decision.digest(),
     )

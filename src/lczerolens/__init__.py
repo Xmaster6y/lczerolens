@@ -38,6 +38,14 @@ from .moves import (
     analyze_move,
 )
 from .provenance import ChessPlayer, EvaluationProvenance, PositionIdentity
+from .puzzle import (
+    Puzzle,
+    PuzzleAttempt,
+    PuzzleContinuation,
+    PuzzleProvenance,
+    PuzzleSolution,
+    PuzzleStatus,
+)
 from .search import (
     Depth,
     LczeroSearch,
@@ -100,6 +108,12 @@ __all__ = [
     "MoveAnalysis",
     "PositionAttribute",
     "PositionIdentity",
+    "Puzzle",
+    "PuzzleAttempt",
+    "PuzzleContinuation",
+    "PuzzleProvenance",
+    "PuzzleSolution",
+    "PuzzleStatus",
     "Nodes",
     "ReferenceSearch",
     "RetainedEventReplayCosts",
