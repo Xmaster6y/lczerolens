@@ -17,7 +17,7 @@ tests-slow:
 	uv run --group dev --extra hub pytest tests -m 'slow or integration' --cov=src --cov-report=term-missing --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy -s -v
 
 tests-wheel:
-	uv run --group dev pytest -q tests/unit/test_distributions.py
+	LCZEROLENS_RUN_WHEEL_TEST=1 uv run --group dev pytest -q tests/unit/test_distributions.py
 
 tests-live-lczero:
 	#!/usr/bin/env bash

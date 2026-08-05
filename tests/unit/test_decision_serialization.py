@@ -11,7 +11,8 @@ import chess
 import pytest
 
 from lczerolens import DecisionAnalysis, DecisionAnalysisFormatError
-from lczerolens.decision import DecisionAction, compare_decision
+from lczerolens.counterfactuals import sibling_counterfactual
+from lczerolens.decision import DecisionAction, compare_counterfactual, compare_decision
 from lczerolens.facts import ChessSide, FactPerspective, MaterialAnalyzer, SideSubject
 from lczerolens.moves import analyze_line
 from lczerolens.provenance import EvaluationProvenance
@@ -43,7 +44,13 @@ def _decision() -> DecisionAnalysis:
         )
         for move in ("d2d4", "e2e4")
     }
-    return compare_decision(evaluator.evaluate(board), fixture_search(), line_analyses=lines)
+    comparison = compare_counterfactual(sibling_counterfactual(board, factual="e2e4", alternative="d2d4"), evaluator)
+    return compare_decision(
+        evaluator.evaluate(board),
+        fixture_search(),
+        line_analyses=lines,
+        counterfactuals=(comparison,),
+    )
 
 
 def test_canonical_round_trip_digest_and_file_persistence(tmp_path):
@@ -59,6 +66,7 @@ def test_canonical_round_trip_digest_and_file_persistence(tmp_path):
     assert deserialize_decision_analysis(serialize_decision_analysis(decision)) == decision
     assert decision.digest() == hashlib.sha256(encoded).hexdigest()
     assert restored.digest() == decision.digest()
+    assert restored.counterfactuals == decision.counterfactuals
 
 
 @pytest.mark.parametrize(
@@ -125,6 +133,11 @@ def test_line_and_counterfactual_entries_are_strict_and_canonical():
         _decode_lines([entry, {"line": line, "move": "d2d4"}])
     with pytest.raises(DecisionAnalysisFormatError, match="CounterfactualPair"):
         _decode_counterfactuals([{"alternative_evaluation": {}, "factual_evaluation": {}, "pair": line}])
+
+    malformed = json.loads(decision.to_bytes())
+    malformed["counterfactuals"][0]["factual_evaluation"] = malformed["evaluation"]
+    with pytest.raises(DecisionAnalysisFormatError, match="factual evaluation must match"):
+        DecisionAnalysis.from_bytes(_canonical_json(malformed))
 
 
 def test_typed_evidence_codec_rejects_unknown_or_invalid_values():

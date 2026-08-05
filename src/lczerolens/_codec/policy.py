@@ -17,8 +17,9 @@ def encode_move(board: chess.Board, move: chess.Move) -> int:
     if not isinstance(move, chess.Move):
         raise TypeError(f"Expected chess.Move, got {type(move).__name__}.")
 
-    from_square = _relative_square(move.from_square, board.turn)
-    to_square = _relative_square(move.to_square, board.turn)
+    policy_move = _policy_move(board, move)
+    from_square = _relative_square(policy_move.from_square, board.turn)
+    to_square = _relative_square(policy_move.to_square, board.turn)
     label = chess.square_name(from_square) + chess.square_name(to_square)
     if move.promotion == chess.BISHOP:
         label += "b"
@@ -45,7 +46,12 @@ def decode_move(board: chess.Board, index: int) -> chess.Move:
         piece = board.piece_at(from_square)
         if piece is not None and piece.piece_type == chess.PAWN and chess.square_rank(to_square) in {0, 7}:
             promotion = chess.KNIGHT
-    return chess.Move(from_square, to_square, promotion=promotion)
+    decoded = chess.Move(from_square, to_square, promotion=promotion)
+    if not board.chess960:
+        for legal_move in board.legal_moves:
+            if board.is_castling(legal_move) and _policy_move(board, legal_move) == decoded:
+                return legal_move
+    return decoded
 
 
 def legal_indices(board: chess.Board) -> torch.Tensor:
@@ -70,6 +76,15 @@ def _relative_square(square: chess.Square, turn: chess.Color) -> chess.Square:
 
 def _absolute_square(square: chess.Square, turn: chess.Color) -> chess.Square:
     return square if turn == chess.WHITE else chess.square_mirror(square)
+
+
+def _policy_move(board: chess.Board, move: chess.Move) -> chess.Move:
+    """Translate standard castling to Lczero's king-to-rook vocabulary."""
+    if board.chess960 or not board.is_castling(move):
+        return move
+    rank = chess.square_rank(move.from_square)
+    rook_file = 7 if board.is_kingside_castling(move) else 0
+    return chess.Move(move.from_square, chess.square(rook_file, rank))
 
 
 def _validate_board(board: chess.Board) -> None:

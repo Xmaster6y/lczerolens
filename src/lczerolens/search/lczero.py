@@ -7,6 +7,7 @@ replayability.
 
 from __future__ import annotations
 
+import math
 import re
 import subprocess
 import threading
@@ -124,7 +125,12 @@ class LczeroSearch:
             raise ValueError("LczeroSearch requires a network path or identifier.")
         if not engine_version:
             raise ValueError("LczeroSearch requires an explicit engine version.")
-        if not isinstance(timeout, int | float) or isinstance(timeout, bool) or timeout <= 0:
+        if (
+            not isinstance(timeout, int | float)
+            or isinstance(timeout, bool)
+            or not math.isfinite(timeout)
+            or timeout <= 0
+        ):
             raise ValueError("LczeroSearch timeout must be positive seconds.")
         self._adapter = _LczeroProcessAdapter(
             executable,
@@ -191,7 +197,10 @@ class _LczeroRootSnapshotParser:
                     raise LczeroOutputError(f"Unsupported lc0 bestmove line: {line!r}")
                 bestmove = tokens[1]
             elif _MOVE_STAT.match(line):
-                actions.append(self._parse_action(line))
+                action = self._parse_action(line)
+                if chess.Move.from_uci(action.statistics.move) not in root_board.legal_moves:
+                    raise LczeroOutputError(f"lc0 root statistics contained illegal move {action.statistics.move!r}.")
+                actions.append(action)
             elif line.startswith("info "):
                 for match in _INFO_NUMBER.finditer(line):
                     if match["name"] == "nodes":

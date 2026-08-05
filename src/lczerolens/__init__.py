@@ -2,17 +2,6 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .behavior import (
-    BehaviorMetric,
-    ControlKind,
-    CounterfactualBehaviorComparison,
-    EvaluatorBehavior,
-    SearchBehaviorComparison,
-    compare_counterfactual_behavior,
-    compare_evaluator_to_search,
-    compare_search_events,
-    evaluator_behavior,
-)
 from ._decision_serialization import DecisionAnalysisFormatError
 from .counterfactuals import (
     CounterfactualConstraints,
@@ -86,12 +75,9 @@ __all__ = [
     "LczeroEvaluator",
     "LczeroKeys",
     "LczeroModel",
-    "BehaviorMetric",
     "ChessPlayer",
-    "ControlKind",
     "CounterfactualConstraints",
     "CounterfactualComparison",
-    "CounterfactualBehaviorComparison",
     "CounterfactualPair",
     "CounterfactualValidity",
     "DecisionAnalysis",
@@ -105,7 +91,6 @@ __all__ = [
     "EvaluationRecord",
     "EvaluationRecordFormatError",
     "EvaluationProvenance",
-    "EvaluatorBehavior",
     "FactAnalyzer",
     "ExactMoveEffect",
     "HistoryPolicy",
@@ -122,7 +107,6 @@ __all__ = [
     "RetainedEventReplayResult",
     "SemanticReplayError",
     "SemanticReplayResult",
-    "SearchBehaviorComparison",
     "SearchAction",
     "SearchEvidenceUnavailable",
     "SearchLimit",
@@ -139,12 +123,8 @@ __all__ = [
     "LineTerminal",
     "analyze_move",
     "analyze_line",
-    "compare_counterfactual_behavior",
     "compare_counterfactual",
-    "compare_evaluator_to_search",
     "compare_decision",
-    "compare_search_events",
-    "evaluator_behavior",
     "plan_retained_events",
     "relocate_piece_counterfactual",
     "remove_piece_counterfactual",

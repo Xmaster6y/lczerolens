@@ -214,17 +214,18 @@ The target source layout is organized by user action::
 
    lczerolens/
        model.py
+       constants.py
        schema.py
        evaluator.py
        evaluation.py
        moves.py
        counterfactuals.py
        decision.py
-       behavior.py
        facts.py
        provenance.py
        serialization.py
        search/
+           limits.py
            result.py
            trace.py
            reference.py
@@ -237,8 +238,8 @@ Module initialization is acyclic. The package ``__init__`` files are composition
 roots, not layers. Foundations (constants, provenance, schema, facts, codec,
 and raw model execution) do not import chess-facing orchestration. Evaluation
 may depend on those foundations; trace/result records do not depend on an
-evaluator; reference search may depend on both. Decision and behavior modules
-compose completed records. Evaluation persistence is imported lazily from its
+evaluator; reference search may depend on both. The decision module composes
+completed records. Evaluation persistence is imported lazily from its
 record methods so serialization does not become an initialization cycle.
 
 Exact chess analysis (facts, moves, provenance, and counterfactual

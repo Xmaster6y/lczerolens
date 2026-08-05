@@ -93,6 +93,8 @@ class SearchResult:
         if self.move not in board.legal_moves:
             raise ValueError("Search result move must be legal in the trace root position.")
         selection = self.trace.snapshots[-1].selection
+        if self.evaluation != self.trace.snapshots[-1].evaluation:
+            raise ValueError("Search result evaluation must match the final trace evaluation.")
         if selection is None or selection.move != self.move.uci():
             raise ValueError("Search result move must match the final trace selection.")
         if self._root is not None:

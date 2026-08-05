@@ -75,6 +75,10 @@ def evaluation_record_digest(record: EvaluationRecord) -> str:
 
 
 def _number(value: float | int) -> int | float:
+    if isinstance(value, bool):
+        raise EvaluationRecordFormatError("Canonical evaluation records require numeric evidence values.")
+    if isinstance(value, int):
+        return value
     numeric = float(value)
     if not math.isfinite(numeric):
         raise EvaluationRecordFormatError("Canonical evaluation records cannot contain non-finite floats.")
@@ -280,10 +284,13 @@ def _integer(value: Any, label: str) -> int:
 def _float(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise EvaluationRecordFormatError(f"{label} must be numeric.")
-    result = float(value)
+    try:
+        result = float(value)
+    except OverflowError as error:
+        raise EvaluationRecordFormatError(f"{label} must be finite.") from error
     if not math.isfinite(result):
         raise EvaluationRecordFormatError(f"{label} must be finite.")
-    return result
+    return value if isinstance(value, int) else result
 
 
 __all__ = [

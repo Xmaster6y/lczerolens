@@ -60,9 +60,9 @@ def test_record_freezes_runtime_values_position_history_and_provenance():
     evaluation.tensors["network", "policy_logits"].zero_()
     evaluation.tensors["evaluation", "policy"].fill_(0)
 
-    assert record.position.fen == board.fen()
+    assert record.position.fen == board.fen(en_passant="fen")
     assert record.position.moves == ("e2e4", "e7e5")
-    assert record.position.board().fen() == board.fen()
+    assert record.position.board().fen(en_passant="fen") == board.fen(en_passant="fen")
     assert tuple(record.position.board().move_stack) == tuple(board.move_stack)
     assert record.provenance is provenance
     assert record.input_format == "classical_112"
@@ -266,12 +266,29 @@ def test_position_identity_rejects_invalid_inputs_and_history():
         PositionIdentity.from_board("not a board")
     with pytest.raises(ValueError, match="variant"):
         PositionIdentity(start, start, (), variant="")
+    with pytest.raises(ValueError, match="fen must"):
+        PositionIdentity(1, start, ())
+    with pytest.raises(ValueError, match="start_fen"):
+        PositionIdentity(start, 1, ())
+    with pytest.raises(ValueError, match="moves must be a tuple"):
+        PositionIdentity(start, start, [])
     with pytest.raises(ValueError, match="chess960"):
         PositionIdentity(start, start, (), chess960=1)
     with pytest.raises(ValueError, match="legal sequence"):
         PositionIdentity(start, start, ("e2e5",))
     with pytest.raises(ValueError, match="legal sequence"):
         PositionIdentity(start, start, (), variant="future")
+
+
+def test_evaluation_provenance_rejects_non_string_fields():
+    for kwargs, message in (
+        ({"source": 1, "model_type": "fixture"}, "source"),
+        ({"source": "fixture", "model_type": 1}, "model_type"),
+        ({"source": "fixture", "model_type": "fixture", "network": 1}, "network"),
+        ({"source": "fixture", "model_type": "fixture", "network_checksum": 1}, "network_checksum"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            EvaluationProvenance(**kwargs)
 
 
 def test_malformed_nested_field_types_are_rejected():
@@ -331,6 +348,25 @@ def test_absent_optional_heads_round_trip_and_utf8_is_strict():
     object.__setattr__(minimal, "mlh", float("inf"))
     with pytest.raises(EvaluationRecordFormatError, match="non-finite"):
         minimal.to_bytes()
+
+    object.__setattr__(minimal, "mlh", True)
+    with pytest.raises(EvaluationRecordFormatError, match="numeric evidence"):
+        minimal.to_bytes()
+
+
+def test_large_integer_evidence_round_trips_losslessly_and_overflow_is_wrapped():
+    record = record_evaluator().evaluate(chess.Board()).record()
+    selected = next(action for action in record.policy if action.rank == 1)
+    exact = 2**60 + 1
+    policy = tuple(replace(action, logit=exact) if action is selected else action for action in record.policy)
+    large = replace(record, policy=policy)
+
+    restored = EvaluationRecord.from_bytes(large.to_bytes())
+    assert next(action for action in restored.policy if action.move == selected.move).logit == exact
+
+    malformed = record.to_bytes().replace(b'"logit":0', b'"logit":' + b"9" * 400, 1)
+    with pytest.raises(EvaluationRecordFormatError, match="finite"):
+        EvaluationRecord.from_bytes(malformed)
 
 
 def _contains_runtime_state(value):

@@ -82,8 +82,14 @@ class DecisionAnalysis:
     counterfactuals: tuple[CounterfactualComparison, ...] = ()
 
     def __post_init__(self) -> None:
+        if not isinstance(self.evaluation, EvaluationRecord) or not isinstance(self.search, SearchResult):
+            raise ValueError("Decision analyses require evaluation and search evidence.")
+        if not isinstance(self.actions, DecisionActions):
+            raise ValueError("Decision actions must be a DecisionActions value.")
         if self.evaluation.position.fen != self.search.trace.root_fen:
             raise ValueError("Decision evaluation and search must describe the same root position.")
+        if set(self.actions) != {action.move for action in self.evaluation.policy}:
+            raise ValueError("Decision actions must exactly match the evaluated legal policy.")
         if self.policy_move not in self.actions or self.search_move not in self.actions:
             raise ValueError("Policy and search selections must be present in decision actions.")
         if self.changed is not (self.policy_move != self.search_move):
@@ -96,6 +102,40 @@ class DecisionAnalysis:
             for item in self.counterfactuals
         ):
             raise ValueError("Decision counterfactuals must use the decision evaluator provenance.")
+        root_actions = {action.statistics.move: action for action in self.search.trace.snapshots[-1].actions or ()}
+        ranks = _search_ranks(tuple(root_actions.values()))
+        visits = [action.statistics.visits for action in root_actions.values()]
+        visit_total = (
+            sum(value for value in visits if value is not None)
+            if visits and all(value is not None for value in visits)
+            else None
+        )
+        board = self.evaluation.position.board()
+        expected = DecisionActions(
+            tuple(
+                _decision_action(
+                    policy,
+                    root_actions.get(policy.move),
+                    ranks.get(policy.move),
+                    visit_total,
+                    self.actions[policy.move].line,
+                    board,
+                    policy.move in (self.policy_move, self.search_move),
+                    self.policy_move,
+                    self.search_move,
+                )
+                for policy in self.evaluation.policy
+            )
+        )
+        for move, action in self.actions.items():
+            if action.line is not None and (
+                action.line.initial_position.fen != self.evaluation.position.fen
+                or not action.line.moves
+                or action.line.moves[0].uci() != move
+            ):
+                raise ValueError("Decision line analysis must start at the root and begin with its action move.")
+        if self.actions != expected:
+            raise ValueError("Decision actions must match their evaluator and search evidence.")
 
     @property
     def search_source(self) -> str:
@@ -183,6 +223,24 @@ class CounterfactualComparison:
     alternative_evaluation: EvaluationRecord
     policy_change: CounterfactualPolicyChange
     value_change: CounterfactualValueChange
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.pair, CounterfactualPair) or not self.pair.succeeded or self.pair.alternative is None:
+            raise ValueError("Counterfactual comparisons require a successful pair.")
+        if not isinstance(self.factual_evaluation, EvaluationRecord) or not isinstance(
+            self.alternative_evaluation, EvaluationRecord
+        ):
+            raise ValueError("Counterfactual comparisons require evaluation records.")
+        if self.factual_evaluation.position != self.pair.factual.identity:
+            raise ValueError("Counterfactual factual evaluation must match the pair factual position.")
+        if self.alternative_evaluation.position != self.pair.alternative.identity:
+            raise ValueError("Counterfactual alternative evaluation must match the pair alternative position.")
+        if self.factual_evaluation.provenance != self.alternative_evaluation.provenance:
+            raise ValueError("Counterfactual evaluations must use the same evaluator provenance.")
+        if self.policy_change != _policy_change(self.factual_evaluation, self.alternative_evaluation):
+            raise ValueError("Counterfactual policy change must match its evaluations.")
+        if self.value_change != _value_change(self.factual_evaluation.value, self.alternative_evaluation.value):
+            raise ValueError("Counterfactual value change must match its evaluations.")
 
 
 def compare_decision(

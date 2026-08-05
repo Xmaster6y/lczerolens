@@ -33,7 +33,13 @@ class PositionIdentity:
     chess960: bool = False
 
     def __post_init__(self) -> None:
-        if not self.variant:
+        if not isinstance(self.fen, str) or not self.fen:
+            raise ValueError("Position fen must be a non-empty string.")
+        if not isinstance(self.start_fen, str) or not self.start_fen:
+            raise ValueError("Position start_fen must be a non-empty string.")
+        if not isinstance(self.moves, tuple) or any(not isinstance(move, str) for move in self.moves):
+            raise ValueError("Position moves must be a tuple of UCI strings.")
+        if not isinstance(self.variant, str) or not self.variant:
             raise ValueError("Position variant must not be empty.")
         if not isinstance(self.chess960, bool):
             raise ValueError("chess960 must be a boolean.")
@@ -44,7 +50,7 @@ class PositionIdentity:
                 reconstructed.push(move)
         except (AttributeError, TypeError, ValueError) as error:
             raise ValueError("Position history must be a legal sequence from start_fen.") from error
-        if reconstructed.fen() != self.fen:
+        if reconstructed.fen(en_passant="fen") != self.fen:
             raise ValueError("Position history must reconstruct fen.")
 
     @classmethod
@@ -54,8 +60,8 @@ class PositionIdentity:
             raise TypeError("PositionIdentity requires a python-chess Board.")
         root = board.root()
         return cls(
-            fen=board.fen(),
-            start_fen=root.fen(),
+            fen=board.fen(en_passant="fen"),
+            start_fen=root.fen(en_passant="fen"),
             moves=tuple(move.uci() for move in board.move_stack),
             variant=board.uci_variant,
             chess960=board.chess960,
@@ -91,11 +97,16 @@ class EvaluationProvenance:
     network_checksum: str | None = None
 
     def __post_init__(self) -> None:
-        if not self.source:
+        if not isinstance(self.source, str) or not self.source:
             raise ValueError("Evaluation provenance source must not be empty.")
-        if not self.model_type:
+        if not isinstance(self.model_type, str) or not self.model_type:
             raise ValueError("Evaluation provenance model_type must not be empty.")
-        if self.network_checksum is not None and not re.fullmatch(r"sha256:[0-9a-f]{64}", self.network_checksum):
+        if self.network is not None and not isinstance(self.network, str):
+            raise ValueError("Evaluation provenance network must be a string when present.")
+        if self.network_checksum is not None and (
+            not isinstance(self.network_checksum, str)
+            or not re.fullmatch(r"sha256:[0-9a-f]{64}", self.network_checksum)
+        ):
             raise ValueError("network_checksum must be a lowercase sha256 digest.")
 
 

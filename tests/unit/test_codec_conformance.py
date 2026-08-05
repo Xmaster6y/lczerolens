@@ -36,7 +36,6 @@ def _moves_with_castling_swap(game, board):
         except StopIteration:
             continue
         backend_moves[index] = move.uci()
-        backend_indices[index] = encode_move(board, move)
     return backend_moves, backend_indices
 
 
@@ -70,7 +69,7 @@ def test_castling_policy_indices_are_canonical(backend_moves):
     moves, indices = _moves_with_castling_swap(Game(), board)
 
     assert moves == ["e1g1", "e1c1"]
-    assert indices == [102, 99]
+    assert indices == [103, 97]
 
 
 @pytest.mark.conformance

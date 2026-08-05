@@ -275,6 +275,10 @@ def test_illegal_history_incompatible_and_intent_mismatch_fail_structurally():
     assert illegal.value.move == chess.Move.from_uci("e2e5")
     assert illegal.value.fen == chess.Board().fen()
 
+    with pytest.raises(LineAnalysisError, match="not-a-move") as malformed_string:
+        analyze_line(chess.Board(), ("not-a-move",), MaterialAnalyzer())
+    assert malformed_string.value.move is None
+
     truncated = chess.Board("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1")
     with pytest.raises(LineAnalysisError) as history:
         analyze_line(

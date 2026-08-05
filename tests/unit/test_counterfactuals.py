@@ -49,8 +49,8 @@ def test_sibling_moves_are_deterministic_history_consistent_and_evidence_bearing
     assert result.alternative is not None
     assert result.alternative.rule_valid
     assert result.alternative.history_complete
-    assert result.factual.fen == "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
-    assert result.alternative.fen == "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+    assert result.factual.fen == "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+    assert result.alternative.fen == "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1"
     assert result.factual.board().move_stack == [chess.Move.from_uci("e2e4")]
     assert result.alternative.board().move_stack == [chess.Move.from_uci("d2d4")]
     assert result.changed_attributes[0].satisfied
@@ -257,6 +257,15 @@ def test_structural_edit_clears_invalid_en_passant_and_reports_the_change():
     assert ep.factual == chess.E3
     assert ep.alternative is None
     assert ep.changed
+
+
+def test_stackless_factual_snapshot_preserves_exact_en_passant_metadata():
+    board = chess.Board("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
+
+    result = remove_piece_counterfactual(board, chess.A1)
+
+    assert result.factual.fen.endswith(" b KQkq e3 0 1")
+    assert result.factual.board().ep_square == chess.E3
 
 
 def test_truncated_sibling_declares_only_shared_parent_legality():

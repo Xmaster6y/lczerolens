@@ -3,34 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-import hashlib
-from pathlib import Path
 
 import chess
 import torch
 from tensordict import TensorDict, TensorDictBase
-from tensordict.nn import TensorDictModule
-from torch import nn
 
 from lczerolens._codec import InputFormat, POLICY_SIZE, encode_input, legal_mask
 from lczerolens.evaluation import Evaluation, EvaluationBatch
 from lczerolens.model import LczeroModel
 from lczerolens.provenance import EvaluationProvenance
 from lczerolens.schema import LczeroKeys, _NETWORK_HEAD_KEYS
-
-
-class _ModelExecutionAdapter(nn.Module):
-    """Expose an existing LczeroModel through the canonical evaluator keys."""
-
-    def __init__(self, model: LczeroModel, heads: tuple[str, ...]):
-        super().__init__()
-        self.model = model
-        self.heads = heads
-
-    def forward(self, planes: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        inputs = TensorDict({"board": planes}, batch_size=planes.shape[0], device=planes.device)
-        outputs = self.model(inputs)
-        return tuple(outputs[head] for head in self.heads)
 
 
 class LczeroEvaluator:
@@ -49,15 +31,10 @@ class LczeroEvaluator:
             raise TypeError("input_format must be an InputFormat.")
         if provenance is not None and not isinstance(provenance, EvaluationProvenance):
             raise TypeError("provenance must be EvaluationProvenance when provided.")
-        heads = tuple(key for key in model.out_keys if isinstance(key, str) and key != "_")
+        heads = model.heads
         if "policy" not in heads or any(head not in _NETWORK_HEAD_KEYS for head in heads):
             raise ValueError("LczeroEvaluator requires a policy head and only supports policy, wdl, value, and mlh.")
-        self._source_model = model
-        self.model = TensorDictModule(
-            _ModelExecutionAdapter(model, heads),
-            in_keys=[LczeroKeys.INPUT_PLANES],
-            out_keys=[_NETWORK_HEAD_KEYS[head] for head in heads],
-        )
+        self.model = model
         self.input_format = input_format
         self.provenance = provenance or _model_provenance(model)
 
@@ -72,13 +49,13 @@ class LczeroEvaluator:
     ) -> "LczeroEvaluator":
         """Load a model using the current Lczero model-format adapters."""
         model = LczeroModel.from_path(model_path, **model_kwargs)
-        resolved_provenance = provenance or _model_provenance(model, network_path=model_path)
+        resolved_provenance = provenance or _model_provenance(model)
         return cls(model, input_format=input_format, provenance=resolved_provenance)
 
     @property
     def device(self) -> torch.device:
         """Device of the wrapped neural module."""
-        return self._source_model.device
+        return self.model.device
 
     def prepare(self, boards: Sequence[chess.Board]) -> TensorDict:
         """Encode a non-empty position batch as the canonical input TensorDict."""
@@ -124,6 +101,11 @@ class LczeroEvaluator:
         expected_masks = torch.stack([legal_mask(board) for board in resolved]).to(tensors.device)
         if not torch.equal(tensors[LczeroKeys.INPUT_LEGAL_MASK], expected_masks):
             raise ValueError("input/legal_mask does not match the supplied positions.")
+        expected_planes = torch.stack([encode_input(board, input_format=self.input_format) for board in resolved]).to(
+            tensors.device
+        )
+        if not torch.equal(tensors[LczeroKeys.INPUT_PLANES], expected_planes):
+            raise ValueError("input/planes does not match the supplied positions.")
 
         logits = tensors[LczeroKeys.NETWORK_POLICY_LOGITS]
         masks = tensors[LczeroKeys.INPUT_LEGAL_MASK]
@@ -221,19 +203,10 @@ def _column(value: torch.Tensor, batch_size: int, label: str) -> torch.Tensor:
     raise ValueError(f"{label} must have shape [{batch_size}] or [{batch_size}, 1].")
 
 
-def _model_provenance(model: LczeroModel, *, network_path: str | None = None) -> EvaluationProvenance:
+def _model_provenance(model: LczeroModel) -> EvaluationProvenance:
     module_type = type(model.module)
-    network = None
-    checksum = None
-    if network_path is not None:
-        path = Path(network_path)
-        network = path.name
-        if path.is_file():
-            digest = hashlib.sha256()
-            with path.open("rb") as stream:
-                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                    digest.update(chunk)
-            checksum = f"sha256:{digest.hexdigest()}"
+    network = model.network
+    checksum = model.network_checksum
     return EvaluationProvenance(
         source="lczerolens.LczeroEvaluator",
         model_type=f"{module_type.__module__}.{module_type.__qualname__}",

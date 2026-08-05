@@ -28,12 +28,12 @@ The currently shipped public surface includes:
   counterfactual records with explicit validity and reachability guarantees;
 * producing typed search traces from deterministic reference search or exposed
   lc0 root snapshots; and
-* comparing observable evaluator, counterfactual, and search behaviour without
-  upgrading a source's available evidence.
+* composing evaluator, counterfactual, and search evidence into one concrete
+  decision analysis without upgrading a source's available evidence.
 
 Search records follow the capability-aware schema in :doc:`search`.
-Counterfactual and comparison facilities are merged public APIs, with their
-guarantees and limitations defined by :doc:`facts` and :doc:`behavior`.
+Counterfactual and decision-comparison facilities are merged public APIs, with
+their guarantees and limitations defined by :doc:`facts` and :doc:`use-cases`.
 
 Evaluator contract
 ------------------
@@ -110,12 +110,12 @@ than a separate compatibility commitment.
      - Disposition
      - Rationale
    * - ``__init__``
-     - Model/evaluator imports plus facts, counterfactual, reference
-       search, move-evidence, and behavior-comparison entry points
+     - Model/evaluator imports plus facts, counterfactual, reference search,
+       move-evidence, and decision-analysis entry points
      - Retain
      - Stable convenience entry point for the documented chess-decision surface.
    * - ``_codec``
-     - ``InputFormat`` and stateless input/policy helpers
+     - Stateless input/policy helpers
      - Internalize
      - Private Lczero transport used by the public evaluator and search boundaries.
    * - ``constants``
@@ -175,16 +175,12 @@ than a separate compatibility commitment.
        comparison helpers
      - Retain
      - Compose already-produced evidence without merging its guarantees.
-   * - ``behavior``
-     - Behaviour records, metric definitions, and evaluator/search/counterfactual comparison helpers
-     - Retain
-     - Observable comparisons with explicit missing-data and capability boundaries.
 
 Compatibility policy
 --------------------
 
 For the breaking ``0.5`` release, plain ``chess.Board``, ``LczeroEvaluator``,
-``LczeroModel``, and the evaluator field meanings form the compatibility core.
+``LczeroModel``, ``InputFormat``, and the evaluator field meanings form the compatibility core.
 The private codec may evolve without becoming a second public board API.
 
 New feature gate

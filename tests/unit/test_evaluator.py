@@ -136,6 +136,11 @@ def test_finish_rejects_malformed_or_position_incompatible_tensors():
     with pytest.raises(ValueError, match="does not match"):
         evaluator.finish([board], wrong_mask)
 
+    wrong_planes = tensors.clone()
+    wrong_planes["input", "planes"][0, 0, 0, 0] = 1 - wrong_planes["input", "planes"][0, 0, 0, 0]
+    with pytest.raises(ValueError, match="input/planes does not match"):
+        evaluator.finish([board], wrong_planes)
+
     missing = TensorDict(
         {
             ("input", "planes"): tensors["input", "planes"],
@@ -186,7 +191,7 @@ def test_evaluator_constructor_and_board_collection_validation():
         LczeroEvaluator(LczeroModel(PolicyOnlyNetwork(), out_keys=["policy"]), provenance="fixture")
     with pytest.raises(ValueError, match="requires a policy head"):
         LczeroEvaluator(LczeroModel(nn.Identity(), out_keys=["value"]))
-    with pytest.raises(ValueError, match="only supports"):
+    with pytest.raises(ValueError, match="supports only"):
         LczeroEvaluator(LczeroModel(nn.Identity(), out_keys=["policy", "other"]))
 
     evaluator = fixture_evaluator()
@@ -211,7 +216,7 @@ def test_from_path_forwards_model_and_evaluator_options(monkeypatch):
 
     evaluator = LczeroEvaluator.from_path("network.pt", weights_only=True)
 
-    assert evaluator._source_model is model
+    assert evaluator.model is model
     assert observed == {"path": "network.pt", "kwargs": {"weights_only": True}}
 
 

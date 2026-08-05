@@ -34,9 +34,12 @@ class FixtureNetwork(nn.Module):
         batch = planes.shape[0]
         policy = torch.zeros((batch, 1858), device=planes.device)
         board = chess.Board()
-        policy[:, encode_move(board, chess.Move.from_uci("e2e4"))] = 4.0
-        policy[:, encode_move(board, chess.Move.from_uci("d2d4"))] = 2.0
-        return policy, torch.full((batch,), 0.25, device=planes.device)
+        weights = torch.arange(planes[0].numel(), device=planes.device, dtype=planes.dtype).square()
+        signal = (planes.flatten(1) * weights).sum(-1) / 10_000_000_000
+        policy[:, encode_move(board, chess.Move.from_uci("e2e4"))] = 4.0 + signal
+        policy[:, encode_move(board, chess.Move.from_uci("d2d4"))] = 2.0 - signal
+        value = 0.5 * (planes[:, 6, 4, 3] - planes[:, 6, 4, 4])
+        return policy, value
 
 
 def fixture_evaluator():
@@ -146,8 +149,8 @@ def test_compare_counterfactual_evaluates_reconstructable_factual_and_alternativ
     assert comparison.alternative_evaluation.position.moves == ("d2d4",)
     assert comparison.policy_change.factual_move is not None
     assert comparison.policy_change.alternative_move is not None
-    assert 0 <= comparison.policy_change.total_variation <= 1
-    assert comparison.value_change.delta == pytest.approx(0.0)
+    assert 0 < comparison.policy_change.total_variation <= 1
+    assert comparison.value_change.delta != pytest.approx(0.0)
 
     decision = compare_decision(
         fixture_evaluator().evaluate(chess.Board()),
@@ -215,17 +218,22 @@ def test_decision_records_reject_inconsistent_state_and_missing_selections():
         replace(decision, changed=not decision.changed)
     with pytest.raises(ValueError, match="CounterfactualComparison"):
         replace(decision, counterfactuals=(object(),))
+    forged = replace(decision.actions["e2e4"], policy_probability=0.0)
+    forged_actions = DecisionActions(
+        tuple(forged if move == "e2e4" else action for move, action in decision.actions.items())
+    )
+    with pytest.raises(ValueError, match="must match their evaluator and search evidence"):
+        replace(decision, actions=forged_actions)
 
     comparison = compare_counterfactual(
         sibling_counterfactual(chess.Board(), factual="e2e4", alternative="d2d4"), fixture_evaluator()
     )
     other_provenance = EvaluationProvenance("other", "fixture")
-    mismatched = replace(
-        comparison,
-        factual_evaluation=replace(comparison.factual_evaluation, provenance=other_provenance),
-    )
-    with pytest.raises(ValueError, match="evaluator provenance"):
-        replace(decision, counterfactuals=(mismatched,))
+    with pytest.raises(ValueError, match="same evaluator provenance"):
+        replace(
+            comparison,
+            factual_evaluation=replace(comparison.factual_evaluation, provenance=other_provenance),
+        )
 
     root = chess.Board()
     no_selection = SearchTrace(
@@ -242,3 +250,56 @@ def test_decision_records_reject_inconsistent_state_and_missing_selections():
     )
     with pytest.raises(SearchEvidenceUnavailable, match="selected move"):
         SearchResult.from_trace(no_selection)
+
+
+def test_decision_and_counterfactual_records_reject_forged_direct_construction():
+    decision = compare_decision(fixture_evaluator().evaluate(chess.Board()), fixture_search())
+    comparison = compare_counterfactual(
+        sibling_counterfactual(chess.Board(), factual="e2e4", alternative="d2d4"), fixture_evaluator()
+    )
+
+    with pytest.raises(ValueError, match="evaluation and search evidence"):
+        replace(decision, evaluation=object())
+    with pytest.raises(ValueError, match="DecisionActions"):
+        replace(decision, actions=object())
+    with pytest.raises(ValueError, match="exactly match"):
+        replace(decision, actions=DecisionActions(tuple(decision.actions.values())[:-1]))
+
+    unrelated_line = analyze_line(chess.Board(), ("d2d4",))
+    forged_line_actions = DecisionActions(
+        tuple(
+            replace(action, line=unrelated_line) if move == "e2e4" else action
+            for move, action in decision.actions.items()
+        )
+    )
+    with pytest.raises(ValueError, match="start at the root"):
+        replace(decision, actions=forged_line_actions)
+
+    other = EvaluationProvenance("other", "fixture")
+    other_comparison = replace(
+        comparison,
+        factual_evaluation=replace(comparison.factual_evaluation, provenance=other),
+        alternative_evaluation=replace(comparison.alternative_evaluation, provenance=other),
+    )
+    with pytest.raises(ValueError, match="decision evaluator provenance"):
+        replace(decision, counterfactuals=(other_comparison,))
+
+    failed = sibling_counterfactual(chess.Board(), factual="e2e5")
+    with pytest.raises(ValueError, match="successful pair"):
+        replace(comparison, pair=failed)
+    with pytest.raises(ValueError, match="evaluation records"):
+        replace(comparison, factual_evaluation=object())
+    with pytest.raises(ValueError, match="factual evaluation"):
+        replace(comparison, factual_evaluation=comparison.alternative_evaluation)
+    with pytest.raises(ValueError, match="alternative evaluation"):
+        replace(comparison, alternative_evaluation=comparison.factual_evaluation)
+    with pytest.raises(ValueError, match="policy change"):
+        replace(
+            comparison,
+            policy_change=replace(comparison.policy_change, total_variation=0.0),
+        )
+    with pytest.raises(ValueError, match="value change"):
+        replace(
+            comparison,
+            value_change=replace(comparison.value_change, delta=99.0),
+        )

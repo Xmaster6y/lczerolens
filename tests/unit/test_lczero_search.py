@@ -146,6 +146,7 @@ def test_rejects_non_positive_priors_and_non_move_stat_records():
     [
         (["bestmove invalid"], "bestmove"),
         (["bestmove e7e5"], "bestmove"),
+        (["e7e5 (P: 100.00%)", "bestmove e2e4"], "illegal move"),
         (["e2e4 (P: 100.00%) unexpected", "bestmove e2e4"], "fields"),
         (["e2e4 (P: 100.00%) (PV: d2d4)", "bestmove e2e4"], "Invalid"),
         (["e2e4 (P: 1.0)", "bestmove e2e4"], "Invalid"),

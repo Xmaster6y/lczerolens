@@ -521,6 +521,8 @@ def _is_legal_move(board: chess.Board, move: object) -> bool:
 
 
 def _move_label(move: object) -> str:
+    if isinstance(move, str):
+        return move
     if not _is_well_formed_move(move):
         return "<malformed move>"
     return chess.square_name(move.from_square) + chess.square_name(move.to_square)

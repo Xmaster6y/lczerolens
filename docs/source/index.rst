@@ -14,7 +14,6 @@ lczerolens
     scope
     facts
     search
-    behavior
     features
     tutorials
     api/index

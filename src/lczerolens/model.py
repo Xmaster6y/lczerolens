@@ -1,6 +1,8 @@
 """Class for wrapping the LCZero models."""
 
+import hashlib
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 import tempfile
 
@@ -11,6 +13,8 @@ from torch import nn
 
 from tensordict.nn import TensorDictModule
 
+from lczerolens.schema import LczeroKeys, _NETWORK_HEAD_KEYS
+
 MISSING_HF_ERROR = (
     "huggingface_hub is required to push or load the model from the Hugging Face Hub. "
     "Install it with `pip install lczerolens[hub]` or directly via `pip install huggingface_hub`."
@@ -20,7 +24,15 @@ MISSING_HF_ERROR = (
 class LczeroModel(TensorDictModule):
     """Class for wrapping the LCZero models."""
 
-    def __init__(self, module: nn.Module, out_keys: List[str], **kwargs):
+    def __init__(
+        self,
+        module: nn.Module,
+        out_keys: List[str],
+        *,
+        network: str | None = None,
+        network_checksum: str | None = None,
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -38,7 +50,20 @@ class LczeroModel(TensorDictModule):
         """
         if not isinstance(module, nn.Module):
             raise TypeError(f"Got invalid module type {type(module)}. Expected nn.Module.")
-        super().__init__(module, ["board"], out_keys, **kwargs)
+        heads = tuple(out_keys)
+        if not heads or any(head not in _NETWORK_HEAD_KEYS for head in heads):
+            raise ValueError("LczeroModel supports only policy, wdl, value, and mlh output heads.")
+        if len(heads) != len(set(heads)):
+            raise ValueError("LczeroModel output heads must be unique.")
+        self.heads = heads
+        self.network = network
+        self.network_checksum = network_checksum
+        super().__init__(
+            module,
+            [LczeroKeys.INPUT_PLANES],
+            [_NETWORK_HEAD_KEYS[head] for head in heads],
+            **kwargs,
+        )
 
     def _call_module(self, tensors: Sequence[torch.Tensor], **kwargs: Any) -> Sequence[torch.Tensor]:
         out = super()._call_module(tensors, **kwargs)
@@ -63,7 +88,8 @@ class LczeroModel(TensorDictModule):
         LczeroModel
             The wrapped model instance
         """
-        return cls(model, out_keys=cls._get_output_names(model), **kwargs)
+        out_keys = kwargs.pop("out_keys", None)
+        return cls(model, out_keys=out_keys or cls._get_output_names(model), **kwargs)
 
     @classmethod
     def from_path(cls, model_path: str, **kwargs) -> "LczeroModel":
@@ -119,7 +145,8 @@ class LczeroModel(TensorDictModule):
         try:
             onnx_model = safe_shape_inference(onnx_model_path) if check else onnx_model_path
             onnx_torch_model = convert(onnx_model)
-            return cls.from_model(onnx_torch_model, **kwargs)
+            model = cls.from_model(onnx_torch_model, **kwargs)
+            return cls._record_source(model, onnx_model_path)
         except Exception as e:
             raise ValueError(f"Could not load model at {onnx_model_path}.") from e
 
@@ -151,9 +178,10 @@ class LczeroModel(TensorDictModule):
         except Exception as e:
             raise ValueError(f"Could not load model at {torch_model_path}.") from e
         if isinstance(torch_model, LczeroModel):
-            return torch_model
+            return cls._record_source(torch_model, torch_model_path)
         elif isinstance(torch_model, nn.Module):
-            return cls.from_model(torch_model, **kwargs)
+            model = cls.from_model(torch_model, **kwargs)
+            return cls._record_source(model, torch_model_path)
         else:
             raise ValueError(f"Could not load model at {torch_model_path}.")
 
@@ -199,7 +227,7 @@ class LczeroModel(TensorDictModule):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = os.path.join(tmp_dir, "model.pt")
-            torch.save(self.module, path)
+            torch.save(self, path)
             upload_file(path_or_fileobj=path, repo_id=repo_id, path_in_repo=path_in_repo, **kwargs)
 
     @classmethod
@@ -237,7 +265,28 @@ class LczeroModel(TensorDictModule):
 
         hf_hub_kwargs = hf_hub_kwargs or {}
         path = hf_hub_download(repo_id, filename, **hf_hub_kwargs)
-        return cls.from_path(path, **kwargs)
+        model = cls.from_path(path, **kwargs)
+        revision = hf_hub_kwargs.get("revision")
+        suffix = f"@{revision}" if revision is not None else ""
+        model.network = f"hf://{repo_id}/{filename}{suffix}"
+        model.network_checksum = cls._checksum(path)
+        return model
+
+    @classmethod
+    def _record_source(cls, model: "LczeroModel", path: str) -> "LczeroModel":
+        if model.network is None:
+            model.network = Path(path).name
+        if model.network_checksum is None:
+            model.network_checksum = cls._checksum(path)
+        return model
+
+    @staticmethod
+    def _checksum(path: str) -> str:
+        digest = hashlib.sha256()
+        with Path(path).open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return f"sha256:{digest.hexdigest()}"
 
     @staticmethod
     def _get_output_names(model: nn.Module) -> List[str]:

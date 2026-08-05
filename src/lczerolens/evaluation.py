@@ -212,7 +212,6 @@ class PolicyEvaluation:
     """Legal-move view over one raw and standardized policy row."""
 
     def __init__(self, board: chess.Board, tensors: TensorDictBase):
-        self._board = board.copy(stack=True)
         self._tensors = tensors
         mask = tensors[LczeroKeys.INPUT_LEGAL_MASK]
         logits = tensors[LczeroKeys.NETWORK_POLICY_LOGITS]

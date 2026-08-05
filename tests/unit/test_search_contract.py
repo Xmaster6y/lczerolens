@@ -178,8 +178,9 @@ def test_lczero_search_constructor_rejects_ambiguous_runtime_configuration():
         LczeroSearch(executable="lc0", network="", engine_version="v-test")
     with pytest.raises(ValueError, match="engine version"):
         LczeroSearch(executable="lc0", network="weights", engine_version="")
-    with pytest.raises(ValueError, match="timeout"):
-        LczeroSearch(executable="lc0", network="weights", engine_version="v-test", timeout=0)
+    for timeout in (0, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="timeout"):
+            LczeroSearch(executable="lc0", network="weights", engine_version="v-test", timeout=timeout)
 
 
 def test_search_result_and_root_reject_inconsistent_or_unavailable_evidence():
@@ -194,6 +195,8 @@ def test_search_result_and_root_reject_inconsistent_or_unavailable_evidence():
         replace(result, move=chess.Move.from_uci("e2e5"))
     with pytest.raises(ValueError, match="final trace selection"):
         replace(result, move=chess.Move.from_uci("d2d4"))
+    with pytest.raises(ValueError, match="final trace evaluation"):
+        replace(result, evaluation=PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=-0.5))
     with pytest.raises(ValueError, match="contain the selected"):
         replace(
             result,

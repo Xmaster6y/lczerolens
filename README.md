@@ -92,11 +92,11 @@ with saliency_context.prepare(evaluator.model) as hooked_model:
 
 The maintained documentation covers the evaluator and position contract, exact
 facts and move/variation evidence, constrained counterfactuals, typed search
-traces, and observable behavior comparisons. Start with the [scope and
+traces, and concrete decision comparisons. Start with the [scope and
 compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html),
 then follow the [facts](https://lczerolens.readthedocs.io/en/latest/facts.html),
 [search](https://lczerolens.readthedocs.io/en/latest/search.html), and
-[behavior](https://lczerolens.readthedocs.io/en/latest/behavior.html) guides.
+[use cases](https://lczerolens.readthedocs.io/en/latest/use-cases.html) guides.
 
 Interpretability techniques remain external integrations rather than
 lczerolens APIs.

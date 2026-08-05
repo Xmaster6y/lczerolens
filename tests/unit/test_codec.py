@@ -60,6 +60,15 @@ def test_move_vocabulary_round_trips_both_perspectives_and_promotions():
         assert decode_move(board, encode_move(board, move)) == move
 
 
+def test_standard_castling_uses_lczero_king_to_rook_indices_and_decodes_naturally():
+    board = chess.Board("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+
+    assert encode_move(board, chess.Move.from_uci("e1g1")) == 103
+    assert encode_move(board, chess.Move.from_uci("e1c1")) == 97
+    assert decode_move(board, 103) == chess.Move.from_uci("e1g1")
+    assert decode_move(board, 97) == chess.Move.from_uci("e1c1")
+
+
 def test_legal_indices_and_mask_share_the_fixed_policy_vocabulary():
     board = chess.Board()
     indices = legal_indices(board)

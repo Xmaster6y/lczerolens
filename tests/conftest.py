@@ -3,7 +3,9 @@ File to test the encodings for the Leela Chess Zero engine.
 """
 
 import hashlib
+import os
 from pathlib import Path
+import shutil
 import subprocess
 
 import pytest
@@ -35,12 +37,22 @@ def _require_fixture(name: str) -> Path:
 
 def _convert_to_onnx(source: Path, destination: Path) -> None:
     """Convert a native test fixture without exposing an executable wrapper as library API."""
-    subprocess.run(
-        ["lc0", "leela2onnx", f"--input={source}", f"--output={destination}"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    requested = os.environ.get("LC0_EXECUTABLE", "lc0")
+    executable = shutil.which(requested)
+    if executable is None:
+        pytest.skip(f"Fixture conversion requires an lc0 executable; set LC0_EXECUTABLE (looked for {requested!r}).")
+    try:
+        subprocess.run(
+            [executable, "leela2onnx", f"--input={source}", f"--output={destination}"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as error:
+        pytest.fail(
+            f"lc0 fixture conversion failed with status {error.returncode}: {error.stderr.strip()}",
+            pytrace=False,
+        )
 
 
 @pytest.fixture(scope="session")
@@ -59,7 +71,7 @@ def tiny_ensure_network():
 
 @pytest.fixture(scope="session")
 def tiny_model(tiny_ensure_network):
-    yield LczeroModel.from_path("assets/tinygyal-8.onnx")
+    yield LczeroModel.from_path(str(ROOT / "assets" / "tinygyal-8.onnx"))
 
 
 def pytest_collection_modifyitems(items):

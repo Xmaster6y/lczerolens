@@ -30,7 +30,8 @@ Supported user path
   counterfactual positions.
 * :doc:`search` defines the shared result, typed limits, and detailed traces.
   ``ReferenceSearch`` is an auditable oracle, not a production engine.
-* :doc:`behavior` covers evaluator, counterfactual, and search comparisons.
+* :doc:`use-cases` covers the concrete evaluator, counterfactual, search, and
+  decision-analysis compositions.
 * :doc:`decision-analysis-tutorial` runs those public boundaries together with
   a small versioned fixture; its output is a demonstration, not a result.
 * :doc:`api/index` contains generated reference documentation for the package.
