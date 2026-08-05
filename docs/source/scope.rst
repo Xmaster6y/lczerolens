@@ -141,30 +141,14 @@ announced compatibility release.
        ``prediction_from_backend``, ``moves_with_castling_swap``
      - Refocus
      - lc0 conversion/backend interoperation; low-level helpers remain subordinate to model adapters.
-   * - ``data``
-     - ``columns_to_rows``, ``rows_to_columns``, ``GameData``,
-       ``BoardData``, ``PuzzleData``
-     - Refocus
-     - Position/game/puzzle evidence adapters, not a general data platform.
-   * - ``concepts``
-     - ``Concept``, ``BinaryConcept``, ``NullConcept``, ``OrBinaryConcept``,
-       ``AndBinaryConcept``, ``MulticlassConcept``, ``ContinuousConcept``,
-       ``HasPiece``, ``HasMaterialAdvantage``, ``BestLegalMove``,
-       ``PieceBestLegalMove``, ``HasThreat``, ``HasMateThreat``
-     - Refocus
-     - Chess-semantic position and move facts; no generic probing framework.
-   * - ``sampling``
-     - ``Sampler``, ``RandomSampler``, ``ModelSampler``, ``PolicySampler``,
-       ``MCTSSampler``, ``SelfPlay``
-     - Refocus
-     - Evaluation-driven move and self-play comparisons, not engine serving.
    * - ``search``
      - ``SearchResult``, typed limits, ``ReferenceSearch``, ``LczeroSearch``,
        trace and replay records
      - Retain
      - One natural result contract with explicit producer limits and absence
        semantics. Reference search is replayable; official public output is
-       root-only. Mutable legacy MCTS remains private compatibility code.
+       root-only. Mutable MCTS, samplers, and self-play are not part of the
+       release surface.
    * - ``facts``
      - Evidence records, guarantees, analyzers, and ``FactAnalyzer``
      - Retain

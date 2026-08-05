@@ -41,7 +41,6 @@ Optional extras when installing from PyPI:
 ```bash
 pip install "lczerolens[viz]"      # heatmaps / graphviz
 pip install "lczerolens[hub]"      # Hugging Face Hub loading/publishing
-pip install "lczerolens[datasets]" # dataset adapters and concept metrics
 pip install "lczerolens[backends]" # lc0 bindings
 ```
 
@@ -49,12 +48,8 @@ pip install "lczerolens[backends]" # lc0 bindings
 
 - `src/lczerolens/board.py`: `LczeroBoard`, move index mapping, board encoding, heatmap rendering.
 - `src/lczerolens/model.py`: `LczeroModel` + flow wrappers (`PolicyFlow`, `WdlFlow`, `ValueFlow`, `ForceValue`).
-- `src/lczerolens/data.py`: `GameData`, `BoardData`, `PuzzleData` adapters and dataset helpers.
-- `src/lczerolens/sampling.py`: `PolicySampler`, `ModelSampler`, `MCTSSampler`, `SelfPlay`.
 - `src/lczerolens/search/`: unified typed limits and results, engine-independent
   traces, deterministic reference search, official Lczero adapter, and replay helpers.
-- `src/lczerolens/_legacy_search.py`: private compatibility MCTS used by
-  `MCTSSampler` while that sampler awaits migration.
 - `src/lczerolens/constants.py`: 1858-policy move vocabulary (`POLICY_INDEX` and inverse).
 
 ## Core mental model
@@ -154,13 +149,6 @@ Example shape flow:
 - `model.prepare_boards(board)` -> `(1, 112, 8, 8)`
 - attribution map often -> `(1, 112, 8, 8)` then reduced to `(64,)` or `(8, 8)` for rendering.
 
-## Samplers and search
-
-- `PolicySampler`: choose moves from policy logits over legal indices.
-- `ModelSampler`: combines value/WDL, policy, and optional MLH signal into utility.
-- `MCTSSampler`: wraps MCTS search with model heuristic for rollout guidance.
-- `SelfPlay`: runs white/black samplers into a full game trajectory.
-
 ## Common gotchas
 
 - `from_hf` requires `huggingface_hub` (`pip install "lczerolens[hub]"`).
@@ -172,7 +160,4 @@ Example shape flow:
 
 ## Where to look next
 
-- `skills/lczerolens/SKILL.md`
-- `skills/lczerolens/references/api.md`
-- `skills/lczerolens/references/tutorials.md`
 - https://lczerolens.readthedocs.io

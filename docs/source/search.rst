@@ -142,7 +142,6 @@ reuse, batching, collision handling, pruning, transpositions, and time
 management.  lczerolens owns the common result, typed limits, evidence schema,
 reference oracle, process translation, and explicit absence semantics.
 
-The pre-refactor mutable search implementation is private compatibility code
-used by legacy samplers.  New analysis code should use ``ReferenceSearch`` or
-``LczeroSearch`` and consume ``SearchResult``; mutable nodes are not a public
-evidence boundary.
+The pre-refactor mutable search, samplers, and self-play surface has been
+removed. Analysis code uses ``ReferenceSearch`` or ``LczeroSearch`` and
+consumes ``SearchResult``; mutable nodes are not an evidence boundary.

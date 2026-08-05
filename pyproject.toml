@@ -42,10 +42,6 @@ backends = [
 hub = [
     "huggingface-hub>=0.27.1",
 ]
-datasets = [
-    "datasets>=4.0.0",
-    "scikit-learn>=1.7.1",
-]
 
 [dependency-groups]
 dev = [
@@ -55,19 +51,7 @@ dev = [
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
 ]
-notebooks = [
-    "captum>=0.8.0",
-    "ipykernel>=6.29.5",
-    "ipywidgets>=8.1.7",
-    "nbconvert>=7.16.5",
-    "nnsight>=0.6.3",
-    "seaborn>=0.13.2",
-    "tdhook>=0.1.3",
-    "zennit>=0.5.1",
-]
 docs = [
-    "nbsphinx>=0.9.6",
-    "pandoc>=2.4",
     "plotly>=5.24.1",
     "pydata-sphinx-theme>=0.16.1",
     "sphinx>=8.1.3",
@@ -78,10 +62,9 @@ docs = [
     "sphinx-llm>=0.3.0",
 ]
 scripts = [
+    "huggingface-hub>=0.27.1",
     "loguru>=0.7.3",
-    "matplotlib>=3.10.0",
-    "pylatex>=1.4.2",
-    "wandb>=0.19.2",
+    "requests>=2.32.0",
 ]
 
 [build]
@@ -98,7 +81,7 @@ default-groups = []
 markers = [
     "unit: deterministic tests of library code with no external service or model fixture (automatic default)",
     "conformance: lc0 compatibility checks that require versioned model fixtures (explicit primary tier)",
-    "integration: tests that exercise notebooks or another process boundary (explicit primary tier)",
+    "integration: tests that exercise another process boundary (explicit primary tier)",
     "network: tests that contact an external service and are never in the offline suite (explicit primary tier)",
     "slow: tests intended for the explicitly requested slow tier (explicit primary tier)",
     "backends: legacy alias for an lc0 conformance test",

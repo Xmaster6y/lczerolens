@@ -15,8 +15,7 @@ Installation
    pip install lczerolens
 
 Use the ``hub`` extra for Hugging Face model loading, ``backends`` for optional
-lc0 bindings, ``viz`` for rendering helpers, and ``datasets`` for dataset
-adapters and concept metrics.
+lc0 bindings, and ``viz`` for rendering helpers.
 
 Supported user path
 -------------------
@@ -37,10 +36,6 @@ Supported user path
 * :doc:`api/index` contains generated reference documentation for every
   importable module.
 
-Notebook status
----------------
-
-The repository retains older notebooks as historical examples, but they are
-not a rendered or supported tutorial path. Their optional dependencies, runtime
-assumptions, and completion status vary; use the maintained pages above for
-current behaviour and compatibility commitments.
+The maintained tutorial is executable and tested. Historical notebooks built
+on removed samplers, datasets, concepts, and mutable search objects are not part
+of the release surface.

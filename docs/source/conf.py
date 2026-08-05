@@ -18,17 +18,11 @@ extensions = [
     "sphinx.ext.viewcode",  # View code in the browser
     "sphinx_copybutton",  # Copy button for code blocks
     "sphinx_design",  # Boostrap design components
-    "nbsphinx",  # Jupyter notebook support
     "autoapi.extension",
     "sphinx_llm.txt",
 ]
 
 templates_path = ["_templates"]
-# ``nbsphinx`` writes conversion checkpoints next to notebooks.  They are build
-# artifacts, not pages in the documentation source tree.
-exclude_patterns = [
-    "**/*.nbconvert.ipynb",
-]  # type: ignore
 fixed_sidebar = True
 
 
@@ -102,13 +96,7 @@ html_context = {"default_mode": "auto"}
 
 html_css_files = [
     "css/custom.css",
-    "css/nbsphinx.css",
 ]
-
-# Nbsphinx
-nbsphinx_execute = "never"
-nbsphinx_codecell_lexer = "none"
-nbsphinx_widgets_path = "https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js"
 
 # Autoapi
 autoapi_dirs = ["../../src"]

@@ -31,10 +31,9 @@ Loading or publishing models through Hugging Face Hub requires the `hub` extra:
 pip install "lczerolens[hub]"
 ```
 
-Install `datasets` for dataset adapters and concept metrics, `viz` to render heatmaps, or `backends` to use the `lc0` bindings:
+Install `viz` to render heatmaps or `backends` to use the `lc0` bindings:
 
 ```bash
-pip install "lczerolens[datasets]"
 pip install "lczerolens[viz]"
 pip install "lczerolens[backends]"
 ```
@@ -68,7 +67,9 @@ print(board.decode_move(best_move_idx.item()))
 
 ### External Interpretability Integrations
 
-Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook`, `captum`, `zennit`, `nnsight`). These packages are optional examples, not lczerolens abstractions or dependencies of its core evaluator contract. More examples are in the [framework-agnostic interpretability notebook](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html).
+Use `lczerolens` with your preferred PyTorch interpretability framework
+(`tdhook`, `captum`, `zennit`, or `nnsight`). These packages own their methods;
+they are not lczerolens abstractions or dependencies of its evaluator contract.
 
 ```python
 from lczerolens import LczeroBoard, LczeroModel
@@ -102,28 +103,12 @@ then follow the [facts](https://lczerolens.readthedocs.io/en/latest/facts.html),
 Interpretability techniques remain external integrations rather than
 lczerolens APIs.
 
-### Example notebooks
+### Maintained tutorial
 
-The following maintained examples live in the repository and can be opened in
-Colab:
-
-- [Encode Boards](docs/source/notebooks/features/encode-boards.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/encode-boards.ipynb)
-- [Load Models](docs/source/notebooks/features/load-models.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/load-models.ipynb)
-- [Move Prediction](docs/source/notebooks/features/move-prediction.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/move-prediction.ipynb)
-- [Run Models on GPU](docs/source/notebooks/features/run-models-on-gpu.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/run-models-on-gpu.ipynb)
-- [Evaluate Models on Puzzles](docs/source/notebooks/features/evaluate-models-on-puzzles.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/evaluate-models-on-puzzles.ipynb)
-- [Convert Official Weights](docs/source/notebooks/features/convert-official-weights.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/convert-official-weights.ipynb)
-- [Visualise Heatmaps](docs/source/notebooks/features/visualise-heatmaps.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/visualise-heatmaps.ipynb)
-- [Probe Concepts](docs/source/notebooks/features/probe-concepts.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/probe-concepts.ipynb)
-
-### Tutorials
-
-- [Walkthrough](docs/source/notebooks/walkthrough.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/walkthrough.ipynb)
-- [Framework-Agnostic Interpretability](docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb)
-
-The automated-interpretability and learned-look-ahead notebooks are incomplete
-and intentionally not listed as tutorials. Their techniques remain external
-integrations rather than lczerolens API guarantees.
+The executable [decision-analysis tutorial](examples/decision_analysis_tutorial.py)
+composes evaluator, search, exact line analysis, and counterfactual comparison
+against a deterministic fixture. Its integration test is the supported example
+contract; historical notebooks built on removed APIs are not shipped.
 
 ## Full Documentation
 

@@ -33,13 +33,12 @@ therefore coexist without losing their tags. Extracting bare values through
 ``EvidenceSet.values`` requires the caller to name one guarantee and rejects a
 mixed set.
 
-Migration from concepts
------------------------
+Migration from legacy concepts
+------------------------------
 
-The existing ``lczerolens.concepts`` API remains available during the 0.x
-compatibility period. It computes task-ready labels and optionally owns dataset
-feature or metric conversion. New chess-semantic code should instead compute an
-``Evidence`` first, then explicitly convert ``evidence.value`` for its task.
+The generic ``lczerolens.concepts`` label, metric, and dataset abstraction was
+removed from the release surface. Chess-semantic code computes ``Evidence``
+first, then explicitly converts ``evidence.value`` for its downstream task.
 
 The direct migrations are:
 
@@ -49,11 +48,10 @@ The direct migrations are:
 * rule-based threat labels to ``AttacksDefendersAnalyzer`` plus an explicit
   task predicate.
 
-``BestLegalMove`` and ``PieceBestLegalMove`` are model-derived labels, not exact
-position facts. Keep using them for compatibility or represent a new analyzer's
-result with ``engine-derived`` or ``search-derived`` guarantee as appropriate.
-No dataset, scikit-learn, neural hook, or attribution dependency is imported by
-the core fact API.
+Legacy best-move concepts were model-derived labels, not exact position facts.
+Use ``Evaluation.policy`` or ``SearchResult`` for those observations and retain
+their evaluator- or search-derived provenance. No dataset, scikit-learn, neural
+hook, or attribution dependency is imported by the core fact API.
 
 Move and line analysis
 ----------------------

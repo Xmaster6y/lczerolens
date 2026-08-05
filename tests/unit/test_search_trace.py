@@ -33,15 +33,15 @@ from lczerolens.search.trace import (
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
-def test_current_python_search_fits_root_action_schema():
-    """The legacy Python MCTS exposes P, N, and Q but need not invent W or U."""
+def test_partial_root_action_source_does_not_invent_unavailable_statistics():
+    """A source may expose P, N, and Q without inventing W or U."""
     trace = SearchTrace(
         root_fen=START_FEN,
         root_player=ChessPlayer.WHITE,
         capability=SearchCapability.ROOT_ACTION_STATS,
         provenance=SearchProvenance(
-            source="lczerolens-reference",
-            engine="legacy-python-mcts",
+            source="fixture-root-actions",
+            engine="fixture",
             parameters=(SearchParameter("c_puct", 1.0),),
         ),
         snapshots=(
