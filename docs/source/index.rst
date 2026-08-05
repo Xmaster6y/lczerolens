@@ -8,15 +8,10 @@ lczerolens
     :maxdepth: 1
     :hidden:
 
-    start
-    features
-    tutorials
-    facts
-    search
-    use-cases
-    scope
-    architecture
-    api/index
+    Getting Started <start>
+    Features <features>
+    Tutorials <tutorials>
+    API Reference <api/index>
     About <about>
 
 .. grid:: 1 1 2 2
@@ -50,76 +45,14 @@ lczerolens
 
                   Get Started
 
-          .. button-ref:: use-cases
+          .. button-ref:: features
             :color: primary
             :outline:
 
-                Use Cases
+                Features
 
           .. button-ref:: api/index
             :color: primary
             :outline:
 
                 API Reference
-
-
-.. div:: sd-fs-1 sd-font-weight-bold sd-text-center sd-text-primary sd-mb-5
-
-  Find what you need
-
-.. grid:: 1 1 2 2
-    :class-container: features
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. image:: _static/images/one.png
-          :width: 150
-
-        .. div::
-
-          **Examples**
-
-          Start with model loading, position evaluation, chess evidence, or replayable search.
-
-          :doc:`Open examples <tutorials>`
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. image:: _static/images/two.png
-          :width: 150
-
-        .. div::
-
-          **Release use cases**
-
-          See supported workflows and the guarantees that make their outputs usable.
-
-          :doc:`Read use cases <use-cases>`
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. div::
-
-          **Architecture**
-
-          See the chess, model, evaluator, and evidence boundaries.
-
-          :doc:`Read architecture <architecture>`
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. div::
-
-          **API reference**
-
-          Browse the supported package surface.
-
-          :doc:`Open API reference <api/index>`

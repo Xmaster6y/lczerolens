@@ -49,13 +49,6 @@ print(evaluation.policy["e2e4"].probability)
 
 For the package boundary and detailed guides, see the [documentation](https://lczerolens.readthedocs.io).
 
-### Documentation map
-
-- [Release use cases and required guarantees](https://lczerolens.readthedocs.io/en/latest/use-cases.html)
-- [Architecture](https://lczerolens.readthedocs.io/en/latest/architecture.html)
-- [Scope and compatibility](https://lczerolens.readthedocs.io/en/latest/scope.html)
-- [API reference](https://lczerolens.readthedocs.io/en/latest/api/index.html)
-
 ## Contribute
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Development and test commands live there rather than in the quick-start path.
