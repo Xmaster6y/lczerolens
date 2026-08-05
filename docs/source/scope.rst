@@ -1,212 +1,51 @@
-Scope and compatibility policy
-==============================
+Scope and compatibility
+=======================
 
-Mission
--------
+``lczerolens`` makes lc0-family models operable in PyTorch and turns evaluator
+and search behavior into chess-domain evidence.
 
-**lczerolens makes lc0-family models portable and operable in PyTorch, then
-expresses their evaluator and search behavior as chess-domain evidence.**
-
-The two halves are mutually necessary: a chess analysis cannot be reproduced or
-compared without a reliable lc0 evaluator contract, and model outputs become
-useful chess evidence only when they are related to positions, legal moves,
-variations, and search decisions.
-
-Supported use cases
--------------------
-
-The currently shipped public surface includes:
-
-* loading or converting lc0-family weights and evaluating one position or a
-  batch in PyTorch;
-* encoding positions and mapping policy indices to legal chess moves;
-* consuming a standardized policy, WDL, value, and MLH evaluator result;
-* passing an evaluator through arbitrary external instrumentation while
-  retaining the same input/output contract.
-* recording exact position facts, legal move deltas, and variation evidence;
-* constructing constrained sibling, structural, and piece-relocation
-  counterfactual records with explicit validity and reachability guarantees;
-* producing typed search traces from deterministic reference search or exposed
-  lc0 root snapshots; and
-* comparing observable evaluator, counterfactual, and search behaviour without
-  upgrading a source's available evidence.
-
-Search records follow the capability-aware schema in :doc:`search`.
-Counterfactual and comparison facilities are merged public APIs, with their
-guarantees and limitations defined by :doc:`facts` and :doc:`behavior`.
-
-Evaluator contract
-------------------
-
-Conceptually, the chess boundary is an ``LczeroBoard`` position in and a
-``TensorDict`` evaluator result out. At runtime, ``LczeroModel.forward()`` also
-accepts an iterable of boards, a 3D or 4D board tensor, or a ``TensorDict``.
-The output contains raw policy values over the fixed 1858-entry lc0 vocabulary
-and WDL probabilities when the network supplies them; value and MLH are exposed
-when supplied or derived by an explicit adapter such as ``ForceValue``.
-Batching and device movement preserve this contract. Legal masking is a
-downstream operation: the wrapper returns raw policy values, and consumers must
-select the board's legal indices before interpreting a move choice.
-``LczeroBoard.get_legal_policy(policy)`` performs that selection and softmax
-normalization for one policy vector; it rejects terminal positions, malformed
-vectors, and non-finite legal logits rather than returning an invalid
-distribution.
-
-Model-format compatibility
---------------------------
-
-``LczeroModel.from_path`` supports ``.onnx`` files through ``onnx2torch`` and
-serialized ``.pt`` ``torch.nn.Module`` objects. Official lc0 weights are
-converted with the optional native backend's ``leela2onnx`` command, then loaded
-from the resulting ONNX file. Native bindings are a conversion and conformance
-oracle only; ordinary PyTorch inference and unit tests do not require them.
-Arbitrary PyTorch modules can be wrapped with ``LczeroModel(module, out_keys)``;
-automatic head discovery is reserved for converted lc0 graphs and reports how
-to provide explicit keys when that structure is unavailable.
-
-Architecture boundary
----------------------
-
-.. code-block:: text
-
-   python-chess                         external interpretability tools
-   rules, FEN, legal moves              hooks, patches, probes, attribution
-          |                                            |
-          v                                            | wrap or instrument
-   LczeroBoard -- encoding / move vocabulary --> lc0 adapters / PyTorch evaluator
-                                              conversion, loading, TensorDict batching
-          |
-          v
-   evaluator contract -- policy / WDL / value / MLH
-          |
-          +-----------------------------+
-          |                             |
-          v                             v
-   chess-semantic analysis          search traces and comparisons
-   position facts, move/variation,  evaluator-guided MCTS evidence
-   counterfactual evidence
-
-``python-chess`` owns chess rules. External tools own neural-method semantics.
-lczerolens owns the arrows between them: lc0 interoperability, the stable
-evaluator result, and chess-specific decision evidence. Search is an analysis
-and comparison facility, not a production engine.
-
-Non-goals
+Supported
 ---------
 
-The core API does not own chess rules, production-engine search, generic hook
-or patch systems, attribution algorithms, probing, SAE/transcoder methods, or
-natural-language coaching. Examples may demonstrate external tools, but no
-implementation-specific interpretability method is required by the core API.
+The public workflows are demonstrated in :doc:`tutorials`:
 
-Public-surface disposition
---------------------------
+* load ONNX, serialized PyTorch, or Hugging Face models;
+* encode and evaluate one or many ``chess.Board`` positions;
+* inspect legal policy, WDL, value, and MLH outputs;
+* analyze exact facts, moves, and variations;
+* define and grade authored puzzles;
+* construct validity-aware counterfactual positions;
+* run reference search or translate public lc0 output;
+* compare evaluator and search decisions; and
+* freeze and serialize reproducible evidence.
 
-The table covers every current importable package module and its public symbols.
-``Retain`` means supported as part of the stated boundary; ``refocus`` means the
-symbol stays available but future changes must serve that boundary. ``Internalize``
-means keep it implementation-facing rather than adding compatibility commitments;
-``deprecate`` means do not extend it and replace it in a later, separately
-announced compatibility release.
+Model compatibility
+-------------------
 
-.. list-table::
-   :header-rows: 1
-   :widths: 14 38 12 36
+``LczeroModel.from_path`` accepts converted ``.onnx`` networks and serialized
+``.pt`` modules. ``LczeroModel.from_hf`` downloads through the optional ``hub``
+extra. Arbitrary PyTorch modules can be wrapped by declaring their output
+heads.
 
-   * - Module
-     - Symbols
-     - Disposition
-     - Rationale
-   * - ``__init__``
-     - Board/model imports plus facts, counterfactual, trace-adapter, reference
-       search, move-evidence, and behavior-comparison entry points
-     - Retain
-     - Stable convenience entry point for the documented chess-decision surface.
-   * - ``board``
-     - ``InputEncoding``, ``LczeroBoard``
-     - Retain
-     - lc0 encoding, legal moves, and policy vocabulary bridge.
-   * - ``constants``
-     - Policy-index and encoding constants
-     - Internalize
-     - Authoritative substrate; avoid promising incidental names.
-   * - ``model``
-     - ``LczeroModel``, ``ForceValue``; ``Flow``, ``PolicyFlow``,
-       ``ValueFlow``, ``WdlFlow``, ``MlhFlow``
-     - Retain; refocus flows
-     - Preserve evaluator loading and output adapters; do not make a hook API.
-   * - ``backends``
-     - ``generic_command``, ``describenet``, ``convert_to_onnx``,
-       ``convert_to_leela``, ``board_from_backend``,
-       ``prediction_from_backend``, ``moves_with_castling_swap``
-     - Refocus
-     - lc0 conversion/backend interoperation; low-level helpers remain subordinate to model adapters.
-   * - ``data``
-     - ``columns_to_rows``, ``rows_to_columns``, ``GameData``,
-       ``BoardData``, ``PuzzleData``
-     - Refocus
-     - Position/game/puzzle evidence adapters, not a general data platform.
-   * - ``concepts``
-     - ``Concept``, ``BinaryConcept``, ``NullConcept``, ``OrBinaryConcept``,
-       ``AndBinaryConcept``, ``MulticlassConcept``, ``ContinuousConcept``,
-       ``HasPiece``, ``HasMaterialAdvantage``, ``BestLegalMove``,
-       ``PieceBestLegalMove``, ``HasThreat``, ``HasMateThreat``
-     - Refocus
-     - Chess-semantic position and move facts; no generic probing framework.
-   * - ``sampling``
-     - ``Sampler``, ``RandomSampler``, ``ModelSampler``, ``PolicySampler``,
-       ``MCTSSampler``, ``SelfPlay``
-     - Refocus
-     - Evaluation-driven move and self-play comparisons, not engine serving.
-   * - ``search``
-     - ``Heuristic``, ``RandomHeuristic``, ``MaterialHeuristic``,
-       ``ModelHeuristic``, ``Node``, ``MCTS``
-     - Refocus
-     - Search traces and comparisons supporting decision evidence.
-   * - ``search_trace``
-     - Typed provenance, budget, snapshot, edge-statistic, event, and capability records
-     - Retain
-     - Engine-independent public evidence boundary for reference and production search adapters.
-   * - ``reference_search``
-     - ``ReferenceMCTS``, ``replay_root_events``
-     - Retain
-     - Deterministic, replayable analysis oracle; explicitly not production lc0 search.
-   * - ``lc0_adapter``
-     - ``Lc0RootSnapshotParser``, ``Lc0ProcessAdapter``, ``Lc0SearchRequest``
-     - Retain
-     - Optional root-snapshot adapter. Root-only evidence is not a full event trace or replayable trace.
-   * - ``facts``
-     - Evidence records, guarantees, analyzers, and ``FactAnalyzer``
-     - Retain
-     - Exact chess observations with provenance before a consumer derives labels or claims.
-   * - ``move_evidence``
-     - ``MoveDelta``, ``VariationEvidence``, ``analyze_move_delta``, ``analyze_variation``
-     - Retain
-     - Legal-move and ordered-variation evidence built from exact facts.
-   * - ``counterfactuals``
-     - Constraints, validity/result records, and sibling/structural operators
-     - Retain
-     - Constrained position pairs that state rule validity and historical reachability separately.
-   * - ``behavior``
-     - Behaviour records, metric definitions, and evaluator/search/counterfactual comparison helpers
-     - Retain
-     - Observable comparisons with explicit missing-data and capability boundaries.
+Official lc0 weights are converted externally. Native bindings are a
+conformance-test dependency, not a runtime abstraction.
 
-Compatibility policy
---------------------
+Ownership boundary
+------------------
 
-The top-level ``LczeroBoard`` and ``LczeroModel`` imports, the board encoding
-and policy-index mapping, and the evaluator field meanings are the compatibility
-core. A compatible release must preserve their documented semantics or provide a
-deprecation path and migration note. Refocused modules remain importable during
-the 0.x series but may receive narrower contracts; any removal or behavior break
-requires a deprecation warning in one minor release and release notes describing
-the replacement. Internal implementation names may change without that promise.
+The project owns lc0/PyTorch interoperability, chess-aware evaluator semantics,
+typed search evidence, exact chess analysis, and reproducible comparison
+records.
 
-New feature gate
-----------------
+It does not own chess rules, production-engine behavior, generic datasets,
+hooks, attribution, probing, sparse autoencoders, natural-language coaching,
+or scientific conclusions. Those systems integrate through the model,
+TensorDict, evaluator, or evidence boundaries.
 
-Before adding public surface, a proposal must identify which supported use case
-it advances, state its evaluator-contract effect, and show why it belongs to
-lc0 interoperability or chess-decision evidence. If it instead owns a generic
-interpretability technique, it belongs in an external integration or example.
+Compatibility
+-------------
+
+The supported surface is the documented package API and executable notebook
+workflows. Private codec details and unexported helpers may change. New public
+features must advance a supported workflow and belong to lc0 interoperability
+or chess-decision evidence.

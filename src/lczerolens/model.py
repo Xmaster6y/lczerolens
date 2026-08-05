@@ -1,20 +1,19 @@
 """Class for wrapping the LCZero models."""
 
+import hashlib
 import os
-from abc import ABCMeta, abstractmethod
-from typing import Dict, Any, Union, Iterable, List, Optional, Sequence
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence
 import tempfile
 
 import torch
 from onnx2torch import convert
 from onnx2torch.utils.safe_shape_inference import safe_shape_inference
-from tensordict import TensorDict
 from torch import nn
 
 from tensordict.nn import TensorDictModule
 
-from lczerolens.board import InputEncoding, LczeroBoard
-
+from lczerolens.schema import LczeroKeys, _NETWORK_HEAD_KEYS
 
 MISSING_HF_ERROR = (
     "huggingface_hub is required to push or load the model from the Hugging Face Hub. "
@@ -25,7 +24,15 @@ MISSING_HF_ERROR = (
 class LczeroModel(TensorDictModule):
     """Class for wrapping the LCZero models."""
 
-    def __init__(self, module: nn.Module, out_keys: List[str], **kwargs):
+    def __init__(
+        self,
+        module: nn.Module,
+        out_keys: List[str],
+        *,
+        network: str | None = None,
+        network_checksum: str | None = None,
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -43,73 +50,20 @@ class LczeroModel(TensorDictModule):
         """
         if not isinstance(module, nn.Module):
             raise TypeError(f"Got invalid module type {type(module)}. Expected nn.Module.")
-        super().__init__(module, ["board"], out_keys, **kwargs)
-
-    def prepare_boards(
-        self,
-        *boards: LczeroBoard,
-        input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
-    ) -> torch.Tensor:
-        """Prepares the boards for the model.
-
-        Parameters
-        ----------
-        *boards : LczeroBoard
-            The boards to prepare.
-        input_encoding : InputEncoding, optional
-            The encoding of the boards.
-
-        Returns
-        -------
-        torch.Tensor
-            The prepared boards.
-        """
-        if not boards:
-            raise ValueError("Expected at least one LczeroBoard.")
-        for board in boards:
-            if not isinstance(board, LczeroBoard):
-                raise TypeError(f"Got invalid board type {type(board)}. Expected LczeroBoard.")
-
-        tensor_list = [board.to_input_tensor(input_encoding=input_encoding).unsqueeze(0) for board in boards]
-        batched_tensor = torch.cat(tensor_list, dim=0)
-        batched_tensor = batched_tensor.to(self.device)
-
-        return batched_tensor
-
-    def forward(
-        self,
-        inputs: Union[TensorDict, LczeroBoard, Iterable[LczeroBoard], torch.Tensor],
-        prepare_kwargs: Optional[Dict[str, Any]] = None,
-        **kwargs,
-    ) -> TensorDict:
-        """
-        Parameters
-        ----------
-        inputs : Union[TensorDict, Iterable[LczeroBoard], torch.Tensor]
-            The inputs to the model.
-        prepare_kwargs : Optional[Dict[str, Any]], optional
-            Keyword arguments to pass to the prepare_boards method, by default None
-        **kwargs : Any
-            Additional keyword arguments to pass to the super().forward method.
-
-        Returns
-        -------
-        TensorDict
-            The output of the model.
-        """
-        prepare_kwargs = prepare_kwargs or {}
-        if isinstance(inputs, LczeroBoard):  # TODO: Move to prepare_baords
-            inputs = (inputs,)
-        if not isinstance(inputs, TensorDict) and not isinstance(inputs, torch.Tensor):
-            inputs = self.prepare_boards(*inputs, **prepare_kwargs)
-        if not isinstance(inputs, TensorDict):
-            if len(inputs.shape) == 3:
-                inputs = inputs.unsqueeze(0)
-            elif len(inputs.shape) != 4:
-                raise ValueError(f"Expected 3D or 4D tensor, got {inputs.shape}.")
-            inputs = inputs.to(self.device)
-            inputs = TensorDict({"board": inputs}, batch_size=inputs.shape[0])
-        return super().forward(inputs, **kwargs)
+        heads = tuple(out_keys)
+        if not heads or any(head not in _NETWORK_HEAD_KEYS for head in heads):
+            raise ValueError("LczeroModel supports only policy, wdl, value, and mlh output heads.")
+        if len(heads) != len(set(heads)):
+            raise ValueError("LczeroModel output heads must be unique.")
+        self.heads = heads
+        self.network = network
+        self.network_checksum = network_checksum
+        super().__init__(
+            module,
+            [LczeroKeys.INPUT_PLANES],
+            [_NETWORK_HEAD_KEYS[head] for head in heads],
+            **kwargs,
+        )
 
     def _call_module(self, tensors: Sequence[torch.Tensor], **kwargs: Any) -> Sequence[torch.Tensor]:
         out = super()._call_module(tensors, **kwargs)
@@ -134,7 +88,8 @@ class LczeroModel(TensorDictModule):
         LczeroModel
             The wrapped model instance
         """
-        return cls(model, out_keys=cls._get_output_names(model), **kwargs)
+        out_keys = kwargs.pop("out_keys", None)
+        return cls(model, out_keys=out_keys or cls._get_output_names(model), **kwargs)
 
     @classmethod
     def from_path(cls, model_path: str, **kwargs) -> "LczeroModel":
@@ -190,7 +145,8 @@ class LczeroModel(TensorDictModule):
         try:
             onnx_model = safe_shape_inference(onnx_model_path) if check else onnx_model_path
             onnx_torch_model = convert(onnx_model)
-            return cls.from_model(onnx_torch_model, **kwargs)
+            model = cls.from_model(onnx_torch_model, **kwargs)
+            return cls._record_source(model, onnx_model_path)
         except Exception as e:
             raise ValueError(f"Could not load model at {onnx_model_path}.") from e
 
@@ -222,9 +178,10 @@ class LczeroModel(TensorDictModule):
         except Exception as e:
             raise ValueError(f"Could not load model at {torch_model_path}.") from e
         if isinstance(torch_model, LczeroModel):
-            return torch_model
+            return cls._record_source(torch_model, torch_model_path)
         elif isinstance(torch_model, nn.Module):
-            return cls.from_model(torch_model, **kwargs)
+            model = cls.from_model(torch_model, **kwargs)
+            return cls._record_source(model, torch_model_path)
         else:
             raise ValueError(f"Could not load model at {torch_model_path}.")
 
@@ -270,7 +227,7 @@ class LczeroModel(TensorDictModule):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = os.path.join(tmp_dir, "model.pt")
-            torch.save(self.module, path)
+            torch.save(self, path)
             upload_file(path_or_fileobj=path, repo_id=repo_id, path_in_repo=path_in_repo, **kwargs)
 
     @classmethod
@@ -308,7 +265,28 @@ class LczeroModel(TensorDictModule):
 
         hf_hub_kwargs = hf_hub_kwargs or {}
         path = hf_hub_download(repo_id, filename, **hf_hub_kwargs)
-        return cls.from_path(path, **kwargs)
+        model = cls.from_path(path, **kwargs)
+        revision = hf_hub_kwargs.get("revision")
+        suffix = f"@{revision}" if revision is not None else ""
+        model.network = f"hf://{repo_id}/{filename}{suffix}"
+        model.network_checksum = cls._checksum(path)
+        return model
+
+    @classmethod
+    def _record_source(cls, model: "LczeroModel", path: str) -> "LczeroModel":
+        if model.network is None:
+            model.network = Path(path).name
+        if model.network_checksum is None:
+            model.network_checksum = cls._checksum(path)
+        return model
+
+    @staticmethod
+    def _checksum(path: str) -> str:
+        digest = hashlib.sha256()
+        with Path(path).open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return f"sha256:{digest.hexdigest()}"
 
     @staticmethod
     def _get_output_names(model: nn.Module) -> List[str]:
@@ -331,82 +309,3 @@ class LczeroModel(TensorDictModule):
             )
         output_node = list(model.graph.nodes)[-1]
         return [n.name.replace("output_", "") for n in output_node.all_input_nodes]
-
-
-class ForceValue(LczeroModel):
-    """Class for forcing and isolating the value flow."""
-
-    def __init__(self, module: nn.Module, out_keys: List[str], **kwargs):
-        super().__init__(module, out_keys, **kwargs)
-        output_names = self._get_output_names(self.module)
-        self._compute_value = "wdl" in output_names
-        self._wdl_index = output_names.index("wdl") if self._compute_value else None
-
-    @staticmethod
-    def _get_output_names(model: nn.Module) -> List[str]:
-        """Returns the output names of the model.
-
-        Parameters
-        ----------
-        model : nn.Module
-            The model to get the output names from.
-
-        Returns
-        -------
-        List[str]
-            The output names of the model.
-        """
-        names = LczeroModel._get_output_names(model)
-        if "value" in names:
-            return names
-        elif "wdl" in names:
-            return names + ["value"]
-        else:
-            raise ValueError("The model does not have a `value` or `wdl` head.")
-
-    def _call_module(self, tensors: Sequence[torch.Tensor], **kwargs: Any) -> Sequence[torch.Tensor]:
-        out = super()._call_module(tensors, **kwargs)
-        if self._compute_value:
-            wdl = out[self._wdl_index]
-            out = (*out, wdl @ torch.tensor([1.0, 0.0, -1.0], device=wdl.device))
-        return out
-
-
-class Flow(LczeroModel, metaclass=ABCMeta):
-    """Base class for isolating a flow."""
-
-    def __init__(self, module: nn.Module, out_keys: List[str], **kwargs):
-        if self._flow_type not in out_keys:
-            raise ValueError(f"The flow type `{self._flow_type}` is not in the output keys ({out_keys=}).")
-        filtered_out_keys = [key if key == self._flow_type else "_" for key in out_keys]
-        super().__init__(module, filtered_out_keys, **kwargs)
-
-    @property
-    @abstractmethod
-    def _flow_type(self) -> str:
-        """Returns the flow type."""
-        pass
-
-
-class PolicyFlow(Flow):
-    """Class for isolating the policy flow."""
-
-    _flow_type = "policy"
-
-
-class ValueFlow(Flow):
-    """Class for isolating the value flow."""
-
-    _flow_type = "value"
-
-
-class WdlFlow(Flow):
-    """Class for isolating the WDL flow."""
-
-    _flow_type = "wdl"
-
-
-class MlhFlow(Flow):
-    """Class for isolating the MLH flow."""
-
-    _flow_type = "mlh"

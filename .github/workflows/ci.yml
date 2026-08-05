@@ -26,11 +26,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        uv sync --locked --group dev --extra hub --extra datasets --extra viz --extra backends
-    - name: Install notebook test dependencies
-      if: inputs.tests-type == 'tests-slow'
-      run: |
-        uv sync --locked --group dev --group notebooks --extra hub --extra datasets --extra viz --extra backends
+        uv sync --locked --group dev --group conformance --extra hub
     - name: Run checks
       run: |
         just checks
@@ -72,15 +68,6 @@ jobs:
           - name: hub
             sync-args: --no-default-groups --extra hub
             import: import lczerolens, huggingface_hub
-          - name: datasets
-            sync-args: --no-default-groups --extra datasets
-            import: import lczerolens, datasets, sklearn
-          - name: viz
-            sync-args: --no-default-groups --extra viz
-            import: import lczerolens, graphviz, matplotlib
-          - name: backends
-            sync-args: --no-default-groups --extra backends
-            import: import lczerolens; from lczero.backends import Backend
           - name: docs
             sync-args: --no-default-groups --group docs
             import: import lczerolens, sphinx
@@ -95,3 +82,21 @@ jobs:
       run: uv sync --locked ${{ matrix.sync-args }}
     - name: Check imports
       run: uv run --no-sync python -c "${{ matrix.import }}"
+
+  wheel:
+    if: inputs.tests-type == 'tests'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: Installed wheel workflow
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install just
+      uses: extractions/setup-just@v3
+      with:
+        just-version: 1.41.0
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: "3.11"
+    - name: Run clean installed-wheel workflow
+      run: just tests-wheel

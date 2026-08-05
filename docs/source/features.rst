@@ -1,30 +1,16 @@
 Features
 ========
 
-The maintained documentation describes the supported library surface rather
-than treating notebooks as API guarantees.
+The feature documentation is executable:
 
-* :doc:`scope` defines board encoding, evaluator outputs, model formats, and
-  the external-integration boundary.
-* :doc:`facts` covers exact position facts, move and variation evidence, and
-  constrained counterfactuals.
-* :doc:`search` defines provenance, capabilities, snapshots, and the
-  deterministic reference-search boundary.
-* :doc:`behavior` defines evaluator, counterfactual, and search comparisons.
+* :doc:`notebooks/features/models-and-inputs` covers model loading, input
+  planes, legal masks, devices, and instrumentation keys.
+* :doc:`notebooks/features/evaluate-positions` covers legal policy, optional
+  heads, batching, and immutable evaluation records.
+* :doc:`notebooks/features/chess-evidence` covers facts, move and line
+  evidence, counterfactual validity, and authored puzzles.
+* :doc:`notebooks/features/replayable-search` covers search results,
+  capability checks, semantic replay, and retained-event replay.
 
-Historical notebook examples remain in the source repository but are not
-published as finished tutorials or compatibility commitments.
-
-.. toctree::
-   :hidden:
-   :maxdepth: 2
-
-   notebooks/features/encode-boards.ipynb
-   notebooks/features/load-models.ipynb
-   notebooks/features/move-prediction.ipynb
-   notebooks/features/run-models-on-gpu.ipynb
-   notebooks/features/evaluate-models-on-puzzles.ipynb
-   notebooks/features/convert-official-weights.ipynb
-   notebooks/features/visualise-heatmaps.ipynb
-   notebooks/features/probe-concepts.ipynb
-   notebooks/features/selfplay-mcts-nn.ipynb
+Use :doc:`facts` and :doc:`search` for the short semantic contracts behind
+those examples. Use :doc:`api/index` for signatures and fields.

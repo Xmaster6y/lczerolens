@@ -5,8 +5,8 @@ import math
 
 import pytest
 
-import lczerolens.search_trace as search_trace_module
-from lczerolens.search_trace import (
+import lczerolens.search.trace as search_trace_module
+from lczerolens.search.trace import (
     BackupUpdate,
     ChessPlayer,
     EdgeStatistics,

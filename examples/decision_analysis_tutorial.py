@@ -8,27 +8,40 @@ comparison boundaries runnable without downloading weights or an engine.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from os import PathLike
+from pathlib import Path
+import sys
 
 import chess
 import torch
-from tensordict import TensorDict
 from torch import nn
 
-from lczerolens import LczeroBoard
-from lczerolens.behavior import (
-    CounterfactualBehaviorComparison,
-    DecisionComparison,
-    EvaluatorBehavior,
-    compare_counterfactual_behavior,
-    compare_search_decision,
-    evaluator_behavior,
+from lczerolens import (
+    Puzzle,
+    PuzzleAttempt,
+    PuzzleContinuation,
+    PuzzleSolution,
+    ReferenceSearch,
+    SearchResult,
+    Simulations,
 )
-from lczerolens.counterfactuals import CounterfactualResult, sibling_counterfactual
+from lczerolens._codec import encode_move
+from lczerolens.decision import (
+    CounterfactualComparison,
+    DecisionAnalysis,
+    compare_counterfactual,
+    compare_decision,
+)
+from lczerolens.counterfactuals import CounterfactualPair, sibling_counterfactual
+from lczerolens.evaluation import Evaluation
+from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
 from lczerolens.model import LczeroModel
-from lczerolens.move_evidence import VariationEvidence, analyze_variation
-from lczerolens.reference_search import ReferenceMCTS
-from lczerolens.search_trace import SearchTrace
+from lczerolens.moves import LineAnalysis, analyze_line
+from lczerolens.provenance import EvaluationProvenance
+
+
+TUTORIAL_DECISION_DIGEST = "8a6646663724282bd88cb89ac303ce80702aa4ac46a728b99be002e12550b49c"
 
 
 class _TutorialFixtureModule(nn.Module):
@@ -36,14 +49,12 @@ class _TutorialFixtureModule(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        root = LczeroBoard()
+        root = chess.Board()
         after_e4 = root.copy(stack=True)
         after_e4.push_uci("e2e4")
-        self.register_buffer("root_e4", torch.tensor(root.encode_move(chess.Move.from_uci("e2e4"), root.turn)))
-        self.register_buffer("root_d4", torch.tensor(root.encode_move(chess.Move.from_uci("d2d4"), root.turn)))
-        self.register_buffer(
-            "black_e5", torch.tensor(after_e4.encode_move(chess.Move.from_uci("e7e5"), after_e4.turn))
-        )
+        self.register_buffer("root_e4", torch.tensor(encode_move(root, chess.Move.from_uci("e2e4"))))
+        self.register_buffer("root_d4", torch.tensor(encode_move(root, chess.Move.from_uci("d2d4"))))
+        self.register_buffer("black_e5", torch.tensor(encode_move(after_e4, chess.Move.from_uci("e7e5"))))
 
     def forward(self, board: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         batch = board.shape[0]
@@ -57,72 +68,95 @@ class _TutorialFixtureModule(nn.Module):
         return policy, torch.full((batch,), 0.2, device=board.device)
 
 
-def load_fixture_evaluator() -> LczeroModel:
-    """Load a tiny PyTorch evaluator through the standard TensorDict wrapper."""
-    return LczeroModel(_TutorialFixtureModule(), out_keys=["policy", "value"])
+@dataclass(frozen=True)
+class _FixtureRuntime:
+    evaluator: LczeroEvaluator
 
 
-def evaluate(model: LczeroModel, board: LczeroBoard) -> TensorDict:
-    """Adapt the public model output to the singleton evaluator search contract."""
-    return model(board)
+def load_fixture_evaluator() -> _FixtureRuntime:
+    """Load a tiny model and its concrete chess evaluator facade."""
+    model = LczeroModel(_TutorialFixtureModule(), out_keys=["policy", "value"])
+    provenance = EvaluationProvenance(
+        source="lczerolens-tutorial-fixture",
+        model_type="lczerolens.tutorial.fixture-v1",
+        network="decision-analysis-tutorial-v1",
+    )
+    return _FixtureRuntime(LczeroEvaluator(model, provenance=provenance))
 
 
 @dataclass(frozen=True)
 class TutorialResult:
     """Structured observations from the tutorial, with no scientific claim."""
 
-    evaluator: EvaluatorBehavior
-    search: SearchTrace
-    decision: DecisionComparison
-    counterfactual: CounterfactualResult
-    counterfactual_behavior: CounterfactualBehaviorComparison
-    variations: dict[str, VariationEvidence]
+    evaluation: Evaluation
+    search: SearchResult
+    decision: DecisionAnalysis
+    counterfactual: CounterfactualPair
+    counterfactual_comparison: CounterfactualComparison
+    variations: dict[str, LineAnalysis]
+    puzzle: Puzzle
+    puzzle_attempt: PuzzleAttempt
+    restored_decision: DecisionAnalysis
+    decision_digest: str
 
 
-def run_tutorial() -> TutorialResult:
+def run_tutorial(artifact_path: str | PathLike[str] | None = None) -> TutorialResult:
     """Run the documented, hermetic decision-analysis workflow."""
-    board = LczeroBoard()
-    model = load_fixture_evaluator()
-    evaluator = evaluator_behavior(board, evaluate(model, board))
-    search = ReferenceMCTS(c_puct=1.0).search(board, lambda position: evaluate(model, position), simulations=4)
+    board = chess.Board()
+    runtime = load_fixture_evaluator()
+    evaluation = runtime.evaluator.evaluate(board)
+    search = ReferenceSearch(runtime.evaluator, c_puct=1.0).run(board, Simulations(4))
 
     # The candidate lines are exact move evidence, not generated explanation.
     variations = {
-        move: analyze_variation(
+        move: analyze_line(
             board,
             (chess.Move.from_uci(move),),
             MaterialAnalyzer(FactPerspective.WHITE),
             MaterialAnalyzer(FactPerspective.BLACK),
         )
-        for move in (evaluator.selected_move, search.snapshots[-1].selection.move)
+        for move in (evaluation.policy.best_move.uci(), search.move.uci())
     }
-    decision = compare_search_decision(evaluator, search, variation_evidence=variations)
-
-    counterfactual = sibling_counterfactual(board, chess.Move.from_uci("g1f3"), chess.Move.from_uci("b1c3"))
-    if not counterfactual.succeeded or counterfactual.modified is None:
+    counterfactual = sibling_counterfactual(board, factual="g1f3", alternative="b1c3")
+    if not counterfactual.succeeded or counterfactual.alternative is None:
         raise RuntimeError("The tutorial's legal sibling counterfactual unexpectedly failed.")
-    original_board = board.copy(stack=True)
-    original_board.push_uci("g1f3")
-    modified_board = board.copy(stack=True)
-    modified_board.push_uci("b1c3")
-    original = evaluator_behavior(original_board, evaluate(model, original_board))
-    modified = evaluator_behavior(modified_board, evaluate(model, modified_board))
-    comparison = compare_counterfactual_behavior(
-        original,
-        modified,
-        ("e7e5",),
-        counterfactual=counterfactual,
-        variation_evidence={
-            "e7e5": analyze_variation(
-                original_board,
-                (chess.Move.from_uci("e7e5"),),
-                MaterialAnalyzer(FactPerspective.WHITE),
-            )
-        },
+    comparison = compare_counterfactual(counterfactual, runtime.evaluator)
+    puzzle = Puzzle.from_board(
+        chess.Board("7k/8/5KQ1/8/8/8/8/8 w - - 0 1"),
+        PuzzleSolution((PuzzleContinuation("g6g7"),)),
     )
-    return TutorialResult(evaluator, search, decision, counterfactual, comparison, variations)
+    puzzle_attempt = puzzle.grade(("g6g7",))
+    decision = compare_decision(
+        evaluation,
+        search,
+        line_analyses=variations,
+        counterfactuals=(comparison,),
+    )
+    restored = DecisionAnalysis.from_bytes(decision.to_bytes())
+    if artifact_path is not None:
+        decision.save(artifact_path)
+        restored = DecisionAnalysis.load(artifact_path)
+    if restored.digest() != decision.digest():
+        raise RuntimeError("The tutorial decision artifact did not retain its canonical digest.")
+    if decision.digest() != TUTORIAL_DECISION_DIGEST:
+        raise RuntimeError("The versioned tutorial decision digest changed unexpectedly.")
+    return TutorialResult(
+        evaluation,
+        search,
+        decision,
+        counterfactual,
+        comparison,
+        variations,
+        puzzle,
+        puzzle_attempt,
+        restored,
+        decision.digest(),
+    )
 
 
 if __name__ == "__main__":
-    result = run_tutorial()
-    print(f"evaluator={result.evaluator.selected_move} search={result.decision.search_candidate}")
+    if len(sys.argv) > 2:
+        raise SystemExit("usage: decision_analysis_tutorial.py [artifact-path]")
+    artifact = Path(sys.argv[1]) if len(sys.argv) == 2 else None
+    result = run_tutorial(artifact)
+    print(f"policy={result.decision.policy_move} search={result.decision.search_move} digest={result.decision_digest}")

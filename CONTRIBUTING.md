@@ -12,13 +12,13 @@ Additionally, install `just` to run the project shortcut commands.
 To install the dependencies:
 
 ```bash
-uv sync
+uv sync --group dev --group conformance --extra hub
 ```
 
 Before committing, install `pre-commit`:
 
 ```bash
-uv run pre-commit install
+uv run --group dev pre-commit install
 ```
 
 To run the checks (`pre-commit` checks):
@@ -32,6 +32,29 @@ To run the tests (using `pytest`):
 ```bash
 just tests
 ```
+
+To build the wheel, install it into a fresh virtual environment, and run the
+maintained six-use-case workflow without importing the checkout:
+
+```bash
+just tests-wheel
+```
+
+Official-Lczero process conformance is deliberately opt-in. Pin the exact
+binary, network, and version token reported by `lc0 --version`:
+
+```bash
+LC0_EXECUTABLE=/path/to/lc0 \
+LC0_NETWORK=/path/to/network.pb.gz \
+LC0_VERSION=v0.31.2 \
+LC0_BACKEND=eigen \
+just tests-live-lczero
+```
+
+The live check verifies both paths, matches the declared version against the
+binary, records the network SHA-256 digest, and defaults to the portable
+`eigen` CPU backend when `LC0_BACKEND` is omitted. It never upgrades public
+root output to event or replayable evidence.
 
 To build the documentation locally:
 

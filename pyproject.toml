@@ -1,6 +1,6 @@
 [project]
 name = "lczerolens"
-version = "0.4.0"
+version = "0.5.0"
 description = "lc0 interoperability and chess-decision evidence in PyTorch."
 readme = "README.md"
 license = "MIT"
@@ -32,56 +32,32 @@ issues = "https://github.com/Xmaster6y/lczerolens/issues"
 releasenotes = "https://github.com/Xmaster6y/lczerolens/releases"
 
 [project.optional-dependencies]
-viz = [
-    "graphviz>=0.21",
-    "matplotlib>=3.10.0",
-]
-backends = [
-    "v-lczero-bindings>=0.31.2"
-]
 hub = [
     "huggingface-hub>=0.27.1",
-]
-datasets = [
-    "datasets>=4.0.0",
-    "scikit-learn>=1.7.1",
 ]
 
 [dependency-groups]
 dev = [
     "gdown>=5.2.0",
-    "onnxruntime>=1.20.1",
+    "ipykernel>=6.29.5",
+    "nbclient>=0.10.2",
+    "nbformat>=5.10.4",
     "pre-commit>=4.0.1",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
 ]
-notebooks = [
-    "captum>=0.8.0",
-    "ipykernel>=6.29.5",
-    "ipywidgets>=8.1.7",
-    "nbconvert>=7.16.5",
-    "nnsight>=0.6.3",
-    "seaborn>=0.13.2",
-    "tdhook>=0.1.3",
-    "zennit>=0.5.1",
+conformance = [
+    "v-lczero-bindings>=0.31.2",
 ]
 docs = [
-    "nbsphinx>=0.9.6",
-    "pandoc>=2.4",
-    "plotly>=5.24.1",
+    "ipykernel>=6.29.5",
+    "nbsphinx>=0.9.7",
     "pydata-sphinx-theme>=0.16.1",
     "sphinx>=8.1.3",
     "sphinx-autoapi>=3.6.0",
-    "sphinx-charts>=0.2.1",
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
     "sphinx-llm>=0.3.0",
-]
-scripts = [
-    "loguru>=0.7.3",
-    "matplotlib>=3.10.0",
-    "pylatex>=1.4.2",
-    "wandb>=0.19.2",
 ]
 
 [build]
@@ -98,10 +74,9 @@ default-groups = []
 markers = [
     "unit: deterministic tests of library code with no external service or model fixture (automatic default)",
     "conformance: lc0 compatibility checks that require versioned model fixtures (explicit primary tier)",
-    "integration: tests that exercise notebooks or another process boundary (explicit primary tier)",
+    "integration: tests that exercise another process boundary (explicit primary tier)",
     "network: tests that contact an external service and are never in the offline suite (explicit primary tier)",
     "slow: tests intended for the explicitly requested slow tier (explicit primary tier)",
-    "backends: legacy alias for an lc0 conformance test",
 ]
 
 [tool.ruff]

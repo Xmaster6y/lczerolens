@@ -1,36 +1,39 @@
-"""
-Integration tests using the notebooks.
-"""
+"""Execute every maintained notebook as an explicit integration contract."""
 
-import subprocess
+from pathlib import Path
+
+from nbclient import NotebookClient
+import nbformat
 import pytest
 
-NOTEBOOKS = [
-    "docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb",
-    "docs/source/notebooks/features/visualise-heatmaps.ipynb",
-    "docs/source/notebooks/features/probe-concepts.ipynb",
-    "docs/source/notebooks/features/convert-official-weights.ipynb",
-    "docs/source/notebooks/features/move-prediction.ipynb",
-    "docs/source/notebooks/tutorials/piece-value-estimation-using-lrp.ipynb",
-    "docs/source/notebooks/walkthrough.ipynb",
-]
+
+ROOT = Path(__file__).parents[2]
+NOTEBOOK_DIRECTORY = ROOT / "docs" / "source" / "notebooks"
+EXPECTED_NOTEBOOKS = {
+    "features/chess-evidence.ipynb",
+    "features/evaluate-positions.ipynb",
+    "features/models-and-inputs.ipynb",
+    "features/replayable-search.ipynb",
+    "tutorials/analyze-puzzles.ipynb",
+    "tutorials/compare-models.ipynb",
+    "tutorials/decision-analysis.ipynb",
+}
+NOTEBOOKS = tuple(sorted(NOTEBOOK_DIRECTORY.rglob("*.ipynb")))
 
 
-def run_notebook(notebook):
-    result = subprocess.run(
-        ["uv", "run", "jupyter", "nbconvert", "--to", "notebook", "--execute", notebook],
-        stderr=subprocess.PIPE,
+@pytest.mark.integration
+def test_maintained_notebook_manifest_is_complete():
+    assert {path.relative_to(NOTEBOOK_DIRECTORY).as_posix() for path in NOTEBOOKS} == EXPECTED_NOTEBOOKS
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("notebook_path", NOTEBOOKS, ids=lambda path: path.stem)
+def test_maintained_notebook_executes(notebook_path):
+    notebook = nbformat.read(notebook_path, as_version=4)
+    client = NotebookClient(
+        notebook,
+        timeout=60,
+        kernel_name="python3",
+        resources={"metadata": {"path": str(ROOT)}},
     )
-    if result.returncode != 0:
-        raise subprocess.CalledProcessError(result.returncode, result.args, result.stderr)
-
-
-class TestNotebooks:
-    def test_error_notebook(self):
-        with pytest.raises(subprocess.CalledProcessError):
-            run_notebook("tests/assets/error.ipynb")
-
-    @pytest.mark.slow
-    @pytest.mark.parametrize("notebook", NOTEBOOKS)
-    def test_notebook(self, notebook):
-        run_notebook(notebook)
+    client.execute()

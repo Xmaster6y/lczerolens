@@ -1,8 +1,18 @@
 # Configuration file for the Sphinx documentation builder.
 
+import importlib
 import os
+from pathlib import Path
+import sys
 
-import lczerolens
+# The maintained notebooks reuse the executable fixture from ``examples``.
+# Make that repository-local companion importable in Sphinx and in the kernel
+# subprocesses started by nbsphinx.
+REPOSITORY_ROOT = str(Path(__file__).parents[2])
+sys.path.insert(0, REPOSITORY_ROOT)
+os.environ["PYTHONPATH"] = os.pathsep.join(filter(None, (REPOSITORY_ROOT, os.environ.get("PYTHONPATH"))))
+
+lczerolens = importlib.import_module("lczerolens")
 
 # Project Information
 project = "lczerolens"
@@ -18,18 +28,21 @@ extensions = [
     "sphinx.ext.viewcode",  # View code in the browser
     "sphinx_copybutton",  # Copy button for code blocks
     "sphinx_design",  # Boostrap design components
-    "nbsphinx",  # Jupyter notebook support
+    "nbsphinx",  # Executable first-class notebook pages
     "autoapi.extension",
     "sphinx_llm.txt",
 ]
 
 templates_path = ["_templates"]
-# ``nbsphinx`` writes conversion checkpoints next to notebooks.  They are build
-# artifacts, not pages in the documentation source tree.
-exclude_patterns = [
-    "**/*.nbconvert.ipynb",
-]  # type: ignore
 fixed_sidebar = True
+exclude_patterns = ["**/*.nbconvert.ipynb"]
+
+# These notebooks are deliberately small and hermetic. Executing them in the
+# docs build keeps the rendered walkthroughs aligned with the public API; the
+# integration tier independently executes the same files.
+nbsphinx_execute = "always"
+nbsphinx_allow_errors = False
+nbsphinx_timeout = 60
 
 
 # HTML Output Options
@@ -102,13 +115,7 @@ html_context = {"default_mode": "auto"}
 
 html_css_files = [
     "css/custom.css",
-    "css/nbsphinx.css",
 ]
-
-# Nbsphinx
-nbsphinx_execute = "never"
-nbsphinx_codecell_lexer = "none"
-nbsphinx_widgets_path = "https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js"
 
 # Autoapi
 autoapi_dirs = ["../../src"]

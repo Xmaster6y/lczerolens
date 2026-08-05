@@ -31,99 +31,107 @@ Loading or publishing models through Hugging Face Hub requires the `hub` extra:
 pip install "lczerolens[hub]"
 ```
 
-Install `datasets` for dataset adapters and concept metrics, `viz` to render heatmaps, or `backends` to use the `lc0` bindings:
-
-```bash
-pip install "lczerolens[datasets]"
-pip install "lczerolens[viz]"
-pip install "lczerolens[backends]"
-```
-
 ### Tests
 
 After `just test-fixtures` has fetched and checksummed the lc0 fixtures, `just
 tests` runs the complete fast, offline suite (unit and conformance tests) and
 produces the coverage report. `just tests-unit` and `just tests-conformance`
-select either tier for diagnosis. Notebook and release checks are opt-in with
-`just tests-slow`; CI retains JUnit and coverage artifacts to make failures
-inspectable.
+select either tier for diagnosis. The native Lczero bindings are a test-only
+conformance oracle, installed through the `conformance` dependency group rather
+than exposed as library API. Notebook and release checks are opt-in with
+`just tests-slow`; the notebook suite executes every maintained `.ipynb` page.
+`just tests-wheel` builds and installs the wheel in a fresh virtual
+environment before running the maintained workflow. CI retains JUnit and
+coverage artifacts to make failures inspectable.
 
-### Run Models
+### Evaluate a position
 
 Get the best move predicted by a model:
 
 ```python
-from lczerolens import LczeroBoard, LczeroModel
+import chess
+from lczerolens import LczeroEvaluator, LczeroModel
 
 model = LczeroModel.from_hf("lczerolens/maia-1100")
-board = LczeroBoard()
+evaluator = LczeroEvaluator(model)
+board = chess.Board()
 
-output = model(board)
-policy = output["policy"].squeeze(0)
-legal_indices = board.get_legal_indices()
-best_legal_offset = policy[legal_indices].argmax()
-best_move_idx = legal_indices[best_legal_offset]
-print(board.decode_move(best_move_idx.item()))
+evaluation = evaluator.evaluate(board)
+print(evaluation.policy.best_move)
+print(evaluation.policy["e2e4"].probability)
 ```
 
 ### External Interpretability Integrations
 
-Use `lczerolens` with your preferred PyTorch interpretability framework (`tdhook`, `captum`, `zennit`, `nnsight`). These packages are optional examples, not lczerolens abstractions or dependencies of its core evaluator contract. More examples are in the [framework-agnostic interpretability notebook](https://lczerolens.readthedocs.io/en/latest/notebooks/tutorials/framework-agnostic-interpretability.html).
+Use `lczerolens` with your preferred PyTorch interpretability framework
+(`tdhook`, `captum`, `zennit`, or `nnsight`). These packages own their methods;
+they are not lczerolens abstractions or dependencies of its evaluator contract.
 
 ```python
-from lczerolens import LczeroBoard, LczeroModel
+import chess
+from lczerolens import LczeroEvaluator, LczeroKeys, LczeroModel
 from tdhook.attribution import Saliency
 from tensordict import TensorDict
 
 model = LczeroModel.from_hf("lczerolens/maia-1100")
-board = LczeroBoard()
+evaluator = LczeroEvaluator(model)
+board = chess.Board()
 
 def best_logit_init_targets(td: TensorDict, _):
-    policy = td["policy"]
+    policy = td[LczeroKeys.NETWORK_POLICY_LOGITS]
     best_logit = policy.max(dim=-1).values
     return TensorDict(out=best_logit, batch_size=td.batch_size)
 
 saliency_context = Saliency(init_attr_targets=best_logit_init_targets)
-with saliency_context.prepare(model) as hooked_model:
-    output = hooked_model(TensorDict(board=model.prepare_boards(board), batch_size=1))
-    attr = output.get(("attr", "board"))
+with saliency_context.prepare(evaluator.model) as hooked_model:
+    tensors = hooked_model(evaluator.prepare([board]))
+    evaluation = evaluator.finish([board], tensors)[0]
+    attr = tensors.get(("attr", "input", "planes"))
 ```
+
+### Define and grade a puzzle
+
+Puzzle correctness comes from an authored solution tree rather than from model
+preference or chess terminality:
+
+```python
+import chess
+from lczerolens import Puzzle, PuzzleContinuation, PuzzleSolution
+
+board = chess.Board("7k/8/5KQ1/8/8/8/8/8 w - - 0 1")
+solution = PuzzleSolution((PuzzleContinuation("g6g7"),))
+puzzle = Puzzle.from_board(board, solution)
+
+attempt = puzzle.grade(["g6g7"])
+print(attempt.status)  # PuzzleStatus.SOLVED
+```
+
+Solution trees can retain alternative accepted moves and authored opponent
+replies. Provider-specific dataset ingestion remains outside the core package.
 
 ### Decision-analysis documentation
 
-The maintained documentation covers the evaluator and board contract, exact
-facts and move/variation evidence, constrained counterfactuals, typed search
-traces, and observable behavior comparisons. Start with the [scope and
-compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html),
+The maintained documentation covers the evaluator and position contract, exact
+facts and move/variation evidence, authored puzzles, constrained
+counterfactuals, typed search traces, and concrete decision comparisons. Start
+with the [scope and compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html),
 then follow the [facts](https://lczerolens.readthedocs.io/en/latest/facts.html),
 [search](https://lczerolens.readthedocs.io/en/latest/search.html), and
-[behavior](https://lczerolens.readthedocs.io/en/latest/behavior.html) guides.
+[use cases](https://lczerolens.readthedocs.io/en/latest/use-cases.html) guides.
 
 Interpretability techniques remain external integrations rather than
 lczerolens APIs.
 
-### Example notebooks
+### Maintained demos
 
-The following maintained examples live in the repository and can be opened in
-Colab:
-
-- [Encode Boards](docs/source/notebooks/features/encode-boards.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/encode-boards.ipynb)
-- [Load Models](docs/source/notebooks/features/load-models.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/load-models.ipynb)
-- [Move Prediction](docs/source/notebooks/features/move-prediction.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/move-prediction.ipynb)
-- [Run Models on GPU](docs/source/notebooks/features/run-models-on-gpu.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/run-models-on-gpu.ipynb)
-- [Evaluate Models on Puzzles](docs/source/notebooks/features/evaluate-models-on-puzzles.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/evaluate-models-on-puzzles.ipynb)
-- [Convert Official Weights](docs/source/notebooks/features/convert-official-weights.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/convert-official-weights.ipynb)
-- [Visualise Heatmaps](docs/source/notebooks/features/visualise-heatmaps.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/visualise-heatmaps.ipynb)
-- [Probe Concepts](docs/source/notebooks/features/probe-concepts.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/features/probe-concepts.ipynb)
-
-### Tutorials
-
-- [Walkthrough](docs/source/notebooks/walkthrough.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/walkthrough.ipynb)
-- [Framework-Agnostic Interpretability](docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xmaster6y/lczerolens/blob/main/docs/source/notebooks/tutorials/framework-agnostic-interpretability.ipynb)
-
-The automated-interpretability and learned-look-ahead notebooks are incomplete
-and intentionally not listed as tutorials. Their techniques remain external
-integrations rather than lczerolens API guarantees.
+The executable [decision-analysis tutorial](examples/decision_analysis_tutorial.py)
+composes evaluator, search, exact line analysis, and counterfactual comparison
+against a deterministic fixture. Seven maintained
+[feature and tutorial notebooks](docs/source/tutorials.rst) cover model loading
+and inputs, evaluation, chess evidence, search and replay, complete decision
+analysis, model comparison, and authored-puzzle analysis. Sphinx renders and
+executes them, and the integration tier executes the source notebooks directly.
+Historical notebooks built on removed APIs are not shipped.
 
 ## Full Documentation
 

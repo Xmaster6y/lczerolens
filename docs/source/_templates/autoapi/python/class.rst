@@ -6,12 +6,6 @@
    {% endif %}
    {% set visible_children = obj.children|selectattr("display")|list %}
    {% set own_page_children = visible_children|selectattr("type", "in", own_page_types)|list %}
-   {% set docstring_attributes = obj.obj["full_name"] in [
-      "lczerolens.data.GameData",
-      "lczerolens.data.BoardData",
-      "lczerolens.data.PuzzleData",
-      "lczerolens.concepts.HasMaterialAdvantage",
-   ] %}
    {% if is_own_page and own_page_children %}
 .. toctree::
    :hidden:
@@ -48,7 +42,7 @@
    {{ obj.docstring|indent(3) }}
    {% endif %}
    {% for obj_item in visible_children %}
-      {% if obj_item.type not in own_page_types and not (docstring_attributes and obj_item.type == "attribute") %}
+      {% if obj_item.type not in own_page_types %}
 
    {{ obj_item.render()|indent(3) }}
       {% endif %}

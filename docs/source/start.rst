@@ -1,11 +1,8 @@
 Getting Started
 ===============
 
-``lczerolens`` makes lc0-family models portable and operable in PyTorch, then
-expresses evaluator and search behaviour as chess-domain evidence. It owns the
-model and chess-analysis boundary, not a neural-interpretability method.
-External tools such as ``tdhook``, ``captum``, ``zennit``, and ``nnsight`` can
-instrument that boundary without becoming lczerolens dependencies.
+``lczerolens`` loads lc0-family models into PyTorch and turns evaluator and
+search output into chess-domain evidence.
 
 Installation
 ------------
@@ -14,28 +11,22 @@ Installation
 
    pip install lczerolens
 
-Use the ``hub`` extra for Hugging Face model loading, ``backends`` for optional
-lc0 bindings, ``viz`` for rendering helpers, and ``datasets`` for dataset
-adapters and concept metrics.
+Use ``pip install "lczerolens[hub]"`` for Hugging Face model loading.
 
-Supported user path
--------------------
+Learn by running
+----------------
 
-* :doc:`scope` defines the board, evaluator, and compatibility contract.
-* :doc:`facts` covers exact facts, move/variation evidence, and constrained
-  counterfactual positions.
-* :doc:`search` defines typed, capability-aware traces. ``ReferenceMCTS`` is
-  an auditable reference implementation, not production lc0 search.
-* :doc:`behavior` covers evaluator, counterfactual, and search comparisons.
-* :doc:`decision-analysis-tutorial` runs those public boundaries together with
-  a small versioned fixture; its output is a demonstration, not a result.
-* :doc:`api/index` contains generated reference documentation for every
-  importable module.
+Start with the maintained notebooks:
 
-Notebook status
----------------
+* :doc:`notebooks/features/models-and-inputs` — load a model and inspect its
+  TensorDict inputs;
+* :doc:`notebooks/features/evaluate-positions` — evaluate positions and
+  batches;
+* :doc:`notebooks/features/chess-evidence` — analyze moves, lines, puzzles,
+  and counterfactuals; and
+* :doc:`notebooks/features/replayable-search` — run and replay reference
+  search.
 
-The repository retains older notebooks as historical examples, but they are
-not a rendered or supported tutorial path. Their optional dependencies, runtime
-assumptions, and completion status vary; use the maintained pages above for
-current behaviour and compatibility commitments.
+Then use :doc:`tutorials` for complete workflows. :doc:`scope` defines what
+the project owns, :doc:`architecture` defines the system contract, and
+:doc:`api/index` is the generated reference.

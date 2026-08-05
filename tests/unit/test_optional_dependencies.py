@@ -3,10 +3,6 @@
 import builtins
 from unittest.mock import patch
 
-import pytest
-
-from lczerolens.concepts import BinaryConcept, ContinuousConcept, MulticlassConcept
-from lczerolens.data import BoardData, GameData, PuzzleData
 from lczerolens.model import LczeroModel
 
 
@@ -21,23 +17,12 @@ def _missing_module(module_name):
     return import_without_optional_dependency
 
 
-@pytest.mark.parametrize(
-    ("call", "module_name"),
-    [
-        (lambda: BinaryConcept.compute_metrics([], []), "sklearn"),
-        (BinaryConcept.get_dataset_feature, "datasets"),
-        (lambda: MulticlassConcept.compute_metrics([], []), "sklearn"),
-        (MulticlassConcept.get_dataset_feature, "datasets"),
-        (lambda: ContinuousConcept.compute_metrics([], []), "sklearn"),
-        (ContinuousConcept.get_dataset_feature, "datasets"),
-        (GameData.get_dataset_features, "datasets"),
-        (BoardData.get_dataset_features, "datasets"),
-        (PuzzleData.get_dataset_features, "datasets"),
-        (lambda: LczeroModel.from_hf("lczerolens/maia-1100"), "huggingface_hub"),
-    ],
-)
-def test_missing_optional_dependency_names_the_install_extra(call, module_name):
-    """Optional functionality points users to the package extra that enables it."""
-    with patch("builtins.__import__", side_effect=_missing_module(module_name)):
-        with pytest.raises(ImportError, match=r"pip install lczerolens\[(datasets|hub)\]"):
-            call()
+def test_missing_hub_dependency_names_the_install_extra():
+    """Optional Hub functionality points users to the package extra that enables it."""
+    with patch("builtins.__import__", side_effect=_missing_module("huggingface_hub")):
+        try:
+            LczeroModel.from_hf("lczerolens/maia-1100")
+        except ImportError as error:
+            assert "pip install lczerolens[hub]" in str(error)
+        else:
+            raise AssertionError("Missing huggingface_hub must fail with an actionable error.")
