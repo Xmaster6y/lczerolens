@@ -17,7 +17,7 @@ from tensordict import TensorDict
 
 from .board import LczeroBoard
 from .counterfactuals import CounterfactualResult
-from .move_evidence import VariationEvidence
+from .moves import LineAnalysis
 from .reference_search import replay_root_events
 from .search_trace import (
     PositionEvaluation,
@@ -464,7 +464,7 @@ class CounterfactualBehaviorComparison:
     targets: tuple[TargetEffect, ...]
     collateral: CollateralEffect
     counterfactual: CounterfactualResult | None = None
-    variation_evidence: tuple[tuple[str, VariationEvidence], ...] = ()
+    line_analyses: tuple[tuple[str, LineAnalysis], ...] = ()
 
 
 def compare_counterfactual_behavior(
@@ -474,7 +474,7 @@ def compare_counterfactual_behavior(
     *,
     control_kind: ControlKind = ControlKind.MATCHED,
     counterfactual: CounterfactualResult | None = None,
-    variation_evidence: Mapping[str, VariationEvidence] | None = None,
+    line_analyses: Mapping[str, LineAnalysis] | None = None,
 ) -> CounterfactualBehaviorComparison:
     """Report declared target effects separately from all collateral effects."""
     if not isinstance(control_kind, ControlKind):
@@ -513,15 +513,15 @@ def compare_counterfactual_behavior(
         )
         for move in collateral_moves
     )
-    evidence = tuple(sorted((variation_evidence or {}).items()))
+    evidence = tuple(sorted((line_analyses or {}).items()))
     unknown_evidence = {move for move, _ in evidence} - (set(target_moves) | set(collateral_moves))
     if unknown_evidence:
-        raise ValueError("Variation evidence keys must name a target or collateral move.")
-    for move, variation in evidence:
-        if not variation.moves or variation.moves[0].uci() != move:
-            raise ValueError("Variation evidence must begin with the move named by its key.")
-        if variation.initial.fen not in (original.fen, modified.fen):
-            raise ValueError("Variation evidence must begin at the original or modified evaluator FEN.")
+        raise ValueError("Line-analysis keys must name a target or collateral move.")
+    for move, line in evidence:
+        if not line.moves or line.moves[0].uci() != move:
+            raise ValueError("Line analysis must begin with the move named by its key.")
+        if line.initial_position.fen not in (original.fen, modified.fen):
+            raise ValueError("Line analysis must begin at the original or modified evaluator FEN.")
     return CounterfactualBehaviorComparison(
         control_kind,
         original,
@@ -541,8 +541,8 @@ class DecisionComparison:
     search_candidate: str
     evaluator_candidate_comparison: SearchActionComparison
     search_candidate_comparison: SearchActionComparison
-    evaluator_variation: VariationEvidence | None
-    search_variation: VariationEvidence | None
+    evaluator_line: LineAnalysis | None
+    search_line: LineAnalysis | None
     search_source: str
     search_capability: SearchCapability
 
@@ -551,7 +551,7 @@ def compare_search_decision(
     evaluator: EvaluatorBehavior,
     trace: SearchTrace,
     *,
-    variation_evidence: Mapping[str, VariationEvidence] | None = None,
+    line_analyses: Mapping[str, LineAnalysis] | None = None,
 ) -> DecisionComparison:
     """Link a search-over-evaluator preference change to supplied chess evidence."""
     comparison = compare_evaluator_to_search(evaluator, trace)
@@ -561,10 +561,10 @@ def compare_search_decision(
     search_action = comparison.action(comparison.search_selected_move)
     if evaluator_action is None or search_action is None:
         raise ValueError("Both evaluator and search candidates must have exposed root action statistics.")
-    evidence = variation_evidence or {}
-    for move, variation in evidence.items():
-        if variation.initial.fen != evaluator.fen or not variation.moves or variation.moves[0].uci() != move:
-            raise ValueError("Decision variation evidence must start at the root and begin with its keyed move.")
+    evidence = line_analyses or {}
+    for move, line in evidence.items():
+        if line.initial_position.fen != evaluator.fen or not line.moves or line.moves[0].uci() != move:
+            raise ValueError("Decision line analysis must start at the root and begin with its keyed move.")
     return DecisionComparison(
         evaluator.selected_move,
         comparison.search_selected_move,

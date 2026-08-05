@@ -30,7 +30,19 @@ from .evaluation import Evaluation, EvaluationBatch, EvaluationRecord
 from .evaluator import LczeroEvaluator
 from .lc0_adapter import Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from .model import LczeroModel
-from .move_evidence import MoveDelta, VariationEvidence, analyze_move_delta, analyze_variation
+from .moves import (
+    ExactMoveEffect,
+    HistoryPolicy,
+    LineAnalysis,
+    LineAnalysisError,
+    LineFailureReason,
+    LineIntent,
+    LineRole,
+    LineTerminal,
+    MoveAnalysis,
+    analyze_line,
+    analyze_move,
+)
 from .provenance import ChessPlayer, EvaluationProvenance, PositionIdentity
 from .reference_search import (
     ReferenceMCTS,
@@ -74,10 +86,12 @@ __all__ = [
     "EvaluationProvenance",
     "EvaluatorBehavior",
     "FactAnalyzer",
+    "ExactMoveEffect",
+    "HistoryPolicy",
     "Lc0ProcessAdapter",
     "Lc0RootSnapshotParser",
     "Lc0SearchRequest",
-    "MoveDelta",
+    "MoveAnalysis",
     "PositionAttribute",
     "PositionIdentity",
     "ReferenceMCTS",
@@ -87,9 +101,14 @@ __all__ = [
     "SemanticReplayError",
     "SemanticReplayResult",
     "SearchBehaviorComparison",
-    "VariationEvidence",
-    "analyze_move_delta",
-    "analyze_variation",
+    "LineAnalysis",
+    "LineAnalysisError",
+    "LineFailureReason",
+    "LineIntent",
+    "LineRole",
+    "LineTerminal",
+    "analyze_move",
+    "analyze_line",
     "compare_counterfactual_behavior",
     "compare_evaluator_to_search",
     "compare_search_decision",

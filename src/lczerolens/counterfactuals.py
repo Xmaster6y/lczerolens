@@ -14,7 +14,7 @@ from typing import TypeAlias
 import chess
 
 from .facts import Evidence, FactAnalyzer, FactKind, HistoryRequirement, history_is_available
-from .move_evidence import MoveDelta, analyze_move_delta
+from .moves import MoveAnalysis, analyze_move
 
 
 class CounterfactualValidity(str, Enum):
@@ -193,8 +193,8 @@ class CounterfactualResult:
     preserved_attributes: tuple[AttributeVerification, ...] = ()
     changed_facts: tuple[FactVerification, ...] = ()
     preserved_facts: tuple[FactVerification, ...] = ()
-    original_move_delta: MoveDelta | None = None
-    modified_move_delta: MoveDelta | None = None
+    original_move_analysis: MoveAnalysis | None = None
+    modified_move_analysis: MoveAnalysis | None = None
     failures: tuple[CounterfactualFailure, ...] = ()
 
     @property
@@ -280,8 +280,8 @@ def sibling_counterfactual(
             CounterfactualValidity.HISTORY_CONSISTENT if complete else CounterfactualValidity.SIBLING_LEGAL_MOVE,
             _history_guarantee(factual_board, modified_board, shared_parent=True, legal=True),
             verifications,
-            original_move_delta=analyze_move_delta(parent, factual_move),
-            modified_move_delta=analyze_move_delta(parent, candidate),
+            original_move_analysis=analyze_move(parent, factual_move),
+            modified_move_analysis=analyze_move(parent, candidate),
         )
 
     if alternative_move is not None:
@@ -554,8 +554,8 @@ def _success_result(
     history: HistoryGuarantee,
     verifications: VerificationGroups,
     *,
-    original_move_delta: MoveDelta | None = None,
-    modified_move_delta: MoveDelta | None = None,
+    original_move_analysis: MoveAnalysis | None = None,
+    modified_move_analysis: MoveAnalysis | None = None,
 ) -> CounterfactualResult:
     return CounterfactualResult(
         original=_snapshot(original),
@@ -568,8 +568,8 @@ def _success_result(
         preserved_attributes=verifications[1],
         changed_facts=verifications[2],
         preserved_facts=verifications[3],
-        original_move_delta=original_move_delta,
-        modified_move_delta=modified_move_delta,
+        original_move_analysis=original_move_analysis,
+        modified_move_analysis=modified_move_analysis,
     )
 
 

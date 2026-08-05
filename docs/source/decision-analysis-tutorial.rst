@@ -28,13 +28,13 @@ The executable companion is :download:`examples/decision_analysis_tutorial.py
 #. evaluates the initial position after masking to legal candidates;
 #. runs :class:`~lczerolens.reference_search.ReferenceMCTS` and retains its
    capability-aware :class:`~lczerolens.search_trace.SearchTrace`;
-#. attaches exact material variation evidence to the evaluator and search
+#. attaches exact material line analysis to the evaluator and search
    candidates;
 #. makes a constrained sibling-move counterfactual (``g1f3`` versus ``b1c3``);
 #. reports the target ``e7e5`` effect separately from the collateral legal
    action distribution; and
 #. records whether evaluator and reference-search candidates agree, including
-   their root statistics and variation evidence.
+   their root statistics and line analysis.
 
 The reference search is explicitly ``replayable`` and therefore exposes full
 events. That is stronger than an official-lc0 adapter that only advertises

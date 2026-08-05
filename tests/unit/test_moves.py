@@ -1,4 +1,4 @@
-"""Tests for exact move deltas and variation evidence."""
+"""Tests for exact move and line analysis."""
 
 from dataclasses import replace
 
@@ -12,17 +12,18 @@ from lczerolens.facts import (
     FactPerspective,
     MaterialAnalyzer,
 )
-from lczerolens.move_evidence import (
+from lczerolens.moves import (
     EvidenceTransition,
     EvidenceTransitionKind,
     ExactMoveEffect,
     HistoryPolicy,
-    VariationAnalysisError,
-    VariationFailureReason,
-    VariationIntent,
-    VariationRole,
-    analyze_move_delta,
-    analyze_variation,
+    LineAnalysisError,
+    LineFailureReason,
+    LineIntent,
+    LineRole,
+    LineTerminal,
+    analyze_move,
+    analyze_line,
     exact_move_analyzers,
 )
 
@@ -30,19 +31,21 @@ from lczerolens.move_evidence import (
 def test_capture_changes_material_and_retains_move_and_position_provenance():
     board = chess.Board("4k3/p7/8/8/8/8/8/R3K3 w - - 0 1")
     move = chess.Move.from_uci("a1a7")
-    delta = analyze_move_delta(
+    delta = analyze_move(
         board,
-        move,
+        "a1a7",
         MaterialAnalyzer(FactPerspective.WHITE),
         MaterialAnalyzer(FactPerspective.BLACK),
     )
 
     assert delta.before.fen == board.fen()
     assert delta.after.turn.value == "black"
-    assert delta.move.move == move
-    assert delta.move.captured_piece == chess.Piece(chess.PAWN, chess.BLACK)
-    assert delta.move.capture_square == chess.A7
-    assert delta.move.effects == (ExactMoveEffect.CAPTURE,)
+    assert delta.move == move
+    assert delta.facts_before is delta.before.evidence
+    assert delta.facts_after is delta.after.evidence
+    assert delta.evidence.captured_piece == chess.Piece(chess.PAWN, chess.BLACK)
+    assert delta.evidence.capture_square == chess.A7
+    assert delta.effects == (ExactMoveEffect.CAPTURE,)
     assert delta.removed.items[0].value == 1
     assert delta.created.items[0].value == 0
     assert delta.preserved.items[0].value == 5
@@ -51,19 +54,19 @@ def test_capture_changes_material_and_retains_move_and_position_provenance():
 
 def test_check_and_evasion_are_exact_move_effects():
     checking = chess.Board("4k3/8/8/8/8/8/R7/4K3 w - - 0 1")
-    check = analyze_move_delta(checking, chess.Move.from_uci("a2e2"), CheckStatusAnalyzer(FactPerspective.BLACK))
-    assert check.move.effects == (ExactMoveEffect.CHECK,)
+    check = analyze_move(checking, chess.Move.from_uci("a2e2"), CheckStatusAnalyzer(FactPerspective.BLACK))
+    assert check.effects == (ExactMoveEffect.CHECK,)
     assert check.created.items[0].value is True
 
     evading = chess.Board("4k3/8/8/8/8/8/4R3/4K3 b - - 0 1")
-    evasion = analyze_move_delta(evading, chess.Move.from_uci("e8f8"), CheckStatusAnalyzer(FactPerspective.BLACK))
-    assert evasion.move.effects == (ExactMoveEffect.EVASION,)
+    evasion = analyze_move(evading, chess.Move.from_uci("e8f8"), CheckStatusAnalyzer(FactPerspective.BLACK))
+    assert evasion.effects == (ExactMoveEffect.EVASION,)
     assert evasion.created.items[0].value is False
 
 
 def test_discovered_attack_and_defender_removal_change_supporting_evidence():
     discovered = chess.Board("r3k3/8/8/8/8/8/B7/R3K3 w - - 0 1")
-    attack = analyze_move_delta(
+    attack = analyze_move(
         discovered,
         chess.Move.from_uci("a2b3"),
         AttacksDefendersAnalyzer(chess.A8, FactPerspective.BLACK),
@@ -73,7 +76,7 @@ def test_discovered_attack_and_defender_removal_change_supporting_evidence():
     assert chess.A1 in attack.created.items[0].supporting_squares
 
     defended = chess.Board("4k3/5n2/8/4P3/2N5/8/8/4K3 w - - 0 1")
-    defender = analyze_move_delta(
+    defender = analyze_move(
         defended,
         chess.Move.from_uci("c4b6"),
         AttacksDefendersAnalyzer(chess.E5, FactPerspective.WHITE),
@@ -84,7 +87,7 @@ def test_discovered_attack_and_defender_removal_change_supporting_evidence():
 
 def test_equal_attack_counts_still_report_changed_attacker_identity():
     board = chess.Board("r3k3/8/8/8/8/8/R7/R3K3 w - - 0 1")
-    delta = analyze_move_delta(
+    delta = analyze_move(
         board,
         chess.Move.from_uci("a2b2"),
         AttacksDefendersAnalyzer(chess.A8, FactPerspective.BLACK),
@@ -137,11 +140,11 @@ def test_equal_attack_counts_still_report_changed_attacker_identity():
     ],
 )
 def test_special_moves_have_explicit_exact_metadata(fen, uci, effects, capture_square, rook_uci):
-    delta = analyze_move_delta(chess.Board(fen), chess.Move.from_uci(uci), MaterialAnalyzer())
+    delta = analyze_move(chess.Board(fen), chess.Move.from_uci(uci), MaterialAnalyzer())
 
-    assert delta.move.effects == effects
-    assert delta.move.capture_square == capture_square
-    assert (delta.move.rook_move.uci() if delta.move.rook_move else None) == rook_uci
+    assert delta.effects == effects
+    assert delta.evidence.capture_square == capture_square
+    assert (delta.evidence.rook_move.uci() if delta.evidence.rook_move else None) == rook_uci
 
 
 def test_chess960_castling_moves_the_configured_rook_without_a_capture():
@@ -152,18 +155,18 @@ def test_chess960_castling_moves_the_configured_rook_without_a_capture():
     board.castling_rights = chess.BB_H1
     move = chess.Move(chess.G1, chess.H1)
 
-    delta = analyze_move_delta(board, move, MaterialAnalyzer())
+    delta = analyze_move(board, move, MaterialAnalyzer())
 
-    assert delta.move.effects == (ExactMoveEffect.CASTLING,)
-    assert delta.move.captured_piece is None
-    assert delta.move.capture_square is None
-    assert delta.move.rook_move == chess.Move(chess.H1, chess.F1)
+    assert delta.effects == (ExactMoveEffect.CASTLING,)
+    assert delta.evidence.captured_piece is None
+    assert delta.evidence.capture_square is None
+    assert delta.evidence.rook_move == chess.Move(chess.H1, chess.F1)
 
 
 def test_unchanged_control_is_preserved_without_losing_original_evidence():
     board = chess.Board()
     before = MaterialAnalyzer(FactPerspective.WHITE).analyze(board)
-    delta = analyze_move_delta(board, chess.Move.from_uci("e2e4"), MaterialAnalyzer(FactPerspective.WHITE))
+    delta = analyze_move(board, chess.Move.from_uci("e2e4"), MaterialAnalyzer(FactPerspective.WHITE))
 
     assert not delta.created.items
     assert not delta.removed.items
@@ -176,7 +179,7 @@ def test_unchanged_control_is_preserved_without_losing_original_evidence():
 
 def test_default_suite_covers_both_sides_all_squares_and_mobility():
     analyzers = exact_move_analyzers()
-    delta = analyze_move_delta(chess.Board(), chess.Move.from_uci("e2e4"))
+    delta = analyze_move(chess.Board(), chess.Move.from_uci("e2e4"))
 
     assert len(analyzers) == 145
     assert len(delta.before.evidence) == len(delta.after.evidence) == 145
@@ -193,40 +196,40 @@ def test_transition_and_input_validation_rejects_inconsistent_records():
         EvidenceTransition(evidence, changed, EvidenceTransitionKind.PRESERVED)
     with pytest.raises(ValueError, match="different fact identity or value"):
         EvidenceTransition(evidence, evidence, EvidenceTransitionKind.CHANGED)
-    with pytest.raises(TypeError, match="Move-delta analysis"):
-        analyze_move_delta("not a board", chess.Move.from_uci("e2e4"))
-    with pytest.raises(VariationAnalysisError) as illegal:
-        analyze_move_delta(chess.Board(), "not a move")
-    assert illegal.value.reason is VariationFailureReason.ILLEGAL_MOVE
+    with pytest.raises(TypeError, match="Move analysis"):
+        analyze_move("not a board", chess.Move.from_uci("e2e4"))
+    with pytest.raises(LineAnalysisError) as illegal:
+        analyze_move(chess.Board(), "not a move")
+    assert illegal.value.reason is LineFailureReason.ILLEGAL_MOVE
     assert illegal.value.move is None
     malformed = chess.Move(64, chess.E4)
-    with pytest.raises(VariationAnalysisError) as malformed_delta:
-        analyze_move_delta(chess.Board(), malformed)
-    assert malformed_delta.value.reason is VariationFailureReason.ILLEGAL_MOVE
+    with pytest.raises(LineAnalysisError) as malformed_delta:
+        analyze_move(chess.Board(), malformed)
+    assert malformed_delta.value.reason is LineFailureReason.ILLEGAL_MOVE
     assert malformed_delta.value.move == malformed
-    with pytest.raises(VariationAnalysisError) as malformed_variation:
-        analyze_variation(chess.Board(), (malformed,))
-    assert malformed_variation.value.reason is VariationFailureReason.ILLEGAL_MOVE
+    with pytest.raises(LineAnalysisError) as malformed_variation:
+        analyze_line(chess.Board(), (malformed,))
+    assert malformed_variation.value.reason is LineFailureReason.ILLEGAL_MOVE
     assert malformed_variation.value.ply_index == 0
-    with pytest.raises(TypeError, match="Variation analysis"):
-        analyze_variation("not a board", (chess.Move.from_uci("e2e4"),))
+    with pytest.raises(TypeError, match="Line analysis"):
+        analyze_line("not a board", (chess.Move.from_uci("e2e4"),))
     with pytest.raises(ValueError, match="history_policy"):
-        analyze_variation(chess.Board(), (chess.Move.from_uci("e2e4"),), history_policy="allow")
+        analyze_line(chess.Board(), (chess.Move.from_uci("e2e4"),), history_policy="allow")
 
 
 def test_variation_tracks_alternating_perspective_terminal_result_and_intent():
     board = chess.Board("7k/5Q2/6K1/8/8/8/8/8 w - - 0 1")
     candidate = chess.Move.from_uci("f7g7")
-    intent = VariationIntent(
-        role=VariationRole.CANDIDATE_SUPPORT,
+    intent = LineIntent(
+        role=LineRole.CANDIDATE_SUPPORT,
         claim_id="mate-candidate",
         candidate=candidate,
     )
-    variation = analyze_variation(board, (candidate,), CheckStatusAnalyzer(), intent=intent)
+    variation = analyze_line(board, (candidate,), CheckStatusAnalyzer(), intent=intent)
 
-    assert variation.initial.turn.value == "white"
-    assert variation.final.turn.value == "black"
-    assert variation.initial.history_truncated
+    assert variation.initial_position.turn.value == "white"
+    assert variation.final_position.turn.value == "black"
+    assert variation.initial_position.history_truncated
     assert variation.moves == (candidate,)
     assert variation.intent == intent
     assert variation.terminal.is_terminal
@@ -239,9 +242,9 @@ def test_variation_tracks_alternating_perspective_terminal_result_and_intent():
 def test_claimable_draw_is_not_reported_as_a_terminal_result():
     moves = tuple(chess.Move.from_uci(uci) for uci in ("g1f3", "g8f6", "f3g1", "f6g8") * 2)
 
-    variation = analyze_variation(chess.Board(), moves, MaterialAnalyzer())
+    variation = analyze_line(chess.Board(), moves, MaterialAnalyzer())
 
-    assert variation.final.history_complete
+    assert variation.final_position.history_complete
     assert not variation.terminal.is_terminal
     assert variation.terminal.result == "*"
     assert variation.terminal.termination is None
@@ -251,67 +254,93 @@ def test_claimable_draw_is_not_reported_as_a_terminal_result():
 def test_refutation_intent_names_candidate_and_opponent_response():
     candidate = chess.Move.from_uci("e2e4")
     response = chess.Move.from_uci("e7e5")
-    intent = VariationIntent(
-        role=VariationRole.OPPONENT_REFUTATION,
+    intent = LineIntent(
+        role=LineRole.OPPONENT_REFUTATION,
         claim_id="candidate-keeps-e5-empty",
         candidate=candidate,
         response=response,
     )
-    variation = analyze_variation(chess.Board(), (candidate, response), MaterialAnalyzer(), intent=intent)
+    variation = analyze_line(chess.Board(), ("e2e4", "e7e5"), MaterialAnalyzer(), intent=intent)
 
     assert variation.intent.response == response
-    assert [delta.move.mover.value for delta in variation.deltas] == ["white", "black"]
-    assert variation.final.ply == 2
+    assert [step.evidence.mover.value for step in variation.steps] == ["white", "black"]
+    assert variation.final_position.ply == 2
 
 
 def test_illegal_history_incompatible_and_intent_mismatch_fail_structurally():
-    with pytest.raises(VariationAnalysisError) as illegal:
-        analyze_variation(chess.Board(), (chess.Move.from_uci("e2e5"),), MaterialAnalyzer())
-    assert illegal.value.reason is VariationFailureReason.ILLEGAL_MOVE
+    with pytest.raises(LineAnalysisError) as illegal:
+        analyze_line(chess.Board(), (chess.Move.from_uci("e2e5"),), MaterialAnalyzer())
+    assert illegal.value.reason is LineFailureReason.ILLEGAL_MOVE
     assert illegal.value.ply_index == 0
     assert illegal.value.move == chess.Move.from_uci("e2e5")
     assert illegal.value.fen == chess.Board().fen()
 
     truncated = chess.Board("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1")
-    with pytest.raises(VariationAnalysisError) as history:
-        analyze_variation(
+    with pytest.raises(LineAnalysisError) as history:
+        analyze_line(
             truncated,
             (chess.Move.from_uci("e2e3"),),
             MaterialAnalyzer(),
             history_policy=HistoryPolicy.REQUIRE_COMPLETE,
         )
-    assert history.value.reason is VariationFailureReason.HISTORY_INCOMPATIBLE
+    assert history.value.reason is LineFailureReason.HISTORY_INCOMPATIBLE
 
-    intent = VariationIntent(
-        role=VariationRole.CANDIDATE_SUPPORT,
+    intent = LineIntent(
+        role=LineRole.CANDIDATE_SUPPORT,
         claim_id="different-candidate",
         candidate=chess.Move.from_uci("d2d4"),
     )
-    with pytest.raises(VariationAnalysisError) as mismatch:
-        analyze_variation(chess.Board(), (chess.Move.from_uci("e2e4"),), MaterialAnalyzer(), intent=intent)
-    assert mismatch.value.reason is VariationFailureReason.INTENT_MISMATCH
+    with pytest.raises(LineAnalysisError) as mismatch:
+        analyze_line(chess.Board(), (chess.Move.from_uci("e2e4"),), MaterialAnalyzer(), intent=intent)
+    assert mismatch.value.reason is LineFailureReason.INTENT_MISMATCH
 
 
 def test_empty_line_and_malformed_intents_are_rejected():
-    with pytest.raises(VariationAnalysisError) as empty:
-        analyze_variation(chess.Board(), (), MaterialAnalyzer())
-    assert empty.value.reason is VariationFailureReason.EMPTY_LINE
+    with pytest.raises(LineAnalysisError) as empty:
+        analyze_line(chess.Board(), (), MaterialAnalyzer())
+    assert empty.value.reason is LineFailureReason.EMPTY_LINE
     with pytest.raises(ValueError, match="cannot name"):
-        VariationIntent(claim_id="claim")
-    with pytest.raises(ValueError, match="VariationRole"):
-        VariationIntent(role="neutral")
+        LineIntent(claim_id="claim")
+    with pytest.raises(ValueError, match="LineRole"):
+        LineIntent(role="neutral")
     with pytest.raises(ValueError, match="claim_id and candidate"):
-        VariationIntent(role=VariationRole.CANDIDATE_SUPPORT)
+        LineIntent(role=LineRole.CANDIDATE_SUPPORT)
     with pytest.raises(ValueError, match="does not take"):
-        VariationIntent(
-            role=VariationRole.CANDIDATE_SUPPORT,
+        LineIntent(
+            role=LineRole.CANDIDATE_SUPPORT,
             claim_id="claim",
             candidate=chess.Move.from_uci("e2e4"),
             response=chess.Move.from_uci("e7e5"),
         )
     with pytest.raises(ValueError, match="needs the opponent response"):
-        VariationIntent(
-            role=VariationRole.OPPONENT_REFUTATION,
+        LineIntent(
+            role=LineRole.OPPONENT_REFUTATION,
             claim_id="claim",
             candidate=chess.Move.from_uci("e2e4"),
         )
+
+
+def test_move_and_line_records_reject_incoherent_structure():
+    move = analyze_move(chess.Board(), "e2e4", MaterialAnalyzer())
+    with pytest.raises(ValueError, match="mover"):
+        replace(move, evidence=replace(move.evidence, mover=move.after.turn))
+    with pytest.raises(ValueError, match="one ply"):
+        replace(move, after=replace(move.after, ply=move.before.ply))
+
+    line = analyze_line(chess.Board(), ("e2e4", "e7e5"), MaterialAnalyzer())
+    alternative = analyze_line(chess.Board(), ("d2d4",), MaterialAnalyzer())
+    with pytest.raises(ValueError, match="at least one"):
+        replace(line, steps=())
+    with pytest.raises(ValueError, match="endpoints"):
+        replace(line, final_position=line.initial_position)
+    with pytest.raises(ValueError, match="continuous"):
+        replace(
+            line,
+            final_position=alternative.final_position,
+            steps=(line.steps[0], alternative.steps[0]),
+        )
+
+    with pytest.raises(ValueError, match="termination"):
+        LineTerminal(True, "*", None, chess.Termination.CHECKMATE, False)
+    with pytest.raises(ValueError, match="Non-terminal"):
+        LineTerminal(False, "1-0", None, None, False)

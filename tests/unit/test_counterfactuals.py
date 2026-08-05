@@ -54,10 +54,10 @@ def test_sibling_moves_are_deterministic_history_consistent_and_evidence_bearing
     assert result.preserved_facts[0].original.value == result.preserved_facts[0].modified.value == 39
     assert result.changed_facts[0].original.value == result.changed_facts[0].modified.value
     assert result.changed_facts[0].original.supporting_pieces != result.changed_facts[0].modified.supporting_pieces
-    assert result.original_move_delta is not None
-    assert result.original_move_delta.move.move == chess.Move.from_uci("e2e4")
-    assert result.modified_move_delta is not None
-    assert result.modified_move_delta.move.move == chess.Move.from_uci("d2d4")
+    assert result.original_move_analysis is not None
+    assert result.original_move_analysis.move == chess.Move.from_uci("e2e4")
+    assert result.modified_move_analysis is not None
+    assert result.modified_move_analysis.move == chess.Move.from_uci("d2d4")
 
 
 def test_automatic_sibling_selection_uses_uci_order_and_skips_unsatisfied_candidates():

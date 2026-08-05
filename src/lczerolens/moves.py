@@ -1,4 +1,4 @@
-"""Exact move deltas and variation evidence built from chess facts.
+"""Exact move and line analysis built from chess facts.
 
 This module compares evidence records across legal moves.  It deliberately
 describes only rule-exact changes and retains the original evidence objects;
@@ -50,13 +50,13 @@ class EvidenceTransitionKind(str, Enum):
 
 
 class HistoryPolicy(str, Enum):
-    """How variation analysis treats a truncated input move stack."""
+    """How line analysis treats a truncated input move stack."""
 
     ALLOW_TRUNCATED = "allow_truncated"
     REQUIRE_COMPLETE = "require_complete"
 
 
-class VariationRole(str, Enum):
+class LineRole(str, Enum):
     """Machine-readable purpose of a line relative to a claim."""
 
     NEUTRAL = "neutral"
@@ -64,8 +64,8 @@ class VariationRole(str, Enum):
     OPPONENT_REFUTATION = "opponent_refutation"
 
 
-class VariationFailureReason(str, Enum):
-    """Structured reasons why a variation could not be analyzed."""
+class LineFailureReason(str, Enum):
+    """Structured reasons why a line could not be analyzed."""
 
     EMPTY_LINE = "empty_line"
     ILLEGAL_MOVE = "illegal_move"
@@ -119,8 +119,8 @@ class EvidenceTransition:
 
 
 @dataclass(frozen=True)
-class MoveDelta:
-    """Deterministic fact-set changes caused by one legal move.
+class MoveAnalysis:
+    """Deterministic exact analysis of one legal move.
 
     ``created`` and ``removed`` are the mathematical set-difference views.  A
     changed semantic fact contributes its after record to ``created`` and its
@@ -129,44 +129,70 @@ class MoveDelta:
 
     before: PositionEvidence
     after: PositionEvidence
-    move: MoveEvidence
+    evidence: MoveEvidence
     created: EvidenceSet
     removed: EvidenceSet
     preserved: EvidenceSet
     transitions: tuple[EvidenceTransition, ...]
+
+    def __post_init__(self) -> None:
+        if self.evidence.mover is not self.before.turn:
+            raise ValueError("Move-analysis mover must match the before-position turn.")
+        if self.after.ply != self.before.ply + 1:
+            raise ValueError("Move analysis must advance exactly one ply.")
 
     @property
     def changed(self) -> tuple[EvidenceTransition, ...]:
         """Return transitions whose fact value or defined state changed."""
         return tuple(item for item in self.transitions if item.kind is EvidenceTransitionKind.CHANGED)
 
+    @property
+    def move(self) -> chess.Move:
+        """The legal move that was analyzed."""
+        return self.evidence.move
+
+    @property
+    def effects(self) -> tuple[ExactMoveEffect, ...]:
+        """Rule-exact effects established for the move."""
+        return self.evidence.effects
+
+    @property
+    def facts_before(self) -> EvidenceSet:
+        """Exact fact set before the move."""
+        return self.before.evidence
+
+    @property
+    def facts_after(self) -> EvidenceSet:
+        """Exact fact set after the move."""
+        return self.after.evidence
+
 
 @dataclass(frozen=True)
-class VariationIntent:
+class LineIntent:
     """A structured claim relation for a candidate line."""
 
-    role: VariationRole = VariationRole.NEUTRAL
+    role: LineRole = LineRole.NEUTRAL
     claim_id: str | None = None
     candidate: chess.Move | None = None
     response: chess.Move | None = None
 
     def __post_init__(self) -> None:
-        if not isinstance(self.role, VariationRole):
-            raise ValueError("Variation intent role must be a VariationRole.")
-        if self.role is VariationRole.NEUTRAL:
+        if not isinstance(self.role, LineRole):
+            raise ValueError("Line intent role must be a LineRole.")
+        if self.role is LineRole.NEUTRAL:
             if any(item is not None for item in (self.claim_id, self.candidate, self.response)):
-                raise ValueError("Neutral variation intent cannot name a claim, candidate, or response.")
+                raise ValueError("Neutral line intent cannot name a claim, candidate, or response.")
             return
         if not self.claim_id or self.candidate is None:
-            raise ValueError("Claim-related variation intent needs a claim_id and candidate move.")
-        if self.role is VariationRole.CANDIDATE_SUPPORT and self.response is not None:
+            raise ValueError("Claim-related line intent needs a claim_id and candidate move.")
+        if self.role is LineRole.CANDIDATE_SUPPORT and self.response is not None:
             raise ValueError("Candidate-support intent does not take a refuting response.")
-        if self.role is VariationRole.OPPONENT_REFUTATION and self.response is None:
+        if self.role is LineRole.OPPONENT_REFUTATION and self.response is None:
             raise ValueError("Opponent-refutation intent needs the opponent response.")
 
 
 @dataclass(frozen=True)
-class VariationTerminal:
+class LineTerminal:
     """Rule result at the end of an analyzed line."""
 
     is_terminal: bool
@@ -175,30 +201,45 @@ class VariationTerminal:
     termination: chess.Termination | None
     claimable_draw: bool
 
+    def __post_init__(self) -> None:
+        if self.is_terminal:
+            if self.result == "*" or self.termination is None or self.claimable_draw:
+                raise ValueError("Terminal line results need a termination and cannot be merely claimable.")
+        elif self.result != "*" or self.winner is not None or self.termination is not None:
+            raise ValueError("Non-terminal line results must use '*' without a winner or termination.")
+
 
 @dataclass(frozen=True)
-class VariationEvidence:
-    """Evidence for an ordered legal line, one exact delta per ply."""
+class LineAnalysis:
+    """Exact analysis of an ordered legal line, one step per ply."""
 
-    initial: PositionEvidence
-    final: PositionEvidence
-    deltas: tuple[MoveDelta, ...]
-    intent: VariationIntent
+    initial_position: PositionEvidence
+    final_position: PositionEvidence
+    steps: tuple[MoveAnalysis, ...]
+    intent: LineIntent
     history_policy: HistoryPolicy
-    terminal: VariationTerminal
+    terminal: LineTerminal
+
+    def __post_init__(self) -> None:
+        if not self.steps:
+            raise ValueError("Line analysis requires at least one move step.")
+        if self.steps[0].before != self.initial_position or self.steps[-1].after != self.final_position:
+            raise ValueError("Line-analysis endpoints must match its first and last steps.")
+        if any(before.after != after.before for before, after in zip(self.steps, self.steps[1:])):
+            raise ValueError("Line-analysis move steps must form one continuous position sequence.")
 
     @property
     def moves(self) -> tuple[chess.Move, ...]:
         """Return the analyzed move sequence."""
-        return tuple(delta.move.move for delta in self.deltas)
+        return tuple(step.move for step in self.steps)
 
 
-class VariationAnalysisError(ValueError):
-    """A variation failure with stable machine-readable context."""
+class LineAnalysisError(ValueError):
+    """A line-analysis failure with stable machine-readable context."""
 
     def __init__(
         self,
-        reason: VariationFailureReason,
+        reason: LineFailureReason,
         message: str,
         *,
         ply_index: int | None = None,
@@ -233,24 +274,24 @@ def exact_move_analyzers() -> tuple[FactAnalyzer, ...]:
     return tuple(analyzers)
 
 
-def analyze_move_delta(
+def analyze_move(
     board: chess.Board,
-    move: chess.Move,
+    move: chess.Move | str,
     *analyzers: FactAnalyzer,
-) -> MoveDelta:
+) -> MoveAnalysis:
     """Apply one legal move and compare exact evidence before and after it."""
-    _validate_board_and_move(board, move)
+    resolved_move = _resolve_move(board, move)
     selected = tuple(analyzers) or exact_move_analyzers()
     before_set = analyze_facts(board, *selected)
-    move_evidence = _move_evidence(board, move)
+    move_evidence = _move_evidence(board, resolved_move)
     after_board = board.copy(stack=True)
-    after_board.push(move)
+    after_board.push(resolved_move)
     after_set = analyze_facts(after_board, *selected)
     created, removed, preserved, transitions = _compare_evidence(before_set, after_set)
-    return MoveDelta(
+    return MoveAnalysis(
         before=_position_evidence(board, before_set),
         after=_position_evidence(after_board, after_set),
-        move=move_evidence,
+        evidence=move_evidence,
         created=created,
         removed=removed,
         preserved=preserved,
@@ -258,50 +299,49 @@ def analyze_move_delta(
     )
 
 
-def analyze_variation(
+def analyze_line(
     board: chess.Board,
-    moves: Iterable[chess.Move],
+    moves: Iterable[chess.Move | str],
     *analyzers: FactAnalyzer,
-    intent: VariationIntent | None = None,
+    intent: LineIntent | None = None,
     history_policy: HistoryPolicy = HistoryPolicy.ALLOW_TRUNCATED,
-) -> VariationEvidence:
+) -> LineAnalysis:
     """Analyze a non-empty ordered legal line with explicit history policy."""
     if not isinstance(board, chess.Board):
-        raise TypeError("Variation analysis requires a python-chess Board.")
+        raise TypeError("Line analysis requires a python-chess Board.")
     if not isinstance(history_policy, HistoryPolicy):
         raise ValueError("history_policy must be a HistoryPolicy.")
-    line = tuple(moves)
-    if not line:
-        raise VariationAnalysisError(VariationFailureReason.EMPTY_LINE, "A variation needs at least one move.")
+    requested = tuple(moves)
+    if not requested:
+        raise LineAnalysisError(LineFailureReason.EMPTY_LINE, "A line needs at least one move.")
     complete = history_is_available(board, HistoryRequirement.FULL_MOVE_STACK)
     if history_policy is HistoryPolicy.REQUIRE_COMPLETE and not complete:
-        raise VariationAnalysisError(
-            VariationFailureReason.HISTORY_INCOMPATIBLE,
-            "The variation requires a complete move stack rooted at the standard initial position.",
+        raise LineAnalysisError(
+            LineFailureReason.HISTORY_INCOMPATIBLE,
+            "The line requires a complete move stack rooted at the standard initial position.",
             fen=board.fen(),
         )
-    resolved_intent = intent or VariationIntent()
+    resolver = board.copy(stack=True)
+    resolved: list[chess.Move] = []
+    for ply_index, requested_move in enumerate(requested):
+        move = _resolve_move(resolver, requested_move, ply_index=ply_index)
+        resolved.append(move)
+        resolver.push(move)
+    line = tuple(resolved)
+    resolved_intent = intent or LineIntent()
     _validate_intent_line(resolved_intent, line, board.fen())
     selected = tuple(analyzers) or exact_move_analyzers()
     current = board.copy(stack=True)
     initial_set = analyze_facts(current, *selected)
-    initial = _position_evidence(current, initial_set)
-    deltas: list[MoveDelta] = []
-    for ply_index, move in enumerate(line):
-        if not _is_legal_move(current, move):
-            raise VariationAnalysisError(
-                VariationFailureReason.ILLEGAL_MOVE,
-                f"Illegal variation move at ply {ply_index}: {_move_label(move)}.",
-                ply_index=ply_index,
-                move=move if isinstance(move, chess.Move) else None,
-                fen=current.fen(),
-            )
-        delta = analyze_move_delta(current, move, *selected)
-        deltas.append(delta)
+    initial_position = _position_evidence(current, initial_set)
+    steps: list[MoveAnalysis] = []
+    for move in line:
+        step = analyze_move(current, move, *selected)
+        steps.append(step)
         current.push(move)
-    final = deltas[-1].after
+    final_position = steps[-1].after
     outcome = current.outcome()
-    terminal = VariationTerminal(
+    terminal = LineTerminal(
         is_terminal=outcome is not None,
         result=outcome.result() if outcome is not None else "*",
         winner=ChessSide.from_color(outcome.winner) if outcome is not None and outcome.winner is not None else None,
@@ -312,10 +352,10 @@ def analyze_variation(
             and (current.can_claim_fifty_moves() or current.can_claim_threefold_repetition())
         ),
     )
-    return VariationEvidence(
-        initial=initial,
-        final=final,
-        deltas=tuple(deltas),
+    return LineAnalysis(
+        initial_position=initial_position,
+        final_position=final_position,
+        steps=tuple(steps),
         intent=resolved_intent,
         history_policy=history_policy,
         terminal=terminal,
@@ -448,16 +488,28 @@ def _castling_rook_move(board: chess.Board, move: chess.Move) -> chess.Move:
     return chess.Move(rook_from, rook_to)
 
 
-def _validate_board_and_move(board: chess.Board, move: chess.Move) -> None:
+def _resolve_move(board: chess.Board, move: chess.Move | str, *, ply_index: int | None = None) -> chess.Move:
     if not isinstance(board, chess.Board):
-        raise TypeError("Move-delta analysis requires a python-chess Board.")
-    if not _is_legal_move(board, move):
-        raise VariationAnalysisError(
-            VariationFailureReason.ILLEGAL_MOVE,
-            f"Move is not legal in the supplied position: {_move_label(move)}.",
-            move=move if isinstance(move, chess.Move) else None,
+        raise TypeError("Move analysis requires a python-chess Board.")
+    resolved: object = move
+    if isinstance(move, str):
+        try:
+            resolved = board.parse_uci(move)
+        except ValueError:
+            resolved = move
+    if not _is_legal_move(board, resolved):
+        raise LineAnalysisError(
+            LineFailureReason.ILLEGAL_MOVE,
+            (
+                f"Illegal line move at ply {ply_index}: {_move_label(resolved)}."
+                if ply_index is not None
+                else f"Move is not legal in the supplied position: {_move_label(resolved)}."
+            ),
+            ply_index=ply_index,
+            move=resolved if isinstance(resolved, chess.Move) else None,
             fen=board.fen(),
         )
+    return resolved
 
 
 def _is_well_formed_move(move: object) -> bool:
@@ -474,15 +526,15 @@ def _move_label(move: object) -> str:
     return chess.square_name(move.from_square) + chess.square_name(move.to_square)
 
 
-def _validate_intent_line(intent: VariationIntent, line: tuple[chess.Move, ...], fen: str) -> None:
+def _validate_intent_line(intent: LineIntent, line: tuple[chess.Move, ...], fen: str) -> None:
     mismatch = False
-    if intent.role is VariationRole.CANDIDATE_SUPPORT:
+    if intent.role is LineRole.CANDIDATE_SUPPORT:
         mismatch = line[0] != intent.candidate
-    elif intent.role is VariationRole.OPPONENT_REFUTATION:
+    elif intent.role is LineRole.OPPONENT_REFUTATION:
         mismatch = len(line) < 2 or line[0] != intent.candidate or line[1] != intent.response
     if mismatch:
-        raise VariationAnalysisError(
-            VariationFailureReason.INTENT_MISMATCH,
+        raise LineAnalysisError(
+            LineFailureReason.INTENT_MISMATCH,
             "The analyzed line does not match its declared candidate/response intent.",
             fen=fen,
         )
@@ -493,16 +545,16 @@ __all__ = [
     "EvidenceTransitionKind",
     "ExactMoveEffect",
     "HistoryPolicy",
-    "MoveDelta",
+    "LineAnalysis",
+    "MoveAnalysis",
     "MoveEvidence",
     "PositionEvidence",
-    "VariationAnalysisError",
-    "VariationEvidence",
-    "VariationFailureReason",
-    "VariationIntent",
-    "VariationRole",
-    "VariationTerminal",
-    "analyze_move_delta",
-    "analyze_variation",
+    "LineAnalysisError",
+    "LineFailureReason",
+    "LineIntent",
+    "LineRole",
+    "LineTerminal",
+    "analyze_line",
+    "analyze_move",
     "exact_move_analyzers",
 ]

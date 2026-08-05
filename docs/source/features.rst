@@ -6,7 +6,7 @@ than treating notebooks as API guarantees.
 
 * :doc:`scope` defines board encoding, evaluator outputs, model formats, and
   the external-integration boundary.
-* :doc:`facts` covers exact position facts, move and variation evidence, and
+* :doc:`facts` covers exact position facts, move and line analysis, and
   constrained counterfactuals.
 * :doc:`search` defines provenance, capabilities, snapshots, and the
   deterministic reference-search boundary.

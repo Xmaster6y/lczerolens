@@ -23,7 +23,7 @@ The currently shipped public surface includes:
 * consuming a standardized policy, WDL, value, and MLH evaluator result;
 * passing an evaluator through arbitrary external instrumentation while
   retaining the same input/output contract.
-* recording exact position facts, legal move deltas, and variation evidence;
+* recording exact position facts and legal move/line analysis;
 * constructing constrained sibling, structural, and piece-relocation
   counterfactual records with explicit validity and reachability guarantees;
 * producing typed search traces from deterministic reference search or exposed
@@ -179,10 +179,10 @@ announced compatibility release.
      - Evidence records, guarantees, analyzers, and ``FactAnalyzer``
      - Retain
      - Exact chess observations with provenance before a consumer derives labels or claims.
-   * - ``move_evidence``
-     - ``MoveDelta``, ``VariationEvidence``, ``analyze_move_delta``, ``analyze_variation``
+   * - ``moves``
+     - ``MoveAnalysis``, ``LineAnalysis``, ``analyze_move``, ``analyze_line``
      - Retain
-     - Legal-move and ordered-variation evidence built from exact facts.
+     - Legal-move and ordered-line analysis built from exact facts.
    * - ``counterfactuals``
      - Constraints, validity/result records, and sibling/structural operators
      - Retain

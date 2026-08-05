@@ -22,7 +22,7 @@ from lczerolens.behavior import (
 from lczerolens.counterfactuals import remove_piece_counterfactual
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
 from lczerolens.lc0_adapter import Lc0RootSnapshotParser, Lc0SearchRequest
-from lczerolens.move_evidence import analyze_variation
+from lczerolens.moves import analyze_line
 from lczerolens.reference_search import ReferenceMCTS
 from lczerolens.search_trace import (
     ChessPlayer,
@@ -201,13 +201,13 @@ def test_budgeted_snapshots_report_rank_q_selection_discovery_and_pv_evolution()
     assert dict(comparison.pv_stability) == {"d2d4": 1.0, "e2e4": 0.5}
 
 
-def test_decision_comparison_links_both_candidates_to_variation_evidence():
+def test_decision_comparison_links_both_candidates_to_line_analyses():
     board = LczeroBoard()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 4.0, "d2d4": 2.0}))
     trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
     search_move = trace.snapshots[-1].selection.move
     evidence = {
-        move: analyze_variation(
+        move: analyze_line(
             board,
             (chess.Move.from_uci(move),),
             MaterialAnalyzer(FactPerspective.WHITE),
@@ -216,12 +216,12 @@ def test_decision_comparison_links_both_candidates_to_variation_evidence():
         for move in (evaluator.selected_move, search_move)
     }
 
-    decision = compare_search_decision(evaluator, trace, variation_evidence=evidence)
+    decision = compare_search_decision(evaluator, trace, line_analyses=evidence)
 
     assert decision.evaluator_candidate == "e2e4"
     assert decision.search_candidate == search_move
-    assert decision.evaluator_variation.moves[0].uci() == "e2e4"
-    assert decision.search_variation.moves[0].uci() == search_move
+    assert decision.evaluator_line.moves[0].uci() == "e2e4"
+    assert decision.search_line.moves[0].uci() == search_move
 
 
 def test_every_metric_definition_states_all_required_semantics():
@@ -375,16 +375,16 @@ def test_root_comparisons_reject_mismatches_and_retain_unavailable_statistics():
 def test_counterfactual_comparison_rejects_invalid_controls_links_and_evidence():
     board = LczeroBoard()
     behavior = evaluator_behavior(board, output_for(board, {"e2e4": 2.0}))
-    variation = analyze_variation(board, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
-    other_variation = analyze_variation(board, (chess.Move.from_uci("d2d4"),), MaterialAnalyzer())
+    variation = analyze_line(board, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
+    other_variation = analyze_line(board, (chess.Move.from_uci("d2d4"),), MaterialAnalyzer())
 
     linked = compare_counterfactual_behavior(
         behavior,
         behavior,
         ("e2e4",),
-        variation_evidence={"e2e4": variation, "d2d4": other_variation},
+        line_analyses={"e2e4": variation, "d2d4": other_variation},
     )
-    assert dict(linked.variation_evidence) == {"d2d4": other_variation, "e2e4": variation}
+    assert dict(linked.line_analyses) == {"d2d4": other_variation, "e2e4": variation}
 
     with pytest.raises(ValueError, match="ControlKind"):
         compare_counterfactual_behavior(behavior, behavior, ("e2e4",), control_kind="matched")
@@ -407,33 +407,29 @@ def test_counterfactual_comparison_rejects_invalid_controls_links_and_evidence()
     with pytest.raises(ValueError, match="must match"):
         compare_counterfactual_behavior(behavior, behavior, ("e2e4",), counterfactual=mismatched)
     with pytest.raises(ValueError, match="target or collateral"):
-        compare_counterfactual_behavior(behavior, behavior, ("e2e4",), variation_evidence={"a1a8": variation})
+        compare_counterfactual_behavior(behavior, behavior, ("e2e4",), line_analyses={"a1a8": variation})
     with pytest.raises(ValueError, match="begin with"):
-        compare_counterfactual_behavior(behavior, behavior, ("e2e4",), variation_evidence={"d2d4": variation})
-    with pytest.raises(ValueError, match="begin with"):
-        compare_counterfactual_behavior(
-            behavior, behavior, ("e2e4",), variation_evidence={"e2e4": replace(variation, deltas=())}
-        )
+        compare_counterfactual_behavior(behavior, behavior, ("e2e4",), line_analyses={"d2d4": variation})
+    with pytest.raises(ValueError, match="at least one"):
+        replace(variation, steps=())
     unrelated = LczeroBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 12 7")
-    unrelated_variation = analyze_variation(unrelated, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
+    unrelated_variation = analyze_line(unrelated, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
     with pytest.raises(ValueError, match="original or modified evaluator FEN"):
-        compare_counterfactual_behavior(
-            behavior, behavior, ("e2e4",), variation_evidence={"e2e4": unrelated_variation}
-        )
+        compare_counterfactual_behavior(behavior, behavior, ("e2e4",), line_analyses={"e2e4": unrelated_variation})
 
 
 def test_decision_evidence_and_non_replay_event_paths_fail_explicitly():
     board = LczeroBoard()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 3.0}))
     trace = ReferenceMCTS().search(board, FixedEvaluator(), simulations=1)
-    variation = analyze_variation(board, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
+    variation = analyze_line(board, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
 
     assert compare_search_events(trace).replay_validated is None
     with pytest.raises(ValueError, match="start at the root"):
-        compare_search_decision(evaluator, trace, variation_evidence={"d2d4": variation})
+        compare_search_decision(evaluator, trace, line_analyses={"d2d4": variation})
 
     wrong_root = LczeroBoard()
     wrong_root.push_uci("e2e4")
-    wrong_root_variation = analyze_variation(wrong_root, (chess.Move.from_uci("e7e5"),), MaterialAnalyzer())
+    wrong_root_variation = analyze_line(wrong_root, (chess.Move.from_uci("e7e5"),), MaterialAnalyzer())
     with pytest.raises(ValueError, match="start at the root"):
-        compare_search_decision(evaluator, trace, variation_evidence={"e7e5": wrong_root_variation})
+        compare_search_decision(evaluator, trace, line_analyses={"e7e5": wrong_root_variation})

@@ -27,7 +27,7 @@ Supported user path
   chess-facing objects, ownership boundaries, and deletion policy.
 * :doc:`scope` documents the currently implemented pre-refactor surface; the
   architecture page supersedes its compatibility policy for the ``0.5`` work.
-* :doc:`facts` covers exact facts, move/variation evidence, and constrained
+* :doc:`facts` covers exact facts, move/line analysis, and constrained
   counterfactual positions.
 * :doc:`search` defines typed, capability-aware traces. ``ReferenceMCTS`` is
   an auditable reference implementation, not production lc0 search.

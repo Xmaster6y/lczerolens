@@ -26,7 +26,7 @@ from lczerolens.behavior import (
 from lczerolens.counterfactuals import CounterfactualResult, sibling_counterfactual
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
 from lczerolens.model import LczeroModel
-from lczerolens.move_evidence import VariationEvidence, analyze_variation
+from lczerolens.moves import LineAnalysis, analyze_line
 from lczerolens.reference_search import ReferenceMCTS
 from lczerolens.search_trace import SearchTrace
 
@@ -76,7 +76,7 @@ class TutorialResult:
     decision: DecisionComparison
     counterfactual: CounterfactualResult
     counterfactual_behavior: CounterfactualBehaviorComparison
-    variations: dict[str, VariationEvidence]
+    variations: dict[str, LineAnalysis]
 
 
 def run_tutorial() -> TutorialResult:
@@ -88,7 +88,7 @@ def run_tutorial() -> TutorialResult:
 
     # The candidate lines are exact move evidence, not generated explanation.
     variations = {
-        move: analyze_variation(
+        move: analyze_line(
             board,
             (chess.Move.from_uci(move),),
             MaterialAnalyzer(FactPerspective.WHITE),
@@ -96,7 +96,7 @@ def run_tutorial() -> TutorialResult:
         )
         for move in (evaluator.selected_move, search.snapshots[-1].selection.move)
     }
-    decision = compare_search_decision(evaluator, search, variation_evidence=variations)
+    decision = compare_search_decision(evaluator, search, line_analyses=variations)
 
     counterfactual = sibling_counterfactual(board, chess.Move.from_uci("g1f3"), chess.Move.from_uci("b1c3"))
     if not counterfactual.succeeded or counterfactual.modified is None:
@@ -112,8 +112,8 @@ def run_tutorial() -> TutorialResult:
         modified,
         ("e7e5",),
         counterfactual=counterfactual,
-        variation_evidence={
-            "e7e5": analyze_variation(
+        line_analyses={
+            "e7e5": analyze_line(
                 original_board,
                 (chess.Move.from_uci("e7e5"),),
                 MaterialAnalyzer(FactPerspective.WHITE),

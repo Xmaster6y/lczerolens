@@ -58,10 +58,10 @@ variation when the legal move sets differ. ``matched``, ``shuffled``, and
 values rather than labels hidden in prose.
 
 A successful :class:`~lczerolens.counterfactuals.CounterfactualResult` and
-supplied :class:`~lczerolens.move_evidence.VariationEvidence` can be retained
+supplied :class:`~lczerolens.moves.LineAnalysis` can be retained
 with the comparison. :func:`~lczerolens.behavior.compare_search_decision`
 combines the evaluator's initial candidate, the source-selected search
 candidate, their root statistics, source capability, and any supplied
-variation evidence. It provides the structured checkpoint-D evidence needed
+line analysis. It provides the structured checkpoint-D evidence needed
 to ask why search preferred one candidate without generating or asserting a
 heuristic chess explanation.
