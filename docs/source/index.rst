@@ -8,15 +8,10 @@ lczerolens
     :maxdepth: 1
     :hidden:
 
-    start
-    features
-    tutorials
-    facts
-    search
-    use-cases
-    scope
-    architecture
-    api/index
+    Getting Started <start>
+    Features <features>
+    Tutorials <tutorials>
+    API Reference <api/index>
     About <about>
 
 .. grid:: 1 1 2 2
@@ -40,8 +35,7 @@ lczerolens
 
             lc0 interoperability and chess-decision analysis
 
-        **lczerolens** makes lc0-family models operable in PyTorch and turns their evaluator and search behavior into chess-domain evidence.
-        Interpretability frameworks such as `tdhook`, `captum`, `zennit`, and `nnsight` integrate at this boundary; they are not core abstractions.
+        PyTorch evaluation and chess-decision evidence for lc0-family models.
 
         .. div:: button-group
 
@@ -51,48 +45,14 @@ lczerolens
 
                   Get Started
 
-          .. button-ref:: tutorials
+          .. button-ref:: features
             :color: primary
             :outline:
 
-                Tutorials
+                Features
 
           .. button-ref:: api/index
             :color: primary
             :outline:
 
                 API Reference
-
-
-.. div:: sd-fs-1 sd-font-weight-bold sd-text-center sd-text-primary sd-mb-5
-
-  Key Features
-
-.. grid:: 1 1 2 2
-    :class-container: features
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. image:: _static/images/one.png
-          :width: 150
-
-        .. div::
-
-          **Adaptability**
-
-          Load converted Lczero ONNX or serialized PyTorch networks through one TensorDict model boundary.
-
-    .. grid-item::
-
-      .. div:: features-container
-
-        .. image:: _static/images/two.png
-          :width: 150
-
-        .. div::
-
-          **Composable execution**
-
-          Run board-aware evaluation while external tools instrument the same TensorDict execution path.

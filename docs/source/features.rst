@@ -12,5 +12,20 @@ The feature documentation is executable:
 * :doc:`notebooks/features/replayable-search` covers search results,
   capability checks, semantic replay, and retained-event replay.
 
-Use :doc:`facts` and :doc:`search` for the short semantic contracts behind
-those examples. Use :doc:`api/index` for signatures and fields.
+Reference guides
+----------------
+
+* :doc:`facts` and :doc:`search` define the evidence and search contracts.
+* :doc:`use-cases` states release workflows and their guarantees.
+* :doc:`architecture` and :doc:`scope` define system ownership and supported
+  compatibility.
+* :doc:`api/index` contains signatures and fields.
+
+.. toctree::
+   :hidden:
+
+   facts
+   search
+   use-cases
+   scope
+   architecture

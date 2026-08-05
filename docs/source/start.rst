@@ -1,9 +1,6 @@
 Getting Started
 ===============
 
-``lczerolens`` loads lc0-family models into PyTorch and turns evaluator and
-search output into chess-domain evidence.
-
 Installation
 ------------
 
@@ -11,12 +8,24 @@ Installation
 
    pip install lczerolens
 
-Use ``pip install "lczerolens[hub]"`` for Hugging Face model loading.
+Use ``pip install "lczerolens[hub]"`` for Hugging Face model loading. Then run
+an evaluation:
 
-Learn by running
-----------------
+.. code-block:: python
 
-Start with the maintained notebooks:
+   import chess
+   from lczerolens import LczeroEvaluator, LczeroModel
+
+   model = LczeroModel.from_hf("lczerolens/maia-1100")
+   evaluator = LczeroEvaluator(model)
+   evaluation = evaluator.evaluate(chess.Board())
+
+   print(evaluation.policy.best_move)
+
+Examples
+--------
+
+Start with the notebook closest to your task:
 
 * :doc:`notebooks/features/models-and-inputs` — load a model and inspect its
   TensorDict inputs;
@@ -27,6 +36,6 @@ Start with the maintained notebooks:
 * :doc:`notebooks/features/replayable-search` — run and replay reference
   search.
 
-Then use :doc:`tutorials` for complete workflows. :doc:`scope` defines what
-the project owns, :doc:`architecture` defines the system contract, and
-:doc:`api/index` is the generated reference.
+For an end-to-end workflow, use :doc:`tutorials`. Project boundaries and the
+generated reference are in :doc:`scope`, :doc:`architecture`, and
+:doc:`api/index`.
