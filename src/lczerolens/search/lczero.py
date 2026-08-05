@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 import subprocess
+import threading
+import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Iterable, Mapping
@@ -86,16 +88,8 @@ class _LczeroProcessAdapter:
             command.append(f"setoption name {name} value {rendered}")
         command.extend(["isready", f"position fen {request.root_fen}"])
         command.append(f"go nodes {request.nodes}" if request.nodes is not None else f"go movetime {request.time_ms}")
-        command.append("quit")
         try:
-            completed = subprocess.run(
-                [str(self.executable)],
-                input="\n".join(command) + "\n",
-                text=True,
-                capture_output=True,
-                timeout=timeout,
-                check=False,
-            )
+            completed = _run_uci_process(self.executable, command, timeout=timeout)
         except (OSError, subprocess.TimeoutExpired) as error:
             raise LczeroOutputError(f"Could not run lc0 executable {self.executable!s}: {error}") from error
         if completed.returncode:
@@ -247,9 +241,9 @@ class _LczeroRootSnapshotParser:
         try:
             prior = _number(fields["P"], percent=True) if "P" in fields else None
             visits = int(fields["N"]) if "N" in fields else None
-            mean = _number(fields["Q"]) if "Q" in fields else None
-            exploration = _number(fields["U"]) if "U" in fields else None
-            total = _number(fields["W"]) if "W" in fields else None
+            mean = _reported_number(fields["Q"]) if "Q" in fields else None
+            exploration = _reported_number(fields["U"]) if "U" in fields else None
+            total = _reported_number(fields["W"]) if "W" in fields else None
             evaluation = _evaluation(fields, "WL", "D")
             leaf_evaluation = _evaluation(fields, "V")
             pv = tuple(fields["PV"].split()) if "PV" in fields else ()
@@ -279,6 +273,81 @@ def _normalise_priors(actions: list[RootAction]) -> list[RootAction]:
     ]
 
 
+def _run_uci_process(
+    executable: Path | str, command: list[str], *, timeout: float
+) -> subprocess.CompletedProcess[str]:
+    """Run one UCI search and stop the engine only after its response."""
+    process = subprocess.Popen(
+        [str(executable)],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    if (
+        process.stdin is None or process.stdout is None or process.stderr is None
+    ):  # pragma: no cover - subprocess contract
+        process.kill()
+        raise OSError("lc0 process pipes were unavailable")
+
+    stdout: list[str] = []
+    stderr: list[str] = []
+    bestmove = threading.Event()
+    engine_error = threading.Event()
+
+    def read_stdout() -> None:
+        for raw_line in process.stdout:
+            line = raw_line.rstrip("\r\n")
+            stdout.append(line)
+            if line.startswith("bestmove "):
+                bestmove.set()
+            elif line.startswith("error "):
+                engine_error.set()
+
+    def read_stderr() -> None:
+        stderr.extend(line.rstrip("\r\n") for line in process.stderr)
+
+    readers = (
+        threading.Thread(target=read_stdout, daemon=True),
+        threading.Thread(target=read_stderr, daemon=True),
+    )
+    for reader in readers:
+        reader.start()
+
+    deadline = time.monotonic() + timeout
+    try:
+        process.stdin.write("\n".join(command) + "\n")
+        process.stdin.flush()
+        while not bestmove.is_set() and not engine_error.is_set() and process.poll() is None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired([str(executable)], timeout)
+            bestmove.wait(min(remaining, 0.05))
+        if process.poll() is None:
+            process.stdin.write("quit\n")
+            process.stdin.flush()
+        process.stdin.close()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired([str(executable)], timeout)
+        returncode = process.wait(timeout=remaining)
+    except BaseException:
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        raise
+    finally:
+        for reader in readers:
+            reader.join(timeout=1)
+
+    if engine_error.is_set():
+        message = next(line for line in stdout if line.startswith("error "))
+        returncode = returncode or 1
+        stderr.append(message)
+    return subprocess.CompletedProcess([str(executable)], returncode, "\n".join(stdout), "\n".join(stderr))
+
+
 def _number(value: str, *, percent: bool = False) -> float:
     if percent:
         if not value.endswith("%"):
@@ -287,15 +356,28 @@ def _number(value: str, *, percent: bool = False) -> float:
     return float(value)
 
 
+def _reported_number(value: str) -> float | None:
+    """Return ``None`` for lc0's dashed placeholder for an unreported value."""
+    if re.fullmatch(r"-\.-+", value):
+        return None
+    return _number(value)
+
+
 def _evaluation(fields: Mapping[str, str], value_name: str, draw_name: str | None = None) -> PositionEvaluation | None:
     if value_name not in fields:
         return None
-    value = _number(fields[value_name])
+    value = _reported_number(fields[value_name])
+    if value is None:
+        if draw_name is not None and draw_name in fields and _reported_number(fields[draw_name]) is not None:
+            raise ValueError(f"{value_name} and {draw_name} must both be reported")
+        return None
     if draw_name is None:
         return PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=value)
     if draw_name not in fields:
         raise ValueError(f"{value_name} requires {draw_name}")
-    draw = _number(fields[draw_name])
+    draw = _reported_number(fields[draw_name])
+    if draw is None:
+        raise ValueError(f"{value_name} and {draw_name} must both be reported")
     return PositionEvaluation(
         ValuePerspective.ROOT_PLAYER,
         value=value,

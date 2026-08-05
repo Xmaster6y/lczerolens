@@ -116,14 +116,16 @@ operator can explicitly test the real process boundary with three pins::
    LC0_EXECUTABLE=/path/to/lc0 \
    LC0_NETWORK=/path/to/network.pb.gz \
    LC0_VERSION=v0.31.2 \
+   LC0_BACKEND=eigen \
    just tests-live-lczero
 
 ``LC0_EXECUTABLE`` must be the exact binary under test, ``LC0_NETWORK`` must be
 the exact network file, and ``LC0_VERSION`` must occur in the output of
 ``LC0_EXECUTABLE --version``.  The check records the SHA-256 digest of the
-network in search provenance and runs a one-node public-UCI request.  Absence
-of these pins skips the live integration test; it never changes fixture-backed
-conformance results.
+network in search provenance and runs a one-node public-UCI request.
+``LC0_BACKEND`` selects the engine backend and defaults to the portable
+``eigen`` CPU backend.  Absence of the three required pins skips the live
+integration test; it never changes fixture-backed conformance results.
 
 Trace evidence
 --------------

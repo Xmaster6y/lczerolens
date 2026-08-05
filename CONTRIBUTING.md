@@ -47,12 +47,14 @@ binary, network, and version token reported by `lc0 --version`:
 LC0_EXECUTABLE=/path/to/lc0 \
 LC0_NETWORK=/path/to/network.pb.gz \
 LC0_VERSION=v0.31.2 \
+LC0_BACKEND=eigen \
 just tests-live-lczero
 ```
 
 The live check verifies both paths, matches the declared version against the
-binary, records the network SHA-256 digest, and never upgrades public root
-output to event or replayable evidence.
+binary, records the network SHA-256 digest, and defaults to the portable
+`eigen` CPU backend when `LC0_BACKEND` is omitted. It never upgrades public
+root output to event or replayable evidence.
 
 To build the documentation locally:
 

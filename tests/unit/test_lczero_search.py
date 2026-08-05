@@ -111,6 +111,23 @@ def test_normalises_rounded_priors_and_preserves_only_reported_total_value():
     assert all(action.statistics.total_value == 0.0 for action in actions)
 
 
+def test_preserves_unreported_lczero_values_as_missing():
+    trace = _LczeroRootSnapshotParser().parse(
+        [
+            "info string e2e4 (322) N: 0 (+ 0) (P: 100.00%) (WL: -.-----) (D: -.---) "
+            "(Q: 0.11550) (U: 0.74239) (V: -.----)",
+            "bestmove e2e4",
+        ],
+        request=_LczeroSearchRequest(ROOT_FEN, nodes=1),
+        engine_version="test",
+        network="test",
+    )
+    action = (trace.snapshots[0].actions or ())[0]
+    assert action.statistics.mean_value == pytest.approx(0.1155)
+    assert action.evaluation is None
+    assert action.leaf_evaluation is None
+
+
 def test_rejects_non_positive_priors_and_non_move_stat_records():
     parser = _LczeroRootSnapshotParser()
     with pytest.raises(LczeroOutputError, match="non-positive"):
@@ -132,6 +149,7 @@ def test_rejects_non_positive_priors_and_non_move_stat_records():
         (["e2e4 (P: 100.00%) unexpected", "bestmove e2e4"], "fields"),
         (["e2e4 (P: 100.00%) (PV: d2d4)", "bestmove e2e4"], "Invalid"),
         (["e2e4 (P: 1.0)", "bestmove e2e4"], "Invalid"),
+        (["e2e4 (P: 100.00%) (V: .)", "bestmove e2e4"], "Invalid"),
     ],
 )
 def test_rejects_unsupported_lc0_output_shapes(lines, message):
@@ -148,14 +166,78 @@ def test_process_adapter_runs_uci_and_parses_result(monkeypatch):
         calls.append((args, kwargs))
         return SimpleNamespace(returncode=0, stdout="info nodes 2\nbestmove e2e4\n", stderr="")
 
-    monkeypatch.setattr(lczero_adapter.subprocess, "run", fake_run)
+    monkeypatch.setattr(lczero_adapter, "_run_uci_process", fake_run)
     trace = _LczeroProcessAdapter("lc0", engine_version="v-test", network="weights").run(
         _LczeroSearchRequest(ROOT_FEN, nodes=2, options={"VerboseMoveStats": True}), timeout=3
     )
     assert trace.snapshots[0].selection and trace.snapshots[0].selection.move == "e2e4"
-    assert calls[0][0] == (["lc0"],)
-    assert "setoption name VerboseMoveStats value true" in calls[0][1]["input"]
+    assert calls[0][0][0] == "lc0"
+    assert "setoption name VerboseMoveStats value true" in calls[0][0][1]
+    assert "quit" not in calls[0][0][1]
     assert calls[0][1]["timeout"] == 3
+
+
+def test_uci_process_waits_for_bestmove_before_quitting(tmp_path):
+    executable = tmp_path / "fake-lc0"
+    executable.write_text(
+        """#!/usr/bin/env python3
+import sys
+
+for command in sys.stdin:
+    command = command.strip()
+    if command.startswith("go "):
+        print("info nodes 1", flush=True)
+        print("bestmove e2e4", flush=True)
+    elif command == "quit":
+        print("quit received", flush=True)
+        break
+"""
+    )
+    executable.chmod(0o755)
+
+    completed = lczero_adapter._run_uci_process(executable, ["uci", "go nodes 1"], timeout=10)
+
+    assert completed.returncode == 0
+    assert completed.stdout.splitlines()[-2:] == ["bestmove e2e4", "quit received"]
+
+
+def test_uci_process_surfaces_engine_errors(tmp_path):
+    executable = tmp_path / "fake-lc0"
+    executable.write_text(
+        """#!/usr/bin/env python3
+import sys
+
+for command in sys.stdin:
+    if command.startswith("go "):
+        print("error invalid backend", flush=True)
+    elif command.strip() == "quit":
+        break
+"""
+    )
+    executable.chmod(0o755)
+
+    completed = lczero_adapter._run_uci_process(executable, ["go nodes 1"], timeout=10)
+
+    assert completed.returncode == 1
+    assert completed.stderr == "error invalid backend"
+
+
+def test_uci_process_enforces_search_timeout(tmp_path):
+    executable = tmp_path / "fake-lc0"
+    executable.write_text(
+        """#!/usr/bin/env python3
+import sys
+import time
+
+for command in sys.stdin:
+    if command.startswith("go "):
+        time.sleep(10)
+"""
+    )
+    executable.chmod(0o755)
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        lczero_adapter._run_uci_process(executable, ["go nodes 1"], timeout=0.05)
 
 
 @pytest.mark.parametrize(
@@ -171,7 +253,7 @@ def test_process_adapter_reports_execution_failures(monkeypatch, result, message
             raise result
         return result
 
-    monkeypatch.setattr(lczero_adapter.subprocess, "run", fake_run)
+    monkeypatch.setattr(lczero_adapter, "_run_uci_process", fake_run)
     with pytest.raises(LczeroOutputError, match=message):
         _LczeroProcessAdapter("lc0", engine_version="test", network="test").run(
             _LczeroSearchRequest(ROOT_FEN, nodes=1)
@@ -199,12 +281,19 @@ def test_optional_pinned_lczero_process_adapter():
     )
     with network_path.open("rb") as network_file:
         checksum = f"sha256:{hashlib.file_digest(network_file, 'sha256').hexdigest()}"
+    backend = os.environ.get("LC0_BACKEND", "eigen")
     trace = _LczeroProcessAdapter(
         executable_path,
         engine_version=version,
         network=str(network_path),
         network_checksum=checksum,
-    ).run(_LczeroSearchRequest(ROOT_FEN, nodes=1, options={"WeightsFile": network, "VerboseMoveStats": True}))
+    ).run(
+        _LczeroSearchRequest(
+            ROOT_FEN,
+            nodes=1,
+            options={"Backend": backend, "WeightsFile": network, "VerboseMoveStats": True},
+        )
+    )
     assert trace.capability in {SearchCapability.ROOT_RESULT, SearchCapability.ROOT_SNAPSHOTS}
     assert trace.provenance.engine_version == version
     assert trace.provenance.network_checksum == checksum

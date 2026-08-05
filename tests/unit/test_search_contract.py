@@ -133,7 +133,7 @@ def test_lczero_search_maps_supported_limits_and_preserves_root_only_absence(mon
         calls.append((args, kwargs))
         return SimpleNamespace(returncode=0, stdout="info nodes 2\nbestmove e2e4\n", stderr="")
 
-    monkeypatch.setattr(lczero_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(lczero_module, "_run_uci_process", fake_run)
     search = LczeroSearch(executable="lc0", network="weights.pb.gz", engine_version="v-test", timeout=3)
 
     result = search.run(chess.Board(), Nodes(2))
@@ -145,7 +145,7 @@ def test_lczero_search_maps_supported_limits_and_preserves_root_only_absence(mon
     assert not result.is_replayable
     with pytest.raises(SearchEvidenceUnavailable, match="root action statistics"):
         result.root
-    command = calls[0][1]["input"]
+    command = calls[0][0][1]
     assert "setoption name WeightsFile value weights.pb.gz" in command
     assert "setoption name VerboseMoveStats value true" in command
     assert "go nodes 2" in command
@@ -155,7 +155,7 @@ def test_lczero_search_supports_whole_time_and_rejects_unsupported_limits(monkey
     def fake_run(*args, **kwargs):
         return SimpleNamespace(returncode=0, stdout="info time 7\nbestmove e2e4\n", stderr="")
 
-    monkeypatch.setattr(lczero_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(lczero_module, "_run_uci_process", fake_run)
     search = LczeroSearch(executable="lc0", network="weights", engine_version="v-test")
 
     result = search.run(chess.Board(), Time(10))
