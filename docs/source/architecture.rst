@@ -1,285 +1,77 @@
 Architecture
 ============
 
-Status and mission
-------------------
+``lczerolens`` connects lc0-family neural execution to reproducible chess
+evidence. The user-facing workflows live in :doc:`tutorials`; this page states
+the boundaries behind them.
 
-This page is the normative target for the breaking ``0.5`` refactor.  It
-supersedes compatibility-driven extension of the pre-refactor public surface.
+Execution flow
+--------------
 
-**lczerolens runs and instruments Lczero-family evaluators, observes reference
-or official search, and turns those observations into reproducible chess
-analysis records.**
-
-The design is driven by :doc:`use-cases`.  New public surface must make one of
-those workflows possible or materially safer.
-
-System model
-------------
-
-The system has two connected planes::
-
-   chess-facing plane
+.. code-block:: text
 
    chess.Board
-       |-- LczeroEvaluator.evaluate() --> Evaluation
-       |-- analyze_move()/line() ------> MoveAnalysis / LineAnalysis
-       |-- Search.run() ---------------> SearchResult + SearchTrace
-       |-- Puzzle.from_board() --------> Puzzle + PuzzleAttempt
-       `-- counterfactual operator ----> CounterfactualPair
-                                              |
-                                              v
-                                         compare_*()
-                                              |
-                                              v
-                                        DecisionAnalysis
+       -> LczeroEvaluator.prepare()
+       -> TensorDict input
+       -> LczeroModel
+       -> TensorDict network output
+       -> LczeroEvaluator.finish()
+       -> Evaluation
+       -> immutable evidence and comparisons
 
-   tensor-execution plane
+``chess.Board`` remains the chess position and history object. TensorDict is
+the neural execution substrate. Domain records are the persistence and
+analysis boundary.
 
-   chess.Board sequence
-       --> stateless Lczero codec
-       --> TensorDict inputs
-       --> evaluator.model
-       --> TensorDict network heads
-       --> evaluator transforms / external instrumentation
-       --> TensorDict standardized outputs
+Responsibilities
+----------------
 
-TensorDict is central to neural execution.  Concrete chess objects are central
-to the user-facing analysis API.  Neither representation impersonates the
-other.
+* ``python-chess`` owns rules, legal moves, FENs, and game history.
+* ``LczeroModel`` owns loading and raw TensorDict network execution.
+* ``LczeroEvaluator`` owns board encoding, legal policy, head validation, and
+  standardized evaluation views.
+* Facts, moves, puzzles, counterfactuals, search traces, and decisions own
+  chess-domain evidence.
+* External libraries own hooks, attribution, probing, interventions, and
+  visualization.
 
-Public vocabulary
------------------
+TensorDict contract
+-------------------
 
-``chess.Board``
-   The runtime position and history object.  lczerolens does not subclass or
-   reimplement it.
+The canonical keys are:
 
-``LczeroModel``
-   The network-format adapter.  It owns loading, declared native heads, and raw
-   network execution, not chess semantics.
+.. code-block:: text
 
-``LczeroEvaluator``
-   The chess-aware facade that prepares boards, invokes ``LczeroModel``,
-   standardizes output tensors, and constructs ``Evaluation`` views.  Its
-   ``model`` attribute is the canonical :class:`tensordict.nn.TensorDictModule`
-   instrumentation boundary using the documented nested keys.
+   input/planes
+   input/legal_mask
+   network/policy_logits
+   network/wdl             optional
+   network/value           optional
+   network/mlh             optional
+   evaluation/policy
+   evaluation/value        native or derived from WDL
 
-``InputFormat``
-   The public evaluator configuration for the supported 112-plane history
-   policies. The encoding implementation remains private and stateless.
-
-``Evaluation``
-   One position bound to one row of evaluator tensors, with a legal-move policy
-   view and explicit native or derived head origins.
-
-``EvaluationRecord``
-   An immutable, tensor-free evaluation snapshot with reconstructable position
-   history, producer and network provenance, canonical bytes, and a stable
-   digest.
-
-``MoveAnalysis`` and ``LineAnalysis``
-   Exact python-chess-derived position transitions.  These concrete names are
-   preferred over a generic evidence-first interface.
-
-``Puzzle`` and ``PuzzleAttempt``
-   A reconstructable authored task and the immutable result of grading a
-   full-ply attempted prefix against its accepted solution tree. Puzzle
-   correctness is normative source evidence, not an evaluator or search claim.
-
-``SearchResult``
-   The natural final result shared by reference and official Lczero search.
-
-``SearchTrace``
-   The immutable detailed search audit record.  Its available features follow
-   from its contents.
-
-``DecisionAnalysis``
-   A comparison that relates evaluations, search results, candidates,
-   counterfactuals, and exact move analysis without merging their guarantees.
-
-Ownership boundaries
---------------------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
-
-   * - Owner
-     - Responsibility
-   * - ``python-chess``
-     - Rules, legal moves, outcomes, FEN, variants, and mutable game history.
-   * - Lczero
-     - Network formats and production engine behavior.  Literal ``lc0`` remains
-       only where it is the executable or upstream project's actual identifier.
-   * - TensorDict
-     - Batched tensor containers, nested keys, device movement, indexing, and
-       composable module execution.
-   * - ``lczerolens._codec``
-     - Lczero input planes, policy vocabulary, move mapping, and legal masks.
-   * - ``LczeroModel``
-     - Network loading, native head declarations, and raw network execution.
-   * - ``LczeroEvaluator``
-     - Canonical TensorDict execution keys, chess-aware preparation, and
-       standardized evaluation semantics.
-   * - lczerolens analysis records
-     - Exact facts, move and line effects, authored puzzle tasks and grading,
-       validity, provenance, search evidence, comparisons, and canonical
-       persistence.
-   * - External interpretability packages
-     - Hooks, patches, attribution, probes, and intervention methods.
-   * - Downstream research
-     - Strategic, causal, behavioral, and scientific conclusions.
-
-Canonical TensorDict contract
------------------------------
-
-The evaluator uses nested keys with stable meanings::
-
-   ("input", "planes")              float [B, 112, 8, 8]
-   ("input", "legal_mask")          bool  [B, 1858]
-
-   ("network", "policy_logits")     float [B, 1858]
-   ("network", "wdl")               float [B, 3] optional
-   ("network", "value")             float [B, 1] optional
-   ("network", "mlh")               float [B, 1] optional
-
-   ("evaluation", "policy")         float [B, 1858]
-   ("evaluation", "value")          float [B, 1] optional
-
-The corresponding public constants live on ``LczeroKeys`` so integrations do
-not duplicate string tuples::
-
-   td[LczeroKeys.INPUT_PLANES]
-   td[LczeroKeys.NETWORK_POLICY_LOGITS]
-   td[LczeroKeys.EVALUATION_POLICY]
-
-``network`` keys contain exactly what the model emitted.  ``evaluation`` keys
-contain standardized or explicitly derived values.  A derived value does not
-overwrite a native network head.  ``Evaluation.value`` records whether its
-origin was native or derived from WDL.
-
-For a non-terminal position, evaluation-policy entries are zero for illegal
-moves and sum to one across legal moves.  For a terminal position the legal
-mask and standardized policy are all zero, the policy view is undefined, and
-``best_move`` is ``None``.  Raw network heads remain observable.
-
-TensorDict input is validated fail-closed for batch shape, dtype, finite values,
-head shape, and required keys.  Instrumentation may add arbitrary nested keys;
-the evaluator must preserve them.
+For non-terminal positions, evaluation policy is zero on illegal moves and
+sums to one over legal moves. Instrumentation may add nested keys; evaluator
+validation preserves them. ``LczeroKeys`` provides the public key constants.
 
 Runtime and evidence
 --------------------
 
-Runtime objects include modules, TensorDict batches, devices, engine processes,
-and mutable search state.  They optimize execution and instrumentation.
+Models, TensorDict batches, devices, engine processes, and mutable search state
+are runtime objects. They are not serialized.
 
-Evidence objects include position identity, evaluation records, exact move and
-line analysis, counterfactual validity, search traces, and decision analysis.
-They are immutable, typed, provenance-bearing, and canonically serializable.
+Evaluation records, exact line analysis, puzzle attempts, counterfactual
+validity, search traces, and decision analyses are immutable evidence. They
+retain position identity and producer provenance and use canonical versioned
+serialization where supported.
 
-``Evaluation`` is an ergonomic runtime view.  ``Evaluation.record()`` freezes
-the selected tensor values and position identity for persistence.  Composite
-analysis APIs store records rather than references to live tensors or modules.
-
-The position identity stores its variant, Chess960 mode, retained starting FEN,
-and UCI move sequence in addition to the final FEN.  Restoration therefore
-reconstructs the available history instead of pretending that a final FEN
-alone contains repetition state.  Network checksums are recorded when the
-evaluator loaded a local model path; in-memory models retain their concrete
-module type without fabricating a weights identity.
-
-Search contract
+Search boundary
 ---------------
 
-Search implementations accept a board and one explicit limit object::
+Search accepts a board and one typed limit. ``ReferenceSearch`` provides a
+deterministic replayable oracle. ``LczeroSearch`` translates only public output
+from an external engine. Consumers check available evidence instead of
+assuming every producer exposes root actions, snapshots, or events.
 
-   Search.run(board, Nodes(10_000))
-   Search.run(board, Visits(10_000))
-   Search.run(board, Simulations(100))
-   Search.run(board, Time(milliseconds=500))
-   Search.run(board, Depth(20))
-
-Unsupported limits fail before starting the producer.  Requested and observed
-work remain separate.
-
-Search trace features are predicates derived from records, not a caller-chosen
-maximum capability label.  Root results, root actions, snapshots, events, and
-semantic replay can therefore evolve without fabricating unavailable fields.
-Accessing absent evidence raises ``SearchEvidenceUnavailable`` with producer
-and feature context.
-
-``ReferenceSearch`` is deterministic and auditable.  It is not Lczero-equivalent
-and does not own production strength, FPU, batching, collisions, pruning,
-transpositions, tree reuse, or time management.  ``LczeroSearch`` invokes an
-external engine and translates only evidence that engine actually emitted.
-
-Package structure
------------------
-
-The target source layout is organized by user action::
-
-   lczerolens/
-       model.py
-       constants.py
-       schema.py
-       evaluator.py
-       evaluation.py
-       moves.py
-       puzzle.py
-       counterfactuals.py
-       decision.py
-       facts.py
-       provenance.py
-       serialization.py
-       search/
-           limits.py
-           result.py
-           trace.py
-           reference.py
-           lczero.py
-       _codec/
-           input.py
-           policy.py
-
-Module initialization is acyclic. The package ``__init__`` files are composition
-roots, not layers. Foundations (constants, provenance, schema, facts, codec,
-and raw model execution) do not import chess-facing orchestration. Evaluation
-and puzzles may depend on those foundations; trace/result records do not depend
-on an evaluator; reference search may depend on both. The decision module
-composes completed records. Evaluation persistence is imported lazily from its
-record methods so serialization does not become an initialization cycle.
-
-Exact chess analysis (facts, moves, provenance, and counterfactual
-construction) does not depend on Torch, TensorDict, or a model. Native bindings
-and Hugging Face remain outside module initialization: bindings are a
-conformance-only development group, while Hub imports occur only when a Hub
-method is called.
-
-Breaking deletion list
-----------------------
-
-The release removes rather than deprecates:
-
-* the ``LczeroBoard`` subclass;
-* mutable public ``MCTS`` and ``Node``;
-* samplers and general self-play;
-* generic ``Concept`` and dataset-metric abstractions;
-* ``ForceValue`` and flow subclasses;
-* generic dataset wrappers and provider-specific puzzle datasets;
-* board-owned visualization;
-* low-level backend helpers that do not implement an evaluator or search
-  boundary; and
-* legacy notebooks and examples built around removed interfaces.
-
-Feature and release gate
-------------------------
-
-A proposed public feature must name the release use case it enables, the
-TensorDict or chess-record contract it changes, and the evidence guarantee it
-preserves.  Notebook convenience alone is insufficient.
-
-The refactor is releasable only when all use cases pass from an installed wheel,
-unit and fixture conformance pass on supported Python versions, live pinned
-Lczero conformance passes, documentation is strict-clean, and canonical
-artifacts round-trip with stable digests.
+See :doc:`scope` for supported use cases and non-goals.

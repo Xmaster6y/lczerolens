@@ -9,13 +9,13 @@ lczerolens
     :hidden:
 
     start
-    use-cases
-    architecture
-    scope
-    facts
-    search
     features
     tutorials
+    facts
+    search
+    use-cases
+    scope
+    architecture
     api/index
     About <about>
 
@@ -93,6 +93,6 @@ lczerolens
 
         .. div::
 
-          **Interpretability utilities**
+          **Composable execution**
 
-          Run board-aware evaluation while external frameworks instrument the same nested TensorDict execution path.
+          Run board-aware evaluation while external tools instrument the same TensorDict execution path.

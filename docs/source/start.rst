@@ -1,11 +1,8 @@
 Getting Started
 ===============
 
-``lczerolens`` makes lc0-family models portable and operable in PyTorch, then
-expresses evaluator and search behaviour as chess-domain evidence. It owns the
-model and chess-analysis boundary, not a neural-interpretability method.
-External tools such as ``tdhook``, ``captum``, ``zennit``, and ``nnsight`` can
-instrument that boundary without becoming lczerolens dependencies.
+``lczerolens`` loads lc0-family models into PyTorch and turns evaluator and
+search output into chess-domain evidence.
 
 Installation
 ------------
@@ -14,28 +11,22 @@ Installation
 
    pip install lczerolens
 
-Use the ``hub`` extra for Hugging Face model loading and publishing. Native
-Lczero bindings are a test-only conformance oracle, not a library extra.
+Use ``pip install "lczerolens[hub]"`` for Hugging Face model loading.
 
-Supported user path
--------------------
+Learn by running
+----------------
 
-* :doc:`use-cases` defines the concrete workflows that gate the breaking
-  ``0.5`` refactor and release.
-* :doc:`architecture` defines the target TensorDict execution contract,
-  chess-facing objects, ownership boundaries, and deletion policy.
-* :doc:`scope` documents the implemented public surface and compatibility
-  policy; :doc:`architecture` records its ownership and dependency rules.
-* :doc:`facts` covers exact facts, move/line analysis, and constrained
-  counterfactual positions.
-* :doc:`search` defines the shared result, typed limits, and detailed traces.
-  ``ReferenceSearch`` is an auditable oracle, not a production engine.
-* :doc:`use-cases` covers the concrete evaluator, puzzle, counterfactual,
-  search, and decision-analysis compositions.
-* :doc:`decision-analysis-tutorial` runs those public boundaries together with
-  a small versioned fixture; its output is a demonstration, not a result.
-* :doc:`api/index` contains generated reference documentation for the package.
+Start with the maintained notebooks:
 
-The maintained tutorial is executable and tested. Historical notebooks built
-on removed samplers, datasets, concepts, and mutable search objects are not part
-of the release surface.
+* :doc:`notebooks/features/models-and-inputs` — load a model and inspect its
+  TensorDict inputs;
+* :doc:`notebooks/features/evaluate-positions` — evaluate positions and
+  batches;
+* :doc:`notebooks/features/chess-evidence` — analyze moves, lines, puzzles,
+  and counterfactuals; and
+* :doc:`notebooks/features/replayable-search` — run and replay reference
+  search.
+
+Then use :doc:`tutorials` for complete workflows. :doc:`scope` defines what
+the project owns, :doc:`architecture` defines the system contract, and
+:doc:`api/index` is the generated reference.

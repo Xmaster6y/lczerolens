@@ -38,8 +38,9 @@ tests` runs the complete fast, offline suite (unit and conformance tests) and
 produces the coverage report. `just tests-unit` and `just tests-conformance`
 select either tier for diagnosis. The native Lczero bindings are a test-only
 conformance oracle, installed through the `conformance` dependency group rather
-than exposed as library API. Notebook and release checks are opt-in with `just
-tests-slow`; `just tests-wheel` builds and installs the wheel in a fresh virtual
+than exposed as library API. Notebook and release checks are opt-in with
+`just tests-slow`; the notebook suite executes every maintained `.ipynb` page.
+`just tests-wheel` builds and installs the wheel in a fresh virtual
 environment before running the maintained workflow. CI retains JUnit and
 coverage artifacts to make failures inspectable.
 
@@ -121,12 +122,16 @@ then follow the [facts](https://lczerolens.readthedocs.io/en/latest/facts.html),
 Interpretability techniques remain external integrations rather than
 lczerolens APIs.
 
-### Maintained tutorial
+### Maintained demos
 
 The executable [decision-analysis tutorial](examples/decision_analysis_tutorial.py)
 composes evaluator, search, exact line analysis, and counterfactual comparison
-against a deterministic fixture. Its integration test is the supported example
-contract; historical notebooks built on removed APIs are not shipped.
+against a deterministic fixture. Seven maintained
+[feature and tutorial notebooks](docs/source/tutorials.rst) cover model loading
+and inputs, evaluation, chess evidence, search and replay, complete decision
+analysis, model comparison, and authored-puzzle analysis. Sphinx renders and
+executes them, and the integration tier executes the source notebooks directly.
+Historical notebooks built on removed APIs are not shipped.
 
 ## Full Documentation
 

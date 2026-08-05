@@ -1,8 +1,18 @@
 # Configuration file for the Sphinx documentation builder.
 
+import importlib
 import os
+from pathlib import Path
+import sys
 
-import lczerolens
+# The maintained notebooks reuse the executable fixture from ``examples``.
+# Make that repository-local companion importable in Sphinx and in the kernel
+# subprocesses started by nbsphinx.
+REPOSITORY_ROOT = str(Path(__file__).parents[2])
+sys.path.insert(0, REPOSITORY_ROOT)
+os.environ["PYTHONPATH"] = os.pathsep.join(filter(None, (REPOSITORY_ROOT, os.environ.get("PYTHONPATH"))))
+
+lczerolens = importlib.import_module("lczerolens")
 
 # Project Information
 project = "lczerolens"
@@ -18,12 +28,21 @@ extensions = [
     "sphinx.ext.viewcode",  # View code in the browser
     "sphinx_copybutton",  # Copy button for code blocks
     "sphinx_design",  # Boostrap design components
+    "nbsphinx",  # Executable first-class notebook pages
     "autoapi.extension",
     "sphinx_llm.txt",
 ]
 
 templates_path = ["_templates"]
 fixed_sidebar = True
+exclude_patterns = ["**/*.nbconvert.ipynb"]
+
+# These notebooks are deliberately small and hermetic. Executing them in the
+# docs build keeps the rendered walkthroughs aligned with the public API; the
+# integration tier independently executes the same files.
+nbsphinx_execute = "always"
+nbsphinx_allow_errors = False
+nbsphinx_timeout = 60
 
 
 # HTML Output Options
