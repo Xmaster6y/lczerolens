@@ -125,16 +125,10 @@ announced compatibility release.
      - Internalize
      - Authoritative substrate; avoid promising incidental names.
    * - ``model``
-     - ``LczeroModel``, ``ForceValue``; ``Flow``, ``PolicyFlow``,
-       ``ValueFlow``, ``WdlFlow``, ``MlhFlow``
-     - Retain; refocus flows
-     - Preserve evaluator loading and output adapters; do not make a hook API.
-   * - ``backends``
-     - ``generic_command``, ``describenet``, ``convert_to_onnx``,
-       ``convert_to_leela``, ``board_from_backend``,
-       ``prediction_from_backend``, ``moves_with_castling_swap``
-     - Refocus
-     - lc0 conversion/backend interoperation; low-level helpers remain subordinate to model adapters.
+     - ``LczeroModel``
+     - Retain
+     - Raw TensorDict execution and model-format loading beneath the evaluator;
+       no head-filtering flow hierarchy or hook API.
    * - ``search``
      - ``SearchResult``, typed limits, ``ReferenceSearch``, ``LczeroSearch``,
        trace and replay records

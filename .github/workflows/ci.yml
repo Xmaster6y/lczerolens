@@ -26,7 +26,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        uv sync --locked --group dev --extra hub --extra backends
+        uv sync --locked --group dev --group conformance --extra hub
     - name: Run checks
       run: |
         just checks
@@ -68,9 +68,6 @@ jobs:
           - name: hub
             sync-args: --no-default-groups --extra hub
             import: import lczerolens, huggingface_hub
-          - name: backends
-            sync-args: --no-default-groups --extra backends
-            import: import lczerolens; from lczero.backends import Backend
           - name: docs
             sync-args: --no-default-groups --group docs
             import: import lczerolens, sphinx

@@ -9,8 +9,7 @@ from torch import nn
 from tensordict import TensorDict
 
 from lczerolens._codec import encode_input
-from lczerolens.model import PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue, LczeroModel
-from lczerolens import backends as lczero_utils
+from lczerolens.model import LczeroModel
 
 
 def _model_input(board: chess.Board) -> TensorDict:
@@ -18,7 +17,14 @@ def _model_input(board: chess.Board) -> TensorDict:
     return TensorDict({"board": planes}, batch_size=[1])
 
 
-@pytest.mark.backends
+def _prediction_from_backend(backend, game):
+    """Return raw policy and value from the native conformance oracle."""
+    (output,) = backend.evaluate(game.as_input(backend))
+    policy = torch.tensor(output.p_raw(*range(1858)), dtype=torch.float)
+    return policy, torch.tensor(output.q())
+
+
+@pytest.mark.conformance
 class TestModel:
     def test_model_prediction(self, tiny_lczero_backend, tiny_model):
         """Test that the model prediction works."""
@@ -27,7 +33,7 @@ class TestModel:
         policy = out["policy"]
         value = out["value"]
         lczero_game = GameState()
-        lczero_policy, lczero_value = lczero_utils.prediction_from_backend(tiny_lczero_backend, lczero_game)
+        lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
         assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value, atol=1e-4)
 
@@ -39,7 +45,7 @@ class TestModel:
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
-            lczero_policy, lczero_value = lczero_utils.prediction_from_backend(tiny_lczero_backend, lczero_game)
+            lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
@@ -51,7 +57,7 @@ class TestModel:
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
-            lczero_policy, lczero_value = lczero_utils.prediction_from_backend(tiny_lczero_backend, lczero_game)
+            lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
@@ -63,7 +69,7 @@ class TestModel:
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
-            lczero_policy, lczero_value = lczero_utils.prediction_from_backend(tiny_lczero_backend, lczero_game)
+            lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
 
@@ -164,61 +170,3 @@ class TestManageModels:
         assert "policy" in output
         assert "wdl" in output
         delete_repo("lczerolens/tests")
-
-
-class TestFlows:
-    def test_policy_flow(self, tiny_model):
-        """Test that the policy flow works."""
-        policy_flow = PolicyFlow.from_model(tiny_model.module)
-        board = chess.Board()
-        output = policy_flow(_model_input(board))
-        assert "value" not in output
-
-    def test_value_flow(self, tiny_model):
-        """Test that the value flow works."""
-        value_flow = ValueFlow.from_model(tiny_model.module)
-        board = chess.Board()
-        output = value_flow(_model_input(board))
-        assert "policy" not in output
-
-    def test_wdl_flow(self, winner_model):
-        """Test that the wdl flow works."""
-        wdl_flow = WdlFlow.from_model(winner_model.module)
-        board = chess.Board()
-        output = wdl_flow(_model_input(board))
-        assert "policy" not in output
-
-    def test_mlh_flow(self, winner_model):
-        """Test that the mlh flow works."""
-        mlh_flow = MlhFlow.from_model(winner_model.module)
-        board = chess.Board()
-        output = mlh_flow(_model_input(board))
-        assert "policy" not in output
-
-    def test_force_value(self, tiny_model):
-        """Test that the force value flow works."""
-        force_value = ForceValue.from_model(tiny_model.module)
-        board = chess.Board()
-        output = force_value(_model_input(board))
-        assert "value" in output
-
-    def test_force_value_wdl(self, winner_model):
-        """Test that the force value flow works."""
-        force_value = ForceValue.from_model(winner_model.module)
-        board = chess.Board()
-        output = force_value(_model_input(board))
-        assert "value" in output
-
-        value = output["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=output.device)
-        assert torch.allclose(output["value"], value)
-
-    def test_incompatible_flows(self, tiny_model, winner_model):
-        """Test that the flows raise an error *
-        when the model is incompatible.
-        """
-        with pytest.raises(ValueError):
-            ValueFlow.from_model(winner_model)
-        with pytest.raises(ValueError):
-            WdlFlow.from_model(tiny_model)
-        with pytest.raises(ValueError):
-            MlhFlow.from_model(tiny_model)

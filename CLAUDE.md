@@ -40,14 +40,13 @@ Optional extras when installing from PyPI:
 
 ```bash
 pip install "lczerolens[hub]"      # Hugging Face Hub loading/publishing
-pip install "lczerolens[backends]" # lc0 bindings
 ```
 
 ## Code map
 
 - `src/lczerolens/_codec/`: stateless Lczero input-plane and policy-vocabulary transport.
 - `src/lczerolens/evaluator.py`: chess-aware TensorDict preparation and standardized evaluation.
-- `src/lczerolens/model.py`: `LczeroModel` + flow wrappers (`PolicyFlow`, `WdlFlow`, `ValueFlow`, `ForceValue`).
+- `src/lczerolens/model.py`: `LczeroModel`, the raw TensorDict/network-format adapter.
 - `src/lczerolens/search/`: unified typed limits and results, engine-independent
   traces, deterministic reference search, official Lczero adapter, and replay helpers.
 - `src/lczerolens/constants.py`: 1858-policy move vocabulary (`POLICY_INDEX` and inverse).
@@ -58,7 +57,7 @@ pip install "lczerolens[backends]" # lc0 bindings
 - `LczeroModel` owns loading and raw TensorDict execution; `LczeroEvaluator` owns chess semantics.
 - Input tensor shape is `(112, 8, 8)` per board; policy head shape is `(1858,)` per board.
 - Typical output keys: `policy`, `wdl`; optional `value` and `mlh` depending on network heads.
-- `ForceValue` adds `value` from `wdl` as `w - l` when a native value head is absent.
+- `LczeroEvaluator` derives `evaluation/value` as `w - l` when the network exposes WDL but no value head.
 
 ## Board encoding details (112 planes)
 

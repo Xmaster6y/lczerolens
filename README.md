@@ -31,20 +31,15 @@ Loading or publishing models through Hugging Face Hub requires the `hub` extra:
 pip install "lczerolens[hub]"
 ```
 
-Install `backends` to use the optional `lc0` bindings:
-
-```bash
-pip install "lczerolens[backends]"
-```
-
 ### Tests
 
 After `just test-fixtures` has fetched and checksummed the lc0 fixtures, `just
 tests` runs the complete fast, offline suite (unit and conformance tests) and
 produces the coverage report. `just tests-unit` and `just tests-conformance`
-select either tier for diagnosis. Notebook and release checks are opt-in with
-`just tests-slow`; CI retains JUnit and coverage artifacts to make failures
-inspectable.
+select either tier for diagnosis. The native Lczero bindings are a test-only
+conformance oracle, installed through the `conformance` dependency group rather
+than exposed as library API. Notebook and release checks are opt-in with `just
+tests-slow`; CI retains JUnit and coverage artifacts to make failures inspectable.
 
 ### Evaluate a position
 

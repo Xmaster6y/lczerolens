@@ -1,7 +1,6 @@
 """Class for wrapping the LCZero models."""
 
 import os
-from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Optional, Sequence
 import tempfile
 
@@ -261,82 +260,3 @@ class LczeroModel(TensorDictModule):
             )
         output_node = list(model.graph.nodes)[-1]
         return [n.name.replace("output_", "") for n in output_node.all_input_nodes]
-
-
-class ForceValue(LczeroModel):
-    """Class for forcing and isolating the value flow."""
-
-    def __init__(self, module: nn.Module, out_keys: List[str], **kwargs):
-        super().__init__(module, out_keys, **kwargs)
-        output_names = self._get_output_names(self.module)
-        self._compute_value = "wdl" in output_names
-        self._wdl_index = output_names.index("wdl") if self._compute_value else None
-
-    @staticmethod
-    def _get_output_names(model: nn.Module) -> List[str]:
-        """Returns the output names of the model.
-
-        Parameters
-        ----------
-        model : nn.Module
-            The model to get the output names from.
-
-        Returns
-        -------
-        List[str]
-            The output names of the model.
-        """
-        names = LczeroModel._get_output_names(model)
-        if "value" in names:
-            return names
-        elif "wdl" in names:
-            return names + ["value"]
-        else:
-            raise ValueError("The model does not have a `value` or `wdl` head.")
-
-    def _call_module(self, tensors: Sequence[torch.Tensor], **kwargs: Any) -> Sequence[torch.Tensor]:
-        out = super()._call_module(tensors, **kwargs)
-        if self._compute_value:
-            wdl = out[self._wdl_index]
-            out = (*out, wdl @ torch.tensor([1.0, 0.0, -1.0], device=wdl.device))
-        return out
-
-
-class Flow(LczeroModel, metaclass=ABCMeta):
-    """Base class for isolating a flow."""
-
-    def __init__(self, module: nn.Module, out_keys: List[str], **kwargs):
-        if self._flow_type not in out_keys:
-            raise ValueError(f"The flow type `{self._flow_type}` is not in the output keys ({out_keys=}).")
-        filtered_out_keys = [key if key == self._flow_type else "_" for key in out_keys]
-        super().__init__(module, filtered_out_keys, **kwargs)
-
-    @property
-    @abstractmethod
-    def _flow_type(self) -> str:
-        """Returns the flow type."""
-        pass
-
-
-class PolicyFlow(Flow):
-    """Class for isolating the policy flow."""
-
-    _flow_type = "policy"
-
-
-class ValueFlow(Flow):
-    """Class for isolating the value flow."""
-
-    _flow_type = "value"
-
-
-class WdlFlow(Flow):
-    """Class for isolating the WDL flow."""
-
-    _flow_type = "wdl"
-
-
-class MlhFlow(Flow):
-    """Class for isolating the MLH flow."""
-
-    _flow_type = "mlh"

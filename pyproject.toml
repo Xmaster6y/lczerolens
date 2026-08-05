@@ -32,9 +32,6 @@ issues = "https://github.com/Xmaster6y/lczerolens/issues"
 releasenotes = "https://github.com/Xmaster6y/lczerolens/releases"
 
 [project.optional-dependencies]
-backends = [
-    "v-lczero-bindings>=0.31.2"
-]
 hub = [
     "huggingface-hub>=0.27.1",
 ]
@@ -46,6 +43,9 @@ dev = [
     "pre-commit>=4.0.1",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
+]
+conformance = [
+    "v-lczero-bindings>=0.31.2",
 ]
 docs = [
     "plotly>=5.24.1",
@@ -80,7 +80,6 @@ markers = [
     "integration: tests that exercise another process boundary (explicit primary tier)",
     "network: tests that contact an external service and are never in the offline suite (explicit primary tier)",
     "slow: tests intended for the explicitly requested slow tier (explicit primary tier)",
-    "backends: legacy alias for an lc0 conformance test",
 ]
 
 [tool.ruff]

@@ -615,14 +615,14 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-backends = [
-    { name = "v-lczero-bindings" },
-]
 hub = [
     { name = "huggingface-hub" },
 ]
 
 [package.dev-dependencies]
+conformance = [
+    { name = "v-lczero-bindings" },
+]
 dev = [
     { name = "gdown" },
     { name = "onnxruntime" },
@@ -654,11 +654,11 @@ requires-dist = [
     { name = "python-chess", specifier = ">=1.999" },
     { name = "tensordict", specifier = ">=0.9.1" },
     { name = "torch", specifier = ">=2.5.0" },
-    { name = "v-lczero-bindings", marker = "extra == 'backends'", specifier = ">=0.31.2" },
 ]
-provides-extras = ["backends", "hub"]
+provides-extras = ["hub"]
 
 [package.metadata.requires-dev]
+conformance = [{ name = "v-lczero-bindings", specifier = ">=0.31.2" }]
 dev = [
     { name = "gdown", specifier = ">=5.2.0" },
     { name = "onnxruntime", specifier = ">=1.20.1" },

@@ -34,6 +34,16 @@ def test_distributions_contain_only_library_release_files(tmp_path: Path) -> Non
     assert any(path.startswith("lczerolens/") for path in wheel_files)
     assert any(path.endswith(".dist-info/METADATA") for path in wheel_files)
     assert all(path.startswith("lczerolens/") or ".dist-info/" in path for path in wheel_files)
+    assert "lczerolens/backends.py" not in wheel_files
+
+    with zipfile.ZipFile(wheel_path) as wheel:
+        model_source = wheel.read("lczerolens/model.py").decode()
+        metadata_path = next(path for path in wheel_files if path.endswith(".dist-info/METADATA"))
+        metadata = wheel.read(metadata_path).decode()
+    assert all(
+        symbol not in model_source for symbol in ("ForceValue", "PolicyFlow", "ValueFlow", "WdlFlow", "MlhFlow")
+    )
+    assert "v-lczero-bindings" not in metadata
 
     with tarfile.open(sdist_path) as sdist:
         sdist_files = {
