@@ -13,6 +13,7 @@ from .behavior import (
     compare_search_events,
     evaluator_behavior,
 )
+from ._decision_serialization import DecisionAnalysisFormatError
 from .counterfactuals import (
     CounterfactualConstraints,
     CounterfactualPair,
@@ -94,6 +95,7 @@ __all__ = [
     "CounterfactualPair",
     "CounterfactualValidity",
     "DecisionAnalysis",
+    "DecisionAnalysisFormatError",
     "DecisionAction",
     "DecisionActions",
     "Evidence",

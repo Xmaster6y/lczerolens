@@ -170,6 +170,12 @@ Durable evidence records have canonical versioned serialization::
 
    assert restored.digest() == decision.digest()
 
+``DecisionAnalysis`` persistence is compositional: it embeds the canonical
+evaluation and search-trace records plus the exact line and counterfactual
+evidence retained by the comparison. Loading revalidates the complete object
+graph and rejects unknown versions, record types, fields, duplicate JSON keys,
+and noncanonical encodings.
+
 The release test exercises evaluation, search, exact move analysis, comparison,
 serialization, restoration, and digest stability end to end.  Mutable modules,
 engine processes, live tensors, devices, and external instrumentation contexts

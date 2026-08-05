@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from os import PathLike
 from typing import TYPE_CHECKING
 
 import chess
@@ -103,6 +104,38 @@ class DecisionAnalysis:
     @property
     def search_capability(self) -> SearchCapability:
         return self.search.trace.capability
+
+    def to_bytes(self) -> bytes:
+        """Return canonical versioned JSON bytes for the complete analysis."""
+        from lczerolens._decision_serialization import serialize_decision_analysis
+
+        return serialize_decision_analysis(self)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> DecisionAnalysis:
+        """Restore a complete analysis from canonical versioned JSON bytes."""
+        from lczerolens._decision_serialization import deserialize_decision_analysis
+
+        return deserialize_decision_analysis(data)
+
+    def digest(self) -> str:
+        """Return the SHA-256 digest of the canonical bytes."""
+        from lczerolens._decision_serialization import decision_analysis_digest
+
+        return decision_analysis_digest(self)
+
+    def save(self, path: str | PathLike[str]) -> None:
+        """Write the canonical analysis bytes to ``path``."""
+        from lczerolens._decision_serialization import save_decision_analysis
+
+        save_decision_analysis(self, path)
+
+    @classmethod
+    def load(cls, path: str | PathLike[str]) -> DecisionAnalysis:
+        """Load a complete analysis from ``path``."""
+        from lczerolens._decision_serialization import load_decision_analysis
+
+        return load_decision_analysis(path)
 
 
 @dataclass(frozen=True)

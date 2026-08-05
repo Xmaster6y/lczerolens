@@ -34,7 +34,29 @@ The executable companion is :download:`examples/decision_analysis_tutorial.py
 #. reports the target ``e7e5`` effect separately from the collateral legal
    action distribution; and
 #. records whether evaluator and reference-search candidates agree, including
-   their root statistics and line analysis.
+   their root statistics and line analysis;
+#. serializes the complete :class:`~lczerolens.decision.DecisionAnalysis` as
+   canonical, versioned JSON; and
+#. restores the artifact and verifies equality plus the versioned fixture's
+   stable SHA-256 digest.
+
+Persisting the result
+---------------------
+
+Pass an output path to retain the exact artifact exercised by the tutorial::
+
+   from examples.decision_analysis_tutorial import run_tutorial
+
+   result = run_tutorial("decision.json")
+   assert result.restored_decision == result.decision
+   assert result.restored_decision.digest() == result.decision_digest
+
+The artifact composes existing canonical evaluator and search-trace records
+with the exact line and counterfactual evidence retained by the decision.
+Loading reconstructs the natural :class:`~lczerolens.search.result.SearchResult`
+and revalidates position identity, selected actions, producer provenance, and
+every domain record. It never stores the model, evaluator, tensors, devices,
+hooks, or engine processes.
 
 The reference search is explicitly ``replayable`` and therefore exposes full
 events. That is stronger than an official-lc0 adapter that only advertises
@@ -59,6 +81,7 @@ Reading the result
 ``TutorialResult`` retains structured records instead of prose explanations:
 the raw evaluator preference, the search decision comparison, exact variation
 evidence, the counterfactual validity tier, one target-move delta, and the
-collateral distribution shift. Those are observations with provenance. They
-can motivate a research question, but they do not establish a causal mechanism,
-model strength, or general chess conclusion.
+collateral distribution shift. It also retains the restored decision and its
+canonical digest. Those are observations with provenance. They can motivate a
+research question, but they do not establish a causal mechanism, model
+strength, or general chess conclusion.

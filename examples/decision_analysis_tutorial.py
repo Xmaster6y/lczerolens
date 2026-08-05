@@ -8,6 +8,7 @@ comparison boundaries runnable without downloading weights or an engine.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from os import PathLike
 
 import chess
 import torch
@@ -27,6 +28,9 @@ from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
 from lczerolens.model import LczeroModel
 from lczerolens.moves import LineAnalysis, analyze_line
+
+
+TUTORIAL_DECISION_DIGEST = "6ab2f10ab07a9b51743ca504738a520b6c339780effd94223126ec3df028be0e"
 
 
 class _TutorialFixtureModule(nn.Module):
@@ -74,9 +78,11 @@ class TutorialResult:
     counterfactual: CounterfactualPair
     counterfactual_comparison: CounterfactualComparison
     variations: dict[str, LineAnalysis]
+    restored_decision: DecisionAnalysis
+    decision_digest: str
 
 
-def run_tutorial() -> TutorialResult:
+def run_tutorial(artifact_path: str | PathLike[str] | None = None) -> TutorialResult:
     """Run the documented, hermetic decision-analysis workflow."""
     board = chess.Board()
     runtime = load_fixture_evaluator()
@@ -103,7 +109,24 @@ def run_tutorial() -> TutorialResult:
         line_analyses=variations,
         counterfactuals=(comparison,),
     )
-    return TutorialResult(evaluation, search, decision, counterfactual, comparison, variations)
+    restored = DecisionAnalysis.from_bytes(decision.to_bytes())
+    if artifact_path is not None:
+        decision.save(artifact_path)
+        restored = DecisionAnalysis.load(artifact_path)
+    if restored.digest() != decision.digest():
+        raise RuntimeError("The tutorial decision artifact did not retain its canonical digest.")
+    if decision.digest() != TUTORIAL_DECISION_DIGEST:
+        raise RuntimeError("The versioned tutorial decision digest changed unexpectedly.")
+    return TutorialResult(
+        evaluation,
+        search,
+        decision,
+        counterfactual,
+        comparison,
+        variations,
+        restored,
+        decision.digest(),
+    )
 
 
 if __name__ == "__main__":

@@ -13,6 +13,16 @@ ROOT = Path(__file__).parents[2]
 SOURCE_ROOT = ROOT / "src" / "lczerolens"
 
 EXPECTED_MODULE_DEPENDENCIES = {
+    "_decision_serialization": {
+        "counterfactuals",
+        "decision",
+        "facts",
+        "moves",
+        "provenance",
+        "search.result",
+        "search.trace",
+        "serialization",
+    },
     "_codec.input": set(),
     "_codec.policy": {"constants"},
     "behavior": {"_codec", "counterfactuals", "moves", "search.reference", "search.trace"},
@@ -54,6 +64,7 @@ EXPECTED_ROOT_EXPORTS = {
     "DecisionAction",
     "DecisionActions",
     "DecisionAnalysis",
+    "DecisionAnalysisFormatError",
     "Depth",
     "EvaluatorBehavior",
     "Evaluation",
