@@ -34,11 +34,10 @@ class FixtureNetwork(nn.Module):
         batch = planes.shape[0]
         policy = torch.zeros((batch, 1858), device=planes.device)
         board = chess.Board()
-        weights = torch.arange(planes[0].numel(), device=planes.device, dtype=planes.dtype).square()
-        signal = (planes.flatten(1) * weights).sum(-1) / 10_000_000_000
+        signal = planes[:, 6, 4, 3] - planes[:, 6, 4, 4]
         policy[:, encode_move(board, chess.Move.from_uci("e2e4"))] = 4.0 + signal
         policy[:, encode_move(board, chess.Move.from_uci("d2d4"))] = 2.0 - signal
-        value = 0.5 * (planes[:, 6, 4, 3] - planes[:, 6, 4, 4])
+        value = 0.5 * signal
         return policy, value
 
 
