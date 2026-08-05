@@ -122,10 +122,10 @@ html_css_files = [
 # Autoapi
 autoapi_dirs = ["../../src"]
 autoapi_root = "api"
-# AutoAPI sources are generated for the build and must not become checkout
-# artifacts.  Keeping them also made a documentation build leave ``api/``
-# untracked.
-autoapi_keep_files = False
+# ``sphinx_llm.txt`` launches a second Sphinx build for Markdown output.  Both
+# builds consume the AutoAPI source pages, so they must remain available until
+# the primary HTML build has finished.
+autoapi_keep_files = True
 autoapi_template_dir = "_templates/autoapi"
 autoapi_python_class_content = "both"
 autoapi_options = [
