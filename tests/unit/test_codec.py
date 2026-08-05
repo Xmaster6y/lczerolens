@@ -51,6 +51,8 @@ def test_move_vocabulary_round_trips_both_perspectives_and_promotions():
     for fen, uci in (
         ("4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8n"),
         ("4k3/8/8/8/8/8/p7/4K3 b - - 0 1", "a2a1n"),
+        ("4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8b"),
+        ("4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8r"),
         ("4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8q"),
     ):
         board = chess.Board(fen)
@@ -81,6 +83,16 @@ def test_terminal_position_has_no_semantic_legal_policy(fen):
     assert not legal_mask(chess.Board(fen)).any()
 
 
+def test_input_encoding_marks_repeated_positions():
+    board = chess.Board()
+    for uci in ("g1f3", "g8f6", "f3g1", "f6g8"):
+        board.push_uci(uci)
+
+    encoded = encode_input(board)
+
+    assert encoded[12].all()
+
+
 def test_codec_rejects_wrong_types_and_policy_indices():
     with pytest.raises(TypeError, match="chess.Board"):
         encode_input("not a board")
@@ -88,5 +100,7 @@ def test_codec_rejects_wrong_types_and_policy_indices():
         encode_input(chess.Board(), input_format="classical")
     with pytest.raises(TypeError, match="chess.Move"):
         encode_move(chess.Board(), "e2e4")
+    with pytest.raises(TypeError, match="chess.Board"):
+        encode_move("not a board", chess.Move.from_uci("e2e4"))
     with pytest.raises(ValueError, match="Policy index"):
         decode_move(chess.Board(), 1858)
