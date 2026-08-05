@@ -77,6 +77,13 @@ def test_search_request_rejects_invalid_budget(kwargs, message):
         _LczeroSearchRequest(ROOT_FEN, **kwargs)
 
 
+def test_search_request_rejects_partial_or_inconsistent_retained_history():
+    with pytest.raises(ValueError, match="both a starting FEN"):
+        _LczeroSearchRequest(ROOT_FEN, root_start_fen=ROOT_FEN, nodes=1)
+    with pytest.raises(ValueError, match="reconstruct"):
+        _LczeroSearchRequest(ROOT_FEN, root_start_fen=ROOT_FEN, root_move_history=("e2e4",), nodes=1)
+
+
 def test_search_request_rejects_terminal_root_before_invoking_lc0():
     with pytest.raises(ValueError, match="non-terminal"):
         _LczeroSearchRequest("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1", nodes=1)

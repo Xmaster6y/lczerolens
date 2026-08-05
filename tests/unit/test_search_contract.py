@@ -22,6 +22,7 @@ from lczerolens import (
 from lczerolens._codec import encode_move
 from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.provenance import ChessPlayer
+from lczerolens.provenance import PositionIdentity
 from lczerolens.search import lczero as lczero_module
 from lczerolens.search.result import SearchEvidenceUnavailable, SearchResult, SearchRoot
 from lczerolens.search.trace import (
@@ -151,6 +152,23 @@ def test_lczero_search_maps_supported_limits_and_preserves_root_only_absence(mon
     assert "go nodes 2" in command
 
 
+def test_lczero_search_preserves_history_and_canonical_en_passant_identity(monkeypatch):
+    calls = []
+
+    def fake_run(*args, **kwargs):
+        calls.append((args, kwargs))
+        return SimpleNamespace(returncode=0, stdout="bestmove e7e5\n", stderr="")
+
+    monkeypatch.setattr(lczero_module, "_run_uci_process", fake_run)
+    board = chess.Board()
+    board.push_uci("e2e4")
+    result = LczeroSearch(executable="lc0", network="weights", engine_version="v-test").run(board, Nodes(1))
+
+    assert board.fen() != board.fen(en_passant="fen")
+    assert result.trace.root_position == PositionIdentity.from_board(board)
+    assert f"position fen {chess.STARTING_FEN} moves e2e4" in calls[0][0][1]
+
+
 def test_lczero_search_supports_whole_time_and_rejects_unsupported_limits(monkeypatch):
     def fake_run(*args, **kwargs):
         return SimpleNamespace(returncode=0, stdout="info time 7\nbestmove e2e4\n", stderr="")
@@ -217,5 +235,6 @@ def test_search_result_and_root_reject_inconsistent_or_unavailable_evidence():
         provenance=SearchProvenance("fixture"),
         snapshots=(RootSnapshot(0, evaluation=PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.0)),),
     )
+    assert no_selection.root_position is None
     with pytest.raises(SearchEvidenceUnavailable, match="selected move"):
         SearchResult.from_trace(no_selection)

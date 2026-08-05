@@ -18,7 +18,7 @@ from typing import Any, TypeAlias, Union, get_args, get_origin, get_type_hints
 
 import chess
 
-from lczerolens.provenance import ChessPlayer
+from lczerolens.provenance import ChessPlayer, PositionIdentity
 
 
 ParameterValue: TypeAlias = str | int | float | bool | None
@@ -466,7 +466,7 @@ class SearchTrace:
                     history_board.push(move)
             except ValueError as error:
                 raise ValueError("root history must be a legal sequence from root_start_fen.") from error
-            if history_board.fen() != self.root_fen:
+            if history_board.fen(en_passant="fen") != self.root_fen:
                 raise ValueError("root history must reconstruct root_fen.")
         legal_moves = {move.uci() for move in board.legal_moves}
         if self.root_expansion is not None and any(edge.move not in legal_moves for edge in self.root_expansion.edges):
@@ -527,6 +527,17 @@ class SearchTrace:
     def supports(self, capability: SearchCapability) -> bool:
         """Return whether this trace advertises at least ``capability``."""
         return self.capability.level >= capability.level
+
+    @property
+    def root_position(self) -> PositionIdentity | None:
+        """Return the canonical retained root identity when the producer supplied it."""
+        if self.root_start_fen is None or self.root_move_history is None:
+            return None
+        return PositionIdentity(
+            fen=self.root_fen,
+            start_fen=self.root_start_fen,
+            moves=self.root_move_history,
+        )
 
     def require(self, capability: SearchCapability) -> SearchTrace:
         """Return this trace or reject an unsupported evidence claim."""

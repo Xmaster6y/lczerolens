@@ -45,8 +45,8 @@ def fixture_evaluator():
     return LczeroEvaluator(LczeroModel(FixtureNetwork(), out_keys=["policy", "value"]))
 
 
-def fixture_trace(*, with_actions=True, selected="d2d4"):
-    board = chess.Board()
+def fixture_trace(*, with_actions=True, selected="d2d4", board=None):
+    board = chess.Board() if board is None else board
     actions = None
     capability = SearchCapability.ROOT_RESULT
     if with_actions:
@@ -66,11 +66,13 @@ def fixture_trace(*, with_actions=True, selected="d2d4"):
             ),
         )
     return SearchTrace(
-        root_fen=board.fen(),
-        root_player=ChessPlayer.WHITE,
+        root_fen=board.fen(en_passant="fen"),
+        root_player=ChessPlayer.WHITE if board.turn else ChessPlayer.BLACK,
         capability=capability,
         provenance=SearchProvenance("fixture-search"),
         snapshots=(RootSnapshot(0, RootSelection(selected, "visits", "uci"), actions=actions),),
+        root_start_fen=board.root().fen(en_passant="fen"),
+        root_move_history=tuple(move.uci() for move in board.move_stack),
     )
 
 
@@ -123,7 +125,12 @@ def test_supplied_line_is_retained_and_invalid_comparison_inputs_fail_closed():
     wrong = chess.Board()
     wrong.halfmove_clock = 1
     with pytest.raises(ValueError, match="same root position"):
-        compare_decision(evaluation, SearchResult.from_trace(replace(fixture_trace(), root_fen=wrong.fen())))
+        compare_decision(
+            evaluation,
+            SearchResult.from_trace(
+                replace(fixture_trace(), root_fen=wrong.fen(), root_start_fen=wrong.fen(), root_move_history=())
+            ),
+        )
     with pytest.raises(ValueError, match="legal evaluated root moves"):
         compare_decision(evaluation, fixture_search(), line_analyses={"e2e5": line})
     with pytest.raises(ValueError, match="start at the root"):
@@ -136,6 +143,35 @@ def test_supplied_line_is_retained_and_invalid_comparison_inputs_fail_closed():
         compare_decision(object(), fixture_search())
     with pytest.raises(TypeError, match="SearchResult"):
         compare_decision(evaluation, object())
+
+
+def test_decision_identity_distinguishes_equal_fens_with_different_retained_histories():
+    first = chess.Board()
+    second = chess.Board()
+    for move in ("g1f3", "g8f6", "f3g1", "f6g8"):
+        first.push_uci(move)
+    for move in ("b1c3", "b8c6", "c3b1", "c6b8"):
+        second.push_uci(move)
+    assert first.fen(en_passant="fen") == second.fen(en_passant="fen")
+
+    with pytest.raises(ValueError, match="retained history"):
+        compare_decision(
+            fixture_evaluator().evaluate(first),
+            SearchResult.from_trace(fixture_trace(board=second)),
+        )
+
+
+def test_decision_identity_accepts_non_capturable_en_passant_with_matching_history():
+    board = chess.Board()
+    board.push_uci("e2e4")
+    assert board.fen() != board.fen(en_passant="fen")
+
+    decision = compare_decision(
+        fixture_evaluator().evaluate(board),
+        SearchResult.from_trace(fixture_trace(with_actions=False, selected="a7a6", board=board)),
+    )
+
+    assert decision.evaluation.position == decision.search.trace.root_position
 
 
 def test_compare_counterfactual_evaluates_reconstructable_factual_and_alternative_positions():
@@ -209,7 +245,9 @@ def test_decision_records_reject_inconsistent_state_and_missing_selections():
     with pytest.raises(ValueError, match="same root position"):
         replace(
             decision,
-            search=SearchResult.from_trace(replace(fixture_trace(), root_fen=wrong.fen())),
+            search=SearchResult.from_trace(
+                replace(fixture_trace(), root_fen=wrong.fen(), root_start_fen=wrong.fen(), root_move_history=())
+            ),
         )
     with pytest.raises(ValueError, match="present in decision actions"):
         replace(decision, policy_move="a1a1")

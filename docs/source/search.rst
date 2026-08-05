@@ -38,6 +38,16 @@ Search producers
 analysis oracle, not an lc0-equivalent or production-strength search. Semantic
 and retained-event replay apply to its full event evidence.
 
+``audit_search_trace`` returns a reconstructed root checkpoint after every
+event (and marks a stopped divergent event incomplete), cumulative
+node/expansion/evaluator-call counts, raw field-level
+recorded-versus-replayed discrepancies, the first divergence, and the explicit
+``ReplayTolerance`` used for numerical comparisons. ``replay_retained_events``
+also reports the exact nodes, edges, paths, expansions, evaluator calls, costs,
+and ancestor-closure status induced by the selected events. It never inserts
+omitted events or backup contributions; selectors, fidelity metrics, and pass
+thresholds remain downstream concerns.
+
 ``LczeroSearch`` invokes a supplied lc0 executable and translates its public
 root output. Public root snapshots do not imply private events, a complete
 tree, or replayability.

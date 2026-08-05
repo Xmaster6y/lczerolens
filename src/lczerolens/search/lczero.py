@@ -57,6 +57,8 @@ class _LczeroSearchRequest:
     """Public UCI inputs for a single lc0 root search."""
 
     root_fen: str
+    root_start_fen: str | None = None
+    root_move_history: tuple[str, ...] | None = None
     nodes: int | None = None
     time_ms: int | None = None
     options: Mapping[str, str | int | float | bool] | None = None
@@ -68,9 +70,39 @@ class _LczeroSearchRequest:
             raise ValueError("nodes must be non-negative.")
         if self.time_ms is not None and self.time_ms < 0:
             raise ValueError("time_ms must be non-negative.")
-        board = chess.Board(self.root_fen)
+        if (self.root_start_fen is None) != (self.root_move_history is None):
+            raise ValueError("Root history requires both a starting FEN and move sequence.")
+        board = self.root_board()
+        if self.root_start_fen is not None and board.fen(en_passant="fen") != self.root_fen:
+            raise ValueError("Root history must reconstruct root_fen.")
         if board.is_game_over():
             raise ValueError("lc0 root snapshots require a non-terminal root FEN.")
+
+    @classmethod
+    def from_board(cls, board: chess.Board, **kwargs) -> _LczeroSearchRequest:
+        """Build a request that preserves every move retained by ``board``."""
+        root = board.root()
+        return cls(
+            root_fen=board.fen(en_passant="fen"),
+            root_start_fen=root.fen(en_passant="fen"),
+            root_move_history=tuple(move.uci() for move in board.move_stack),
+            **kwargs,
+        )
+
+    def root_board(self) -> chess.Board:
+        """Reconstruct the requested root, including retained history when present."""
+        board = chess.Board(self.root_start_fen or self.root_fen)
+        for move in self.root_move_history or ():
+            board.push_uci(move)
+        return board
+
+    @property
+    def position_command(self) -> str:
+        """Render the lossless UCI position command for this request."""
+        if self.root_start_fen is None or self.root_move_history is None:
+            return f"position fen {self.root_fen}"
+        moves = "" if not self.root_move_history else f" moves {' '.join(self.root_move_history)}"
+        return f"position fen {self.root_start_fen}{moves}"
 
 
 @dataclass(frozen=True)
@@ -87,7 +119,7 @@ class _LczeroProcessAdapter:
         for name, value in (request.options or {}).items():
             rendered = str(value).lower() if isinstance(value, bool) else value
             command.append(f"setoption name {name} value {rendered}")
-        command.extend(["isready", f"position fen {request.root_fen}"])
+        command.extend(["isready", request.position_command])
         command.append(f"go nodes {request.nodes}" if request.nodes is not None else f"go movetime {request.time_ms}")
         try:
             completed = _run_uci_process(self.executable, command, timeout=timeout)
@@ -157,7 +189,7 @@ class LczeroSearch:
         else:
             raise ValueError("LczeroSearch supports only Nodes and Time limits.")
         options = {**self._options, "WeightsFile": self._network, "VerboseMoveStats": True}
-        request = _LczeroSearchRequest(board.fen(), options=options, **budget)
+        request = _LczeroSearchRequest.from_board(board, options=options, **budget)
         trace = self._adapter.run(request, timeout=self._timeout)
         return SearchResult.from_trace(trace)
 
@@ -181,7 +213,7 @@ class _LczeroRootSnapshotParser:
         network: str,
         network_checksum: str | None = None,
     ) -> SearchTrace:
-        root_board = chess.Board(request.root_fen)
+        root_board = request.root_board()
         actions: list[RootAction] = []
         bestmove: str | None = None
         observed_nodes: int | None = None
@@ -234,6 +266,8 @@ class _LczeroRootSnapshotParser:
                     actions=tuple(actions) if actions else None,
                 ),
             ),
+            root_start_fen=request.root_start_fen,
+            root_move_history=request.root_move_history,
         )
 
     def _parse_action(self, line: str) -> RootAction:

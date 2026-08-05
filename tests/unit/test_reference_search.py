@@ -10,12 +10,14 @@ from tensordict import TensorDict
 from lczerolens._codec import encode_move
 from lczerolens.search.reference import (
     _ReferenceMCTS,
+    ReplayTolerance,
     SemanticReplayError,
     _Node,
     _apply_retained_root_delta,
     _retained_initial_root_state,
     _retained_root_transition,
     plan_retained_events,
+    audit_search_trace,
     replay_retained_events,
     _replay_path,
     replay_root_events,
@@ -144,6 +146,68 @@ def test_retained_event_plan_preserves_trace_order_and_rejects_ambiguous_selecti
         plan_retained_events(trace, (first, first))
     with pytest.raises(ValueError, match="Unknown retained"):
         plan_retained_events(trace, (second, "missing"))
+
+
+def test_retained_event_replay_exposes_exact_topology_costs_and_ancestor_closure():
+    trace = _ReferenceMCTS().search(chess.Board(), FixedEvaluator(), simulations=8)
+    sparse = replay_retained_events(trace, ("simulation-6",))
+    closed = replay_retained_events(trace, ("simulation-1", "simulation-4", "simulation-6"))
+
+    assert sparse.costs.path_steps == 3
+    assert sparse.footprint.node_ids == ("node-0", "node-2", "node-5", "node-7")
+    assert len(sparse.footprint.edges) == 3
+    assert sparse.footprint.paths[0].node_ids == ("node-0", "node-2", "node-5", "node-7")
+    assert sparse.footprint.expansion_node_ids == ("node-7",)
+    assert sparse.footprint.evaluator_call_node_ids == ("node-7",)
+    assert not sparse.footprint.ancestor_closed
+    assert sparse.footprint.missing_ancestor_event_ids == ("simulation-1", "simulation-4")
+    assert closed.footprint.ancestor_closed
+    assert closed.footprint.missing_ancestor_event_ids == ()
+    assert sparse.plan.retained_event_ids == ("simulation-6",)
+
+
+def test_semantic_replay_audit_reports_checkpoints_raw_differences_and_tolerance():
+    trace = _ReferenceMCTS().search(chess.Board(), FixedEvaluator(), simulations=2)
+    event = trace.events[1]
+    altered_total = (event.root_after[0].total_value or 0.0) + 0.01
+    altered = replace(event.root_after[0], total_value=altered_total, mean_value=altered_total)
+    object.__setattr__(event, "root_after", (altered, *event.root_after[1:]))
+
+    tolerance = ReplayTolerance(relative=1e-8, absolute=1e-8)
+    audit = audit_search_trace(trace, tolerance)
+
+    assert audit.tolerance is tolerance
+    assert len(audit.checkpoints) == 2
+    assert audit.checkpoints[0].node_count == 2
+    assert audit.checkpoints[0].completed
+    assert audit.checkpoints[1].expansion_count == 3
+    assert audit.checkpoints[1].evaluator_call_count == 3
+    assert audit.first_divergence is not None
+    assert audit.first_divergence.event_id == "simulation-1"
+    assert audit.first_divergence.field.endswith("total_value")
+    assert audit.first_divergence.recorded == altered.total_value
+    assert audit.first_divergence.replayed != altered.total_value
+    assert audit.result is None
+
+    loose = audit_search_trace(trace, ReplayTolerance(relative=0.1, absolute=0.1))
+    assert loose.first_divergence is None
+    assert loose.result is not None
+
+
+def test_replay_audit_validates_tolerance_and_reports_duplicate_and_missing_root_fields():
+    trace = _ReferenceMCTS().search(chess.Board(), FixedEvaluator(), simulations=1)
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        ReplayTolerance(relative=-1)
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        ReplayTolerance(absolute=float("inf"))
+    with pytest.raises(TypeError, match="ReplayTolerance"):
+        audit_search_trace(trace, object())
+
+    event = trace.events[0]
+    object.__setattr__(event, "root_after", (event.root_after[0], event.root_after[0], *event.root_after[2:]))
+    audit = audit_search_trace(trace)
+    fields = {difference.field for difference in audit.checkpoints[0].discrepancies}
+    assert {"duplicate_moves", "moves"} <= fields
 
 
 def test_full_retained_replay_is_not_limited_to_reference_mcts_provenance():

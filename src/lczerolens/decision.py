@@ -86,8 +86,10 @@ class DecisionAnalysis:
             raise ValueError("Decision analyses require evaluation and search evidence.")
         if not isinstance(self.actions, DecisionActions):
             raise ValueError("Decision actions must be a DecisionActions value.")
-        if self.evaluation.position.fen != self.search.trace.root_fen:
-            raise ValueError("Decision evaluation and search must describe the same root position.")
+        if self.evaluation.position != self.search.trace.root_position:
+            raise ValueError(
+                "Decision evaluation and search must describe the same root position and retained history."
+            )
         if set(self.actions) != {action.move for action in self.evaluation.policy}:
             raise ValueError("Decision actions must exactly match the evaluated legal policy.")
         if self.policy_move not in self.actions or self.search_move not in self.actions:
@@ -129,7 +131,7 @@ class DecisionAnalysis:
         )
         for move, action in self.actions.items():
             if action.line is not None and (
-                action.line.initial_position.fen != self.evaluation.position.fen
+                action.line.initial_position.fen != self.evaluation.position.board().fen()
                 or not action.line.moves
                 or action.line.moves[0].uci() != move
             ):
@@ -257,8 +259,8 @@ def compare_decision(
     if not isinstance(search, SearchResult):
         raise TypeError("search must be a SearchResult.")
     trace = search.trace
-    if record.position.fen != trace.root_fen:
-        raise ValueError("Evaluation and search must describe the same root position.")
+    if record.position != trace.root_position:
+        raise ValueError("Evaluation and search must describe the same root position and retained history.")
     policy_move = _selected_policy_move(record)
     final = trace.snapshots[-1]
     search_move = search.move.uci()
@@ -273,7 +275,7 @@ def compare_decision(
     for move, line in supplied.items():
         if move not in {action.move for action in record.policy}:
             raise ValueError("Line-analysis keys must name legal evaluated root moves.")
-        if line.initial_position.fen != record.position.fen or not line.moves or line.moves[0].uci() != move:
+        if line.initial_position.fen != record.position.board().fen() or not line.moves or line.moves[0].uci() != move:
             raise ValueError("Decision line analysis must start at the root and begin with its keyed move.")
     actions = DecisionActions(
         tuple(
