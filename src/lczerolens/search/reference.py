@@ -16,7 +16,12 @@ import torch
 from tensordict import TensorDict
 
 from lczerolens.board import LczeroBoard
-from lczerolens.search_trace import (
+from lczerolens.evaluation import Evaluation
+from lczerolens.evaluator import LczeroEvaluator
+from lczerolens.schema import LczeroKeys
+from lczerolens.search.limits import SearchLimit, Simulations
+from lczerolens.search.result import SearchResult
+from lczerolens.search.trace import (
     BackupUpdate,
     ChessPlayer,
     EdgeStatistics,
@@ -120,7 +125,7 @@ class RetainedEventReplayResult:
     costs: RetainedEventReplayCosts
 
 
-class ReferenceMCTS:
+class _ReferenceMCTS:
     """Sequential PUCT search whose output is a replayable :class:`SearchTrace`.
 
     The evaluator returns a single-board TensorDict with a raw 1858-logit
@@ -321,6 +326,58 @@ class ReferenceMCTS:
         return RootSelection(move, rule="maximum visit count", tie_break="UCI lexicographic order", temperature=0.0)
 
 
+class ReferenceSearch:
+    """Deterministic, auditable search behind the shared ``run`` interface.
+
+    This producer intentionally models neither production Lczero behavior nor
+    its batching, FPU, collisions, pruning, transpositions, or time management.
+    """
+
+    def __init__(self, evaluator: LczeroEvaluator, *, c_puct: float = 1.0):
+        if not isinstance(evaluator, LczeroEvaluator):
+            raise TypeError("ReferenceSearch requires a LczeroEvaluator.")
+        self.evaluator = evaluator
+        self._core = _ReferenceMCTS(c_puct)
+
+    def run(self, board: chess.Board, limit: SearchLimit) -> SearchResult:
+        """Run exactly the requested simulations on a plain chess board."""
+        if not isinstance(board, chess.Board):
+            raise TypeError("ReferenceSearch.run requires a python-chess Board.")
+        if not isinstance(limit, Simulations):
+            raise ValueError("ReferenceSearch supports only Simulations limits.")
+        internal = _as_lczero_board(board)
+        trace = self._core.search(internal, self._evaluate, simulations=limit.value)
+        return SearchResult.from_trace(trace)
+
+    def _evaluate(self, board: LczeroBoard) -> TensorDict:
+        evaluated = self.evaluator.evaluate(board)
+        if not isinstance(evaluated, Evaluation):
+            raise TypeError("ReferenceSearch requires one Evaluation per position.")
+        value = evaluated.value
+        if value is None:
+            raise ValueError("ReferenceSearch requires a native or explicitly derived scalar value.")
+        policy = evaluated.tensors[LczeroKeys.NETWORK_POLICY_LOGITS]
+        return TensorDict(
+            {
+                "policy": policy,
+                "value": torch.as_tensor(value.value, dtype=policy.dtype, device=policy.device),
+            },
+            batch_size=[],
+        )
+
+
+def _as_lczero_board(board: chess.Board) -> LczeroBoard:
+    if board.uci_variant != "chess" or board.chess960:
+        raise ValueError("ReferenceSearch currently supports standard chess positions.")
+    root = board.root()
+    converted = LczeroBoard(root.fen(), chess960=board.chess960)
+    for move in board.move_stack:
+        converted.push(converted.parse_uci(move.uci()))
+    if converted.fen() != board.fen():
+        raise ValueError("ReferenceSearch could not preserve the supplied board history.")
+    return converted
+
+
 def replay_root_events(events: tuple[SimulationEvent, ...]) -> tuple[EdgeStatistics, ...]:
     """Reconstruct final root state from events without accessing a search tree."""
     if not events:
@@ -486,7 +543,7 @@ def replay_search_trace(trace: SearchTrace) -> SemanticReplayResult:
     trace.require(SearchCapability.REPLAYABLE)
     if trace.provenance.source != "lczerolens-reference-mcts" or trace.provenance.engine != "deterministic-reference":
         raise SemanticReplayError(
-            "semantic replay is limited to deterministic ReferenceMCTS traces.",
+            "semantic replay is limited to deterministic ReferenceSearch traces.",
             phase="provenance",
         )
     events = trace.events or ()
@@ -770,7 +827,7 @@ def _replay_backups(path: list[tuple[_Node, _Edge, _Node]], event: SimulationEve
     for index, ((parent, edge, _), recorded) in enumerate(zip(reversed(path), event.backups)):
         value = -value
         perspective = ValuePerspective.ROOT_PLAYER if parent is path[0][0] else ValuePerspective.SIDE_TO_MOVE
-        before = ReferenceMCTS._edge_stat(edge, perspective)
+        before = _ReferenceMCTS._edge_stat(edge, perspective)
         if (
             recorded.node_id != parent.node_id
             or not _close(recorded.signed_value, value)
@@ -783,7 +840,7 @@ def _replay_backups(path: list[tuple[_Node, _Edge, _Node]], event: SimulationEve
             )
         edge.visits += 1
         edge.total_value += value
-        after = ReferenceMCTS._edge_stat(edge, perspective)
+        after = _ReferenceMCTS._edge_stat(edge, perspective)
         if not _same_edge(recorded.after, after):
             raise SemanticReplayError(
                 f"backup {index} post-state diverges from the reconstructed update.",
@@ -793,7 +850,7 @@ def _replay_backups(path: list[tuple[_Node, _Edge, _Node]], event: SimulationEve
 
 
 def _replay_edge_stats(node: _Node, perspective: ValuePerspective) -> tuple[EdgeStatistics, ...]:
-    return tuple(ReferenceMCTS._edge_stat(node.edges[move], perspective) for move in sorted(node.edges))
+    return tuple(_ReferenceMCTS._edge_stat(node.edges[move], perspective) for move in sorted(node.edges))
 
 
 def _check_edge_sequence(
@@ -853,7 +910,7 @@ def _close(left: float | None, right: float | None) -> bool:
 
 __all__ = [
     "Evaluator",
-    "ReferenceMCTS",
+    "ReferenceSearch",
     "RetainedEventReplayCosts",
     "RetainedEventReplayPlan",
     "RetainedEventReplayResult",

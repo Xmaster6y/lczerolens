@@ -29,8 +29,8 @@ Supported user path
   architecture page supersedes its compatibility policy for the ``0.5`` work.
 * :doc:`facts` covers exact facts, move/line analysis, and constrained
   counterfactual positions.
-* :doc:`search` defines typed, capability-aware traces. ``ReferenceMCTS`` is
-  an auditable reference implementation, not production lc0 search.
+* :doc:`search` defines the shared result, typed limits, and detailed traces.
+  ``ReferenceSearch`` is an auditable oracle, not a production engine.
 * :doc:`behavior` covers evaluator, counterfactual, and search comparisons.
 * :doc:`decision-analysis-tutorial` runs those public boundaries together with
   a small versioned fixture; its output is a demonstration, not a result.

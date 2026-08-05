@@ -51,11 +51,10 @@ pip install "lczerolens[backends]" # lc0 bindings
 - `src/lczerolens/model.py`: `LczeroModel` + flow wrappers (`PolicyFlow`, `WdlFlow`, `ValueFlow`, `ForceValue`).
 - `src/lczerolens/data.py`: `GameData`, `BoardData`, `PuzzleData` adapters and dataset helpers.
 - `src/lczerolens/sampling.py`: `PolicySampler`, `ModelSampler`, `MCTSSampler`, `SelfPlay`.
-- `src/lczerolens/search.py`: legacy MCTS primitives used by `MCTSSampler`.
-- `src/lczerolens/search_trace.py`: engine-independent typed provenance, budgets,
-  snapshots, events, and capability records for search evidence.
-- `src/lczerolens/reference_search.py`: deterministic, evaluator-guided reference
-  MCTS and replay helpers; an analysis oracle, not production lc0 search.
+- `src/lczerolens/search/`: unified typed limits and results, engine-independent
+  traces, deterministic reference search, official Lczero adapter, and replay helpers.
+- `src/lczerolens/_legacy_search.py`: private compatibility MCTS used by
+  `MCTSSampler` while that sampler awaits migration.
 - `src/lczerolens/constants.py`: 1858-policy move vocabulary (`POLICY_INDEX` and inverse).
 
 ## Core mental model
@@ -134,9 +133,8 @@ best_move = board.decode_move(best_idx)
   evaluator contract, and chess-decision evidence.
 - External packages such as `tdhook`, `captum`, `zennit`, and `nnsight` own
   attribution, probing, hooks, patches, and other neural-method semantics.
-- `ReferenceMCTS` is deterministic reference search for evaluation and replay;
-  a production lc0 search adapter must expose its own capabilities and must not
-  be represented as the reference implementation.
+- `ReferenceSearch` is deterministic reference search for evaluation and replay;
+  `LczeroSearch` translates only evidence exposed by the official engine.
 
 Search consumers must call `SearchTrace.supports()` or `SearchTrace.require()`
 before making capability-dependent claims. A trace records evidence at the

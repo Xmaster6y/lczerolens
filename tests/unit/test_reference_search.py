@@ -7,8 +7,8 @@ import torch
 from tensordict import TensorDict
 
 from lczerolens import LczeroBoard
-from lczerolens.reference_search import (
-    ReferenceMCTS,
+from lczerolens.search.reference import (
+    _ReferenceMCTS,
     SemanticReplayError,
     _Node,
     _apply_retained_root_delta,
@@ -20,7 +20,7 @@ from lczerolens.reference_search import (
     replay_root_events,
     replay_search_trace,
 )
-from lczerolens.search_trace import (
+from lczerolens.search.trace import (
     BackupUpdate,
     EdgeStatistics,
     LeafRecord,
@@ -60,8 +60,8 @@ class BatchedFixedEvaluator(FixedEvaluator):
 @pytest.mark.parametrize("simulations", (1, 2, 8, 32))
 def test_reference_search_is_deterministic_and_replayable(simulations):
     board = LczeroBoard()
-    trace = ReferenceMCTS(c_puct=1.5).search(board, FixedEvaluator(), simulations)
-    repeat = ReferenceMCTS(c_puct=1.5).search(board, FixedEvaluator(), simulations)
+    trace = _ReferenceMCTS(c_puct=1.5).search(board, FixedEvaluator(), simulations)
+    repeat = _ReferenceMCTS(c_puct=1.5).search(board, FixedEvaluator(), simulations)
 
     assert trace.capability is SearchCapability.REPLAYABLE
     assert trace.events == repeat.events
@@ -81,7 +81,7 @@ def test_reference_search_is_deterministic_and_replayable(simulations):
 
 def test_reference_search_revisits_a_child_and_alternates_backup_signs():
     board = LczeroBoard()
-    trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(-0.4), simulations=2)
+    trace = _ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(-0.4), simulations=2)
 
     assert len(trace.events[1].path) == 2
     assert [backup.signed_value for backup in trace.events[1].backups] == pytest.approx((0.4, -0.4))
@@ -98,7 +98,7 @@ def test_reference_search_revisits_a_child_and_alternates_backup_signs():
 )
 def test_semantic_replay_reconstructs_representative_search_results(fen, simulations, c_puct):
     board = LczeroBoard(fen) if fen is not None else LczeroBoard()
-    trace = ReferenceMCTS(c_puct=c_puct).search(board, FixedEvaluator(), simulations)
+    trace = _ReferenceMCTS(c_puct=c_puct).search(board, FixedEvaluator(), simulations)
 
     result = replay_search_trace(trace)
 
@@ -108,7 +108,7 @@ def test_semantic_replay_reconstructs_representative_search_results(fen, simulat
 
 
 def test_retained_event_replay_supports_full_prefix_sparse_singleton_empty_and_complement_selections():
-    trace = ReferenceMCTS(c_puct=1.5).search(LczeroBoard(), FixedEvaluator(), simulations=8)
+    trace = _ReferenceMCTS(c_puct=1.5).search(LczeroBoard(), FixedEvaluator(), simulations=8)
     event_ids = tuple(event.event_id for event in trace.events)
 
     full = replay_retained_events(trace)
@@ -133,7 +133,7 @@ def test_retained_event_replay_supports_full_prefix_sparse_singleton_empty_and_c
 
 
 def test_retained_event_plan_preserves_trace_order_and_rejects_ambiguous_selections():
-    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=3)
+    trace = _ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=3)
     first, second, third = (event.event_id for event in trace.events)
 
     plan = plan_retained_events(trace, (third, first))
@@ -146,7 +146,7 @@ def test_retained_event_plan_preserves_trace_order_and_rejects_ambiguous_selecti
 
 
 def test_full_retained_replay_is_not_limited_to_reference_mcts_provenance():
-    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    trace = _ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=2)
     other_provider = replace(trace, provenance=SearchProvenance(source="external-search", engine="external"))
 
     result = replay_retained_events(other_provider)
@@ -156,7 +156,7 @@ def test_full_retained_replay_is_not_limited_to_reference_mcts_provenance():
 
 
 def test_retained_event_replay_clears_provider_specific_exploration_evidence():
-    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     before = tuple(replace(edge, exploration=0.5) for edge in event.root_before)
     after = tuple(replace(edge, exploration=0.5) for edge in event.root_after)
@@ -186,7 +186,7 @@ def test_retained_event_replay_clears_provider_specific_exploration_evidence():
 
 
 def test_retained_event_replay_rejects_missing_or_malformed_retained_evidence():
-    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    trace = _ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=2)
     event = trace.events[0]
     before = event.root_before
     after = event.root_after
@@ -209,7 +209,7 @@ def test_retained_event_replay_rejects_missing_or_malformed_retained_evidence():
 
 
 def test_retained_root_delta_rejects_incompatible_or_incomplete_updates():
-    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     before = event.root_before
     after = event.root_after
@@ -243,7 +243,7 @@ def test_semantic_replay_preserves_root_history_for_fivefold_repetition():
     for move in cycle[:3]:
         board.push_uci(move)
 
-    trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
     result = replay_search_trace(trace)
 
     assert trace.root_start_fen == "8/8/6r1/8/6R1/8/K6k/8 b - - 0 1"
@@ -253,7 +253,7 @@ def test_semantic_replay_preserves_root_history_for_fivefold_repetition():
 
 
 def test_semantic_replay_requires_complete_and_consistent_root_history():
-    trace = ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS().search(LczeroBoard(), FixedEvaluator(), simulations=1)
 
     with pytest.raises(ValueError, match="both a starting FEN and move sequence"):
         replace(trace, root_start_fen=None)
@@ -272,7 +272,7 @@ def test_semantic_replay_requires_complete_and_consistent_root_history():
 
 
 def test_semantic_replay_path_rejects_unreachable_internal_states():
-    trace = ReferenceMCTS(c_puct=0.0).search(LczeroBoard(), FixedEvaluator(-0.4), simulations=2)
+    trace = _ReferenceMCTS(c_puct=0.0).search(LczeroBoard(), FixedEvaluator(-0.4), simulations=2)
     first, second = trace.events
     unexpanded_root = _Node(LczeroBoard(), "node-0")
 
@@ -285,7 +285,7 @@ def test_semantic_replay_path_rejects_unreachable_internal_states():
 
 
 def test_semantic_replay_reports_first_path_divergence():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=2)
     event = trace.events[0]
     wrong_move = next(edge.move for edge in event.root_before if edge.move != event.path[0].move)
     wrong_step = replace(event.path[0], move=wrong_move)
@@ -296,7 +296,7 @@ def test_semantic_replay_reports_first_path_divergence():
 
 
 def test_semantic_replay_reports_first_expansion_divergence():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     evaluator = event.leaf.evaluator
     altered_logits = ((evaluator.legal_policy_logits[0][0], 100.0), *evaluator.legal_policy_logits[1:])
@@ -308,7 +308,7 @@ def test_semantic_replay_reports_first_expansion_divergence():
 
 
 def test_semantic_replay_reports_first_perspective_divergence():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     wrong_evaluation = replace(event.leaf.evaluation, perspective=ValuePerspective.ROOT_PLAYER)
     invalid = replace(trace, events=(replace(event, leaf=replace(event.leaf, evaluation=wrong_evaluation)),))
@@ -318,7 +318,7 @@ def test_semantic_replay_reports_first_perspective_divergence():
 
 
 def test_semantic_replay_rejects_recorded_post_state_instead_of_returning_it():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     backup = event.backups[-1]
     altered_after = replace(
@@ -405,7 +405,7 @@ def test_semantic_replay_rejects_recorded_post_state_instead_of_returning_it():
     ),
 )
 def test_semantic_replay_rejects_invalid_trace_level_evidence(mutation, message):
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
 
     with pytest.raises(SemanticReplayError, match=message):
         replay_search_trace(mutation(trace))
@@ -463,7 +463,7 @@ def test_semantic_replay_rejects_invalid_trace_level_evidence(mutation, message)
     ),
 )
 def test_semantic_replay_rejects_invalid_event_evidence(mutate_event, message):
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     invalid_event = mutate_event(trace.events[0], trace)
     invalid = replace(trace, events=(invalid_event,))
 
@@ -473,7 +473,7 @@ def test_semantic_replay_rejects_invalid_event_evidence(mutate_event, message):
 
 def test_semantic_replay_rejects_terminal_evaluator_and_value_divergences():
     board = LczeroBoard("8/8/8/8/8/8/4Q3/K1k5 w - - 0 1")
-    trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
     event = trace.events[0]
     with_evaluator = replace(event, leaf=replace(event.leaf, evaluator=trace.root_evaluator))
     wrong_value = replace(
@@ -488,7 +488,7 @@ def test_semantic_replay_rejects_terminal_evaluator_and_value_divergences():
 
 
 def test_semantic_replay_rejects_reused_or_changed_child_identity():
-    trace = ReferenceMCTS(c_puct=0.0).search(LczeroBoard(), FixedEvaluator(-0.4), simulations=2)
+    trace = _ReferenceMCTS(c_puct=0.0).search(LczeroBoard(), FixedEvaluator(-0.4), simulations=2)
     first, second = trace.events
     reused_root = replace(first.path[0], child_id=first.path[0].node_id)
     changed_child = replace(second.path[0], child_id="other-child")
@@ -500,7 +500,7 @@ def test_semantic_replay_rejects_reused_or_changed_child_identity():
 
 
 def test_semantic_replay_rejects_wrong_selected_move():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     final = trace.snapshots[-1]
     other_move = next(
         action.statistics.move for action in final.actions if action.statistics.move != final.selection.move
@@ -529,7 +529,7 @@ def test_semantic_replay_rejects_wrong_selected_move():
     ),
 )
 def test_semantic_replay_rejects_corrupt_initial_root_state(root_before, message):
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     # Model corruption that can arrive from untrusted persisted trace data.
     object.__setattr__(event, "root_before", root_before(event.root_before))
@@ -539,7 +539,7 @@ def test_semantic_replay_rejects_corrupt_initial_root_state(root_before, message
 
 
 def test_semantic_replay_rejects_path_past_first_unexpanded_node():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     extra = replace(event.path[0], node_id=event.path[0].child_id, child_id="extra-child")
 
@@ -548,7 +548,7 @@ def test_semantic_replay_rejects_path_past_first_unexpanded_node():
 
 
 def test_semantic_replay_requires_scalar_leaf_value_for_backup():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     perspective = event.leaf.evaluation.perspective
     wdl_only = PositionEvaluation(perspective, wdl=Wdl(0.5, 0.25, 0.25, perspective))
@@ -559,7 +559,7 @@ def test_semantic_replay_requires_scalar_leaf_value_for_backup():
 
 
 def test_semantic_replay_rejects_backup_post_state_divergence():
-    trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     event = trace.events[0]
     backup = event.backups[0]
     altered_after = replace(backup.after, exploration=0.1)
@@ -580,12 +580,12 @@ def test_semantic_replay_rejects_backup_post_state_divergence():
 
 
 def test_semantic_replay_rejects_root_and_final_action_state_divergence():
-    root_trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=2)
+    root_trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=2)
     object.__setattr__(root_trace.events[1], "root_before", None)
     with pytest.raises(SemanticReplayError, match="root_before: recorded root state diverges"):
         replay_search_trace(root_trace)
 
-    result_trace = ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
+    result_trace = _ReferenceMCTS(c_puct=1.0).search(LczeroBoard(), FixedEvaluator(), simulations=1)
     final = result_trace.snapshots[-1]
     object.__setattr__(final, "actions", final.actions[:-1])
     with pytest.raises(SemanticReplayError, match="result: final root action statistics diverge"):
@@ -593,14 +593,14 @@ def test_semantic_replay_rejects_root_and_final_action_state_divergence():
 
 
 def test_reference_search_accepts_the_canonical_singleton_evaluator_batch():
-    trace = ReferenceMCTS().search(LczeroBoard(), BatchedFixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS().search(LczeroBoard(), BatchedFixedEvaluator(), simulations=1)
 
     assert trace.events[0].leaf.evaluator.legal_policy_logits
 
 
 def test_reference_search_records_terminal_leaf_without_evaluator_call():
     board = LczeroBoard("8/8/8/8/8/8/4Q3/K1k5 w - - 0 1")
-    trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
 
     assert trace.events[0].leaf.terminal
     assert trace.events[0].leaf.evaluator is None
@@ -611,7 +611,7 @@ def test_reference_search_rejects_invalid_evaluator_policy():
         return TensorDict({"policy": torch.full((1858,), float("nan")), "value": torch.tensor(0.0)})
 
     with pytest.raises(ValueError, match="non-finite"):
-        ReferenceMCTS().search(LczeroBoard(), invalid, simulations=1)
+        _ReferenceMCTS().search(LczeroBoard(), invalid, simulations=1)
 
 
 def test_replayer_rejects_an_event_that_changes_the_root_move_set():

@@ -3,7 +3,7 @@
 import pytest
 
 from examples.decision_analysis_tutorial import run_tutorial
-from lczerolens.search_trace import SearchCapability
+from lczerolens.search.trace import SearchCapability
 
 
 @pytest.mark.integration

@@ -26,8 +26,8 @@ The executable companion is :download:`examples/decision_analysis_tutorial.py
    same TensorDict evaluator boundary used for an lc0-family model loaded from
    ONNX, Torch, or the Hub;
 #. evaluates the initial position after masking to legal candidates;
-#. runs :class:`~lczerolens.reference_search.ReferenceMCTS` and retains its
-   capability-aware :class:`~lczerolens.search_trace.SearchTrace`;
+#. runs :class:`~lczerolens.search.reference.ReferenceSearch` and retains its
+   natural :class:`~lczerolens.search.result.SearchResult` plus detailed trace;
 #. attaches exact material line analysis to the evaluator and search
    candidates;
 #. makes a constrained sibling-move counterfactual (``g1f3`` versus ``b1c3``);
@@ -47,7 +47,7 @@ Optional external instrumentation
 An attribution or hook library belongs *around* ``model`` in
 ``load_fixture_evaluator``/``evaluate``. For example, an application can wrap
 the returned ``LczeroModel`` with a tdhook or Captum session, then preserve the
-same ``TensorDict`` output for ``evaluator_behavior`` and ``ReferenceMCTS``.
+same ``TensorDict`` output for evaluator analysis and ``ReferenceSearch``.
 Removing that optional wrapper changes neither the chess-evidence nor the
 search-analysis APIs. The maintained executable deliberately does not depend
 on an interpretability package, so the product boundary remains reproducible

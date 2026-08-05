@@ -39,10 +39,10 @@ adjacent-PV prefix stability. Unavailable source fields remain ``None``.
 
 Event metrics are deliberately separate. Calling
 :func:`~lczerolens.behavior.compare_search_events` on a root-only trace raises
-:class:`~lczerolens.search_trace.SearchCapabilityError`. Path-depth and
+:class:`~lczerolens.search.trace.SearchCapabilityError`. Path-depth and
 expansion summaries require ``full_events``; independent root transition
 validation additionally requires ``replayable``. Official lc0 public root
-output and :class:`~lczerolens.reference_search.ReferenceMCTS` may therefore be
+output and :class:`~lczerolens.search.reference.ReferenceSearch` may therefore be
 compared through the same root vocabulary without claiming that their search
 algorithms, strengths, or capabilities are equivalent.
 
@@ -60,7 +60,7 @@ values rather than labels hidden in prose.
 The concrete user-facing composition lives in :mod:`lczerolens.decision`.
 :func:`~lczerolens.decision.compare_decision` accepts an
 :class:`~lczerolens.evaluation.Evaluation` (or its immutable record) and a
-:class:`~lczerolens.search_trace.SearchTrace`.  Its
+:class:`~lczerolens.search.result.SearchResult`.  Its
 :class:`~lczerolens.decision.DecisionAnalysis` retains both producer records,
 exposes policy and search observations per legal action, and attaches exact
 :class:`~lczerolens.moves.LineAnalysis` values without generating a heuristic

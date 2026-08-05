@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from lczerolens.search_trace import (
+from lczerolens.search.trace import (
     BackupUpdate,
     ChessPlayer,
     EdgeStatistics,

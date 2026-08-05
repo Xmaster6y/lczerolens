@@ -18,8 +18,8 @@ from tensordict import TensorDict
 from .board import LczeroBoard
 from .counterfactuals import CounterfactualPair
 from .moves import LineAnalysis
-from .reference_search import replay_root_events
-from .search_trace import (
+from .search.reference import replay_root_events
+from .search.trace import (
     PositionEvaluation,
     PrincipalVariation,
     RootAction,

@@ -14,7 +14,8 @@ from lczerolens.decision import DecisionActions, compare_counterfactual, compare
 from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.moves import analyze_line
 from lczerolens.provenance import ChessPlayer, EvaluationProvenance
-from lczerolens.search_trace import (
+from lczerolens.search.result import SearchEvidenceUnavailable, SearchResult
+from lczerolens.search.trace import (
     EdgeStatistics,
     PositionEvaluation,
     PrincipalVariation,
@@ -71,16 +72,20 @@ def fixture_trace(*, with_actions=True, selected="d2d4"):
     )
 
 
+def fixture_search(*, with_actions=True, selected="d2d4"):
+    return SearchResult.from_trace(fixture_trace(with_actions=with_actions, selected=selected))
+
+
 def test_compare_decision_uses_evaluation_records_and_keeps_search_evidence_separate():
     evaluation = fixture_evaluator().evaluate(chess.Board())
-    trace = fixture_trace()
+    search = fixture_search()
 
-    decision = compare_decision(evaluation, trace)
+    decision = compare_decision(evaluation, search)
 
     assert decision.policy_move == "e2e4"
     assert decision.search_move == "d2d4"
     assert decision.changed
-    assert decision.search is trace
+    assert decision.search is search
     assert decision.evaluation == evaluation.record()
     assert decision.search_source == "fixture-search"
     assert decision.search_capability is SearchCapability.ROOT_ACTION_STATS
@@ -98,7 +103,7 @@ def test_compare_decision_uses_evaluation_records_and_keeps_search_evidence_sepa
 def test_root_only_decision_preserves_unavailable_search_action_fields():
     record = fixture_evaluator().evaluate(chess.Board()).record()
 
-    decision = compare_decision(record, fixture_trace(with_actions=False, selected="e2e4"))
+    decision = compare_decision(record, fixture_search(with_actions=False, selected="e2e4"))
 
     assert not decision.changed
     assert decision.actions["e2e4"].search_rank is None
@@ -110,24 +115,24 @@ def test_root_only_decision_preserves_unavailable_search_action_fields():
 def test_supplied_line_is_retained_and_invalid_comparison_inputs_fail_closed():
     evaluation = fixture_evaluator().evaluate(chess.Board())
     line = analyze_line(chess.Board(), ("e2e4", "e7e5"))
-    decision = compare_decision(evaluation, fixture_trace(), line_analyses={"e2e4": line})
+    decision = compare_decision(evaluation, fixture_search(), line_analyses={"e2e4": line})
 
     assert decision.actions["e2e4"].line is line
     wrong = chess.Board()
     wrong.halfmove_clock = 1
     with pytest.raises(ValueError, match="same root position"):
-        compare_decision(evaluation, replace(fixture_trace(), root_fen=wrong.fen()))
+        compare_decision(evaluation, SearchResult.from_trace(replace(fixture_trace(), root_fen=wrong.fen())))
     with pytest.raises(ValueError, match="legal evaluated root moves"):
-        compare_decision(evaluation, fixture_trace(), line_analyses={"e2e5": line})
+        compare_decision(evaluation, fixture_search(), line_analyses={"e2e5": line})
     with pytest.raises(ValueError, match="start at the root"):
         compare_decision(
             evaluation,
-            fixture_trace(),
+            fixture_search(),
             line_analyses={"e2e4": analyze_line(chess.Board(), ("d2d4",))},
         )
     with pytest.raises(TypeError, match="Evaluation or EvaluationRecord"):
-        compare_decision(object(), fixture_trace())
-    with pytest.raises(TypeError, match="SearchTrace"):
+        compare_decision(object(), fixture_search())
+    with pytest.raises(TypeError, match="SearchResult"):
         compare_decision(evaluation, object())
 
 
@@ -146,7 +151,7 @@ def test_compare_counterfactual_evaluates_reconstructable_factual_and_alternativ
 
     decision = compare_decision(
         fixture_evaluator().evaluate(chess.Board()),
-        fixture_trace(),
+        fixture_search(),
         counterfactuals=(comparison,),
     )
     assert decision.counterfactuals == (comparison,)
@@ -178,7 +183,7 @@ def test_counterfactual_comparison_rejects_failed_pairs_and_invalid_evaluators()
 
 
 def test_decision_action_collection_rejects_duplicates_and_noncanonical_order():
-    decision = compare_decision(fixture_evaluator().evaluate(chess.Board()), fixture_trace())
+    decision = compare_decision(fixture_evaluator().evaluate(chess.Board()), fixture_search())
     action = decision.actions["e2e4"]
 
     assert decision.actions == DecisionActions(tuple(decision.actions.values()))
@@ -195,12 +200,15 @@ def test_decision_action_collection_rejects_duplicates_and_noncanonical_order():
 
 def test_decision_records_reject_inconsistent_state_and_missing_selections():
     evaluation = fixture_evaluator().evaluate(chess.Board())
-    decision = compare_decision(evaluation, fixture_trace())
+    decision = compare_decision(evaluation, fixture_search())
     wrong = chess.Board()
     wrong.halfmove_clock = 1
 
     with pytest.raises(ValueError, match="same root position"):
-        replace(decision, search=replace(fixture_trace(), root_fen=wrong.fen()))
+        replace(
+            decision,
+            search=SearchResult.from_trace(replace(fixture_trace(), root_fen=wrong.fen())),
+        )
     with pytest.raises(ValueError, match="present in decision actions"):
         replace(decision, policy_move="a1a1")
     with pytest.raises(ValueError, match="changed status"):
@@ -232,22 +240,5 @@ def test_decision_records_reject_inconsistent_state_and_missing_selections():
             ),
         ),
     )
-    with pytest.raises(ValueError, match="exposed search selection"):
-        compare_decision(evaluation, no_selection)
-
-    terminal = chess.Board("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1")
-    terminal_evaluation = fixture_evaluator().evaluate(terminal)
-    terminal_trace = SearchTrace(
-        root_fen=terminal.fen(),
-        root_player=ChessPlayer.BLACK,
-        capability=SearchCapability.ROOT_RESULT,
-        provenance=SearchProvenance("fixture-search"),
-        snapshots=(
-            RootSnapshot(
-                0,
-                evaluation=PositionEvaluation(ValuePerspective.ROOT_PLAYER, value=0.0),
-            ),
-        ),
-    )
-    with pytest.raises(ValueError, match="non-terminal evaluation policy"):
-        compare_decision(terminal_evaluation, terminal_trace)
+    with pytest.raises(SearchEvidenceUnavailable, match="selected move"):
+        SearchResult.from_trace(no_selection)

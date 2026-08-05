@@ -15,7 +15,10 @@ from typing import Iterable, Mapping
 
 import chess
 
-from .search_trace import (
+from .limits import Nodes, SearchLimit, Time
+from .result import SearchResult
+
+from .trace import (
     ChessPlayer,
     EdgeStatistics,
     PositionEvaluation,
@@ -34,7 +37,7 @@ from .search_trace import (
 )
 
 
-class Lc0OutputError(ValueError):
+class LczeroOutputError(ValueError):
     """Raised when claimed lc0 root output cannot be represented safely."""
 
 
@@ -47,7 +50,7 @@ _INFO_NUMBER = re.compile(r"\b(?P<name>nodes|time)\s+(?P<value>\d+)\b")
 
 
 @dataclass(frozen=True)
-class Lc0SearchRequest:
+class _LczeroSearchRequest:
     """Public UCI inputs for a single lc0 root search."""
 
     root_fen: str
@@ -68,7 +71,7 @@ class Lc0SearchRequest:
 
 
 @dataclass(frozen=True)
-class Lc0ProcessAdapter:
+class _LczeroProcessAdapter:
     """Run an lc0 executable through UCI and parse its root-level output."""
 
     executable: Path | str
@@ -76,7 +79,7 @@ class Lc0ProcessAdapter:
     network: str
     network_checksum: str | None = None
 
-    def run(self, request: Lc0SearchRequest, *, timeout: float = 60.0) -> SearchTrace:
+    def run(self, request: _LczeroSearchRequest, *, timeout: float = 60.0) -> SearchTrace:
         command = ["uci"]
         for name, value in (request.options or {}).items():
             rendered = str(value).lower() if isinstance(value, bool) else value
@@ -94,10 +97,10 @@ class Lc0ProcessAdapter:
                 check=False,
             )
         except (OSError, subprocess.TimeoutExpired) as error:
-            raise Lc0OutputError(f"Could not run lc0 executable {self.executable!s}: {error}") from error
+            raise LczeroOutputError(f"Could not run lc0 executable {self.executable!s}: {error}") from error
         if completed.returncode:
-            raise Lc0OutputError(f"lc0 exited with status {completed.returncode}: {completed.stderr.strip()}")
-        return Lc0RootSnapshotParser().parse(
+            raise LczeroOutputError(f"lc0 exited with status {completed.returncode}: {completed.stderr.strip()}")
+        return _LczeroRootSnapshotParser().parse(
             completed.stdout.splitlines(),
             request=request,
             engine_version=self.engine_version,
@@ -106,7 +109,60 @@ class Lc0ProcessAdapter:
         )
 
 
-class Lc0RootSnapshotParser:
+class LczeroSearch:
+    """Official Lczero UCI search behind the shared ``run`` interface.
+
+    Only public root output is translated. This adapter never claims private
+    engine events, a complete tree, or replayability.
+    """
+
+    def __init__(
+        self,
+        *,
+        executable: Path | str,
+        network: str,
+        engine_version: str,
+        network_checksum: str | None = None,
+        options: Mapping[str, str | int | float | bool] | None = None,
+        timeout: float = 60.0,
+    ):
+        if not network:
+            raise ValueError("LczeroSearch requires a network path or identifier.")
+        if not engine_version:
+            raise ValueError("LczeroSearch requires an explicit engine version.")
+        if not isinstance(timeout, int | float) or isinstance(timeout, bool) or timeout <= 0:
+            raise ValueError("LczeroSearch timeout must be positive seconds.")
+        self._adapter = _LczeroProcessAdapter(
+            executable,
+            engine_version=engine_version,
+            network=network,
+            network_checksum=network_checksum,
+        )
+        self._network = network
+        self._options = dict(options or {})
+        self._timeout = float(timeout)
+
+    def run(self, board: chess.Board, limit: SearchLimit) -> SearchResult:
+        """Run official Lczero with a supported limit and return root evidence."""
+        if not isinstance(board, chess.Board):
+            raise TypeError("LczeroSearch.run requires a python-chess Board.")
+        if board.uci_variant != "chess" or board.chess960:
+            raise ValueError("LczeroSearch currently supports standard chess positions.")
+        if isinstance(limit, Nodes):
+            budget = {"nodes": limit.value}
+        elif isinstance(limit, Time):
+            if not float(limit.milliseconds).is_integer():
+                raise ValueError("LczeroSearch requires whole-millisecond Time limits.")
+            budget = {"time_ms": int(limit.milliseconds)}
+        else:
+            raise ValueError("LczeroSearch supports only Nodes and Time limits.")
+        options = {**self._options, "WeightsFile": self._network, "VerboseMoveStats": True}
+        request = _LczeroSearchRequest(board.fen(), options=options, **budget)
+        trace = self._adapter.run(request, timeout=self._timeout)
+        return SearchResult.from_trace(trace)
+
+
+class _LczeroRootSnapshotParser:
     """Parse the pinned public ``VerboseMoveStats``/UCI text contract.
 
     Supported fields are ``P``, ``N``, ``Q``, ``U``, ``V``, ``WL``, ``D``,
@@ -120,7 +176,7 @@ class Lc0RootSnapshotParser:
         self,
         output: Iterable[str],
         *,
-        request: Lc0SearchRequest,
+        request: _LczeroSearchRequest,
         engine_version: str,
         network: str,
         network_checksum: str | None = None,
@@ -138,7 +194,7 @@ class Lc0RootSnapshotParser:
                     or not _is_uci(tokens[1])
                     or chess.Move.from_uci(tokens[1]) not in root_board.legal_moves
                 ):
-                    raise Lc0OutputError(f"Unsupported lc0 bestmove line: {line!r}")
+                    raise LczeroOutputError(f"Unsupported lc0 bestmove line: {line!r}")
                 bestmove = tokens[1]
             elif _MOVE_STAT.match(line):
                 actions.append(self._parse_action(line))
@@ -149,9 +205,9 @@ class Lc0RootSnapshotParser:
                     else:
                         observed_time = int(match["value"])
         if bestmove is None:
-            raise Lc0OutputError("lc0 output did not contain a UCI bestmove line.")
+            raise LczeroOutputError("lc0 output did not contain a UCI bestmove line.")
         if actions and bestmove not in {action.statistics.move for action in actions}:
-            raise Lc0OutputError("lc0 bestmove was absent from captured root action statistics.")
+            raise LczeroOutputError("lc0 bestmove was absent from captured root action statistics.")
         actions = _normalise_priors(actions)
         unit = SearchBudgetUnit.NODES if request.nodes is not None else SearchBudgetUnit.TIME_MS
         requested = request.nodes if request.nodes is not None else request.time_ms
@@ -180,14 +236,14 @@ class Lc0RootSnapshotParser:
     def _parse_action(self, line: str) -> RootAction:
         match = _MOVE_STAT.match(line)
         if match is None:
-            raise Lc0OutputError(f"Unsupported lc0 root move-stat line: {line!r}")
+            raise LczeroOutputError(f"Unsupported lc0 root move-stat line: {line!r}")
         fields = {
             field["name"] or field["bare_name"]: (field["value"] or field["bare_value"]).strip()
             for field in _FIELD.finditer(match["fields"])
         }
         remainder = _FIELD.sub("", match["fields"]).strip()
         if not fields or not re.fullmatch(r"(?:\(\s*\d+\s*\))?", remainder):
-            raise Lc0OutputError(f"Unsupported lc0 root move-stat fields: {line!r}")
+            raise LczeroOutputError(f"Unsupported lc0 root move-stat fields: {line!r}")
         try:
             prior = _number(fields["P"], percent=True) if "P" in fields else None
             visits = int(fields["N"]) if "N" in fields else None
@@ -206,7 +262,7 @@ class Lc0RootSnapshotParser:
                 principal_variation=PrincipalVariation(pv) if pv else None,
             )
         except ValueError as error:
-            raise Lc0OutputError(f"Invalid lc0 root move-stat values: {line!r}") from error
+            raise LczeroOutputError(f"Invalid lc0 root move-stat values: {line!r}") from error
 
 
 def _normalise_priors(actions: list[RootAction]) -> list[RootAction]:
@@ -216,7 +272,7 @@ def _normalise_priors(actions: list[RootAction]) -> list[RootAction]:
         return actions
     total = sum(prior for prior in priors if prior is not None)
     if total <= 0:
-        raise Lc0OutputError("lc0 exposed root priors with a non-positive total.")
+        raise LczeroOutputError("lc0 exposed root priors with a non-positive total.")
     return [
         replace(action, statistics=replace(action.statistics, prior=action.statistics.prior / total))
         for action in actions
@@ -251,4 +307,4 @@ def _is_uci(move: str) -> bool:
     return re.fullmatch(r"[a-h][1-8][a-h][1-8][qrbn]?", move) is not None
 
 
-__all__ = ["Lc0OutputError", "Lc0ProcessAdapter", "Lc0RootSnapshotParser", "Lc0SearchRequest"]
+__all__ = ["LczeroOutputError", "LczeroSearch"]

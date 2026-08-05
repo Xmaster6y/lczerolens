@@ -159,22 +159,12 @@ announced compatibility release.
      - Refocus
      - Evaluation-driven move and self-play comparisons, not engine serving.
    * - ``search``
-     - ``Heuristic``, ``RandomHeuristic``, ``MaterialHeuristic``,
-       ``ModelHeuristic``, ``Node``, ``MCTS``
-     - Refocus
-     - Search traces and comparisons supporting decision evidence.
-   * - ``search_trace``
-     - Typed provenance, budget, snapshot, edge-statistic, event, and capability records
+     - ``SearchResult``, typed limits, ``ReferenceSearch``, ``LczeroSearch``,
+       trace and replay records
      - Retain
-     - Engine-independent public evidence boundary for reference and production search adapters.
-   * - ``reference_search``
-     - ``ReferenceMCTS``, ``replay_root_events``
-     - Retain
-     - Deterministic, replayable analysis oracle; explicitly not production lc0 search.
-   * - ``lc0_adapter``
-     - ``Lc0RootSnapshotParser``, ``Lc0ProcessAdapter``, ``Lc0SearchRequest``
-     - Retain
-     - Optional root-snapshot adapter. Root-only evidence is not a full event trace or replayable trace.
+     - One natural result contract with explicit producer limits and absence
+       semantics. Reference search is replayable; official public output is
+       root-only. Mutable legacy MCTS remains private compatibility code.
    * - ``facts``
      - Evidence records, guarantees, analyzers, and ``FactAnalyzer``
      - Retain

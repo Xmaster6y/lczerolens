@@ -16,7 +16,8 @@ from .evaluation import (
     ScalarEvaluationRecord,
 )
 from .moves import LineAnalysis, analyze_line
-from .search_trace import PrincipalVariation, RootAction, SearchCapability, SearchTrace, ValuePerspective
+from .search.result import SearchResult
+from .search.trace import PrincipalVariation, RootAction, SearchCapability, ValuePerspective
 
 if TYPE_CHECKING:
     from .evaluator import LczeroEvaluator
@@ -72,7 +73,7 @@ class DecisionAnalysis:
     """Evaluator and search evidence joined by position and action identity."""
 
     evaluation: EvaluationRecord
-    search: SearchTrace
+    search: SearchResult
     policy_move: str
     search_move: str
     changed: bool
@@ -80,7 +81,7 @@ class DecisionAnalysis:
     counterfactuals: tuple[CounterfactualComparison, ...] = ()
 
     def __post_init__(self) -> None:
-        if self.evaluation.position.fen != self.search.root_fen:
+        if self.evaluation.position.fen != self.search.trace.root_fen:
             raise ValueError("Decision evaluation and search must describe the same root position.")
         if self.policy_move not in self.actions or self.search_move not in self.actions:
             raise ValueError("Policy and search selections must be present in decision actions.")
@@ -97,11 +98,11 @@ class DecisionAnalysis:
 
     @property
     def search_source(self) -> str:
-        return self.search.provenance.source
+        return self.search.trace.provenance.source
 
     @property
     def search_capability(self) -> SearchCapability:
-        return self.search.capability
+        return self.search.trace.capability
 
 
 @dataclass(frozen=True)
@@ -153,7 +154,7 @@ class CounterfactualComparison:
 
 def compare_decision(
     evaluation: Evaluation | EvaluationRecord,
-    search: SearchTrace,
+    search: SearchResult,
     *,
     line_analyses: Mapping[str, LineAnalysis] | None = None,
     counterfactuals: Sequence[CounterfactualComparison] = (),
@@ -162,15 +163,14 @@ def compare_decision(
     record = evaluation.record() if isinstance(evaluation, Evaluation) else evaluation
     if not isinstance(record, EvaluationRecord):
         raise TypeError("evaluation must be an Evaluation or EvaluationRecord.")
-    if not isinstance(search, SearchTrace):
-        raise TypeError("search must be a SearchTrace.")
-    if record.position.fen != search.root_fen:
+    if not isinstance(search, SearchResult):
+        raise TypeError("search must be a SearchResult.")
+    trace = search.trace
+    if record.position.fen != trace.root_fen:
         raise ValueError("Evaluation and search must describe the same root position.")
     policy_move = _selected_policy_move(record)
-    final = search.snapshots[-1]
-    if final.selection is None:
-        raise ValueError("Decision analysis requires an exposed search selection.")
-    search_move = final.selection.move
+    final = trace.snapshots[-1]
+    search_move = search.move.uci()
     root_actions = {action.statistics.move: action for action in final.actions or ()}
     ranks = _search_ranks(tuple(root_actions.values()))
     visits = [action.statistics.visits for action in root_actions.values()]

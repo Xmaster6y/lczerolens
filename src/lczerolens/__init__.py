@@ -34,7 +34,6 @@ from .decision import (
 from .facts import Evidence, EvidenceSet, FactAnalyzer
 from .evaluation import Evaluation, EvaluationBatch, EvaluationRecord
 from .evaluator import LczeroEvaluator
-from .lc0_adapter import Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from .model import LczeroModel
 from .moves import (
     ExactMoveEffect,
@@ -50,8 +49,21 @@ from .moves import (
     analyze_move,
 )
 from .provenance import ChessPlayer, EvaluationProvenance, PositionIdentity
-from .reference_search import (
-    ReferenceMCTS,
+from .search import (
+    Depth,
+    LczeroSearch,
+    Nodes,
+    ReferenceSearch,
+    SearchAction,
+    SearchEvidenceUnavailable,
+    SearchLimit,
+    SearchResult,
+    SearchRoot,
+    Simulations,
+    Time,
+    Visits,
+)
+from .search.reference import (
     RetainedEventReplayCosts,
     RetainedEventReplayPlan,
     RetainedEventReplayResult,
@@ -97,19 +109,27 @@ __all__ = [
     "FactAnalyzer",
     "ExactMoveEffect",
     "HistoryPolicy",
-    "Lc0ProcessAdapter",
-    "Lc0RootSnapshotParser",
-    "Lc0SearchRequest",
+    "Depth",
+    "LczeroSearch",
     "MoveAnalysis",
     "PositionAttribute",
     "PositionIdentity",
-    "ReferenceMCTS",
+    "Nodes",
+    "ReferenceSearch",
     "RetainedEventReplayCosts",
     "RetainedEventReplayPlan",
     "RetainedEventReplayResult",
     "SemanticReplayError",
     "SemanticReplayResult",
     "SearchBehaviorComparison",
+    "SearchAction",
+    "SearchEvidenceUnavailable",
+    "SearchLimit",
+    "SearchResult",
+    "SearchRoot",
+    "Simulations",
+    "Time",
+    "Visits",
     "LineAnalysis",
     "LineAnalysisError",
     "LineFailureReason",

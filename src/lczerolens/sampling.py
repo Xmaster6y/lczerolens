@@ -11,7 +11,7 @@ from itertools import tee
 
 from lczerolens.model import LczeroModel
 from lczerolens.board import LczeroBoard
-from lczerolens.search import MCTS, ModelHeuristic, Node
+from lczerolens._legacy_search import MCTS, ModelHeuristic, Node
 
 
 class Sampler(ABC):

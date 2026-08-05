@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).parents[2]
-LIVE_LC0_TEST = "tests/unit/test_lc0_adapter.py::test_optional_pinned_lc0_process_adapter"
+LIVE_LC0_TEST = "tests/unit/test_lczero_search.py::test_optional_pinned_lczero_process_adapter"
 
 
 def _collect(marker: str) -> subprocess.CompletedProcess[str]:

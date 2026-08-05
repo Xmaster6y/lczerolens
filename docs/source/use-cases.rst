@@ -99,7 +99,11 @@ An external engine uses the same shape::
 
    from lczerolens import LczeroSearch, Nodes
 
-   search = LczeroSearch(executable="/path/to/lc0", network="network.pb.gz")
+   search = LczeroSearch(
+       executable="/path/to/lc0",
+       network="network.pb.gz",
+       engine_version="v0.31.2",
+   )
    result = search.run(board, Nodes(10_000))
 
 ``SearchResult`` is the natural final result.  ``SearchTrace`` is the detailed

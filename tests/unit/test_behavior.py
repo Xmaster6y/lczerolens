@@ -21,10 +21,10 @@ from lczerolens.behavior import (
 )
 from lczerolens.counterfactuals import remove_piece_counterfactual
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
-from lczerolens.lc0_adapter import Lc0RootSnapshotParser, Lc0SearchRequest
+from lczerolens.search.lczero import _LczeroRootSnapshotParser, _LczeroSearchRequest
 from lczerolens.moves import analyze_line
-from lczerolens.reference_search import ReferenceMCTS
-from lczerolens.search_trace import (
+from lczerolens.search.reference import _ReferenceMCTS
+from lczerolens.search.trace import (
     ChessPlayer,
     EdgeStatistics,
     PositionEvaluation,
@@ -119,9 +119,9 @@ def test_failures_are_explicit_for_missing_heads_bad_targets_and_capabilities():
     with pytest.raises(ValueError, match="target_moves"):
         compare_counterfactual_behavior(behavior, behavior, ())
 
-    root_result = Lc0RootSnapshotParser().parse(
+    root_result = _LczeroRootSnapshotParser().parse(
         ["bestmove e2e4"],
-        request=Lc0SearchRequest(ROOT_FEN, nodes=1),
+        request=_LczeroSearchRequest(ROOT_FEN, nodes=1),
         engine_version="test",
         network="test",
     )
@@ -134,11 +134,11 @@ def test_failures_are_explicit_for_missing_heads_bad_targets_and_capabilities():
 def test_raw_evaluator_preference_compares_separately_with_reference_and_official_lc0():
     board = LczeroBoard()
     evaluator = evaluator_behavior(board, FixedEvaluator()(board))
-    reference = ReferenceMCTS(c_puct=1.0).search(board, FixedEvaluator(), simulations=4)
+    reference = _ReferenceMCTS(c_puct=1.0).search(board, FixedEvaluator(), simulations=4)
     fixture = Path(__file__).parents[1] / "assets" / "lc0_root_snapshot_v1.txt"
-    official = Lc0RootSnapshotParser().parse(
+    official = _LczeroRootSnapshotParser().parse(
         fixture.read_text().splitlines(),
-        request=Lc0SearchRequest(ROOT_FEN, nodes=256, options={"VerboseMoveStats": True}),
+        request=_LczeroSearchRequest(ROOT_FEN, nodes=256, options={"VerboseMoveStats": True}),
         engine_version="v0.31.2",
         network="fixture",
     )
@@ -204,7 +204,7 @@ def test_budgeted_snapshots_report_rank_q_selection_discovery_and_pv_evolution()
 def test_decision_comparison_links_both_candidates_to_line_analyses():
     board = LczeroBoard()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 4.0, "d2d4": 2.0}))
-    trace = ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
     search_move = trace.snapshots[-1].selection.move
     evidence = {
         move: analyze_line(
@@ -421,7 +421,7 @@ def test_counterfactual_comparison_rejects_invalid_controls_links_and_evidence()
 def test_decision_evidence_and_non_replay_event_paths_fail_explicitly():
     board = LczeroBoard()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 3.0}))
-    trace = ReferenceMCTS().search(board, FixedEvaluator(), simulations=1)
+    trace = _ReferenceMCTS().search(board, FixedEvaluator(), simulations=1)
     variation = analyze_line(board, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
 
     assert compare_search_events(trace).replay_validated is None

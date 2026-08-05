@@ -11,10 +11,10 @@ from dataclasses import dataclass
 
 import chess
 import torch
-from tensordict import TensorDict
 from torch import nn
 
-from lczerolens import LczeroBoard
+from lczerolens import ReferenceSearch, SearchResult, Simulations
+from lczerolens._codec import encode_move
 from lczerolens.decision import (
     CounterfactualComparison,
     DecisionAnalysis,
@@ -27,8 +27,6 @@ from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
 from lczerolens.model import LczeroModel
 from lczerolens.moves import LineAnalysis, analyze_line
-from lczerolens.reference_search import ReferenceMCTS
-from lczerolens.search_trace import SearchTrace
 
 
 class _TutorialFixtureModule(nn.Module):
@@ -36,14 +34,12 @@ class _TutorialFixtureModule(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        root = LczeroBoard()
+        root = chess.Board()
         after_e4 = root.copy(stack=True)
         after_e4.push_uci("e2e4")
-        self.register_buffer("root_e4", torch.tensor(root.encode_move(chess.Move.from_uci("e2e4"), root.turn)))
-        self.register_buffer("root_d4", torch.tensor(root.encode_move(chess.Move.from_uci("d2d4"), root.turn)))
-        self.register_buffer(
-            "black_e5", torch.tensor(after_e4.encode_move(chess.Move.from_uci("e7e5"), after_e4.turn))
-        )
+        self.register_buffer("root_e4", torch.tensor(encode_move(root, chess.Move.from_uci("e2e4"))))
+        self.register_buffer("root_d4", torch.tensor(encode_move(root, chess.Move.from_uci("d2d4"))))
+        self.register_buffer("black_e5", torch.tensor(encode_move(after_e4, chess.Move.from_uci("e7e5"))))
 
     def forward(self, board: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         batch = board.shape[0]
@@ -59,19 +55,13 @@ class _TutorialFixtureModule(nn.Module):
 
 @dataclass(frozen=True)
 class _FixtureRuntime:
-    model: LczeroModel
     evaluator: LczeroEvaluator
 
 
 def load_fixture_evaluator() -> _FixtureRuntime:
     """Load a tiny model and its concrete chess evaluator facade."""
     model = LczeroModel(_TutorialFixtureModule(), out_keys=["policy", "value"])
-    return _FixtureRuntime(model, LczeroEvaluator(model))
-
-
-def evaluate(model: LczeroModel, board: LczeroBoard) -> TensorDict:
-    """Adapt the public model output to the singleton evaluator search contract."""
-    return model(board)
+    return _FixtureRuntime(LczeroEvaluator(model))
 
 
 @dataclass(frozen=True)
@@ -79,7 +69,7 @@ class TutorialResult:
     """Structured observations from the tutorial, with no scientific claim."""
 
     evaluation: Evaluation
-    search: SearchTrace
+    search: SearchResult
     decision: DecisionAnalysis
     counterfactual: CounterfactualPair
     counterfactual_comparison: CounterfactualComparison
@@ -88,10 +78,10 @@ class TutorialResult:
 
 def run_tutorial() -> TutorialResult:
     """Run the documented, hermetic decision-analysis workflow."""
-    board = LczeroBoard()
+    board = chess.Board()
     runtime = load_fixture_evaluator()
     evaluation = runtime.evaluator.evaluate(board)
-    search = ReferenceMCTS(c_puct=1.0).search(board, lambda position: evaluate(runtime.model, position), simulations=4)
+    search = ReferenceSearch(runtime.evaluator, c_puct=1.0).run(board, Simulations(4))
 
     # The candidate lines are exact move evidence, not generated explanation.
     variations = {
@@ -101,7 +91,7 @@ def run_tutorial() -> TutorialResult:
             MaterialAnalyzer(FactPerspective.WHITE),
             MaterialAnalyzer(FactPerspective.BLACK),
         )
-        for move in (evaluation.policy.best_move.uci(), search.snapshots[-1].selection.move)
+        for move in (evaluation.policy.best_move.uci(), search.move.uci())
     }
     counterfactual = sibling_counterfactual(board, factual="g1f3", alternative="b1c3")
     if not counterfactual.succeeded or counterfactual.alternative is None:

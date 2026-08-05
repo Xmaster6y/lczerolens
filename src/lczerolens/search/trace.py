@@ -536,6 +536,26 @@ class SearchTrace:
             )
         return self
 
+    @property
+    def has_root_actions(self) -> bool:
+        """Whether the final snapshot exposes root action records."""
+        return self.snapshots[-1].actions is not None
+
+    @property
+    def has_snapshots(self) -> bool:
+        """Whether budget-labelled root evolution is available."""
+        return len(self.snapshots) > 1 or all(snapshot.budget is not None for snapshot in self.snapshots)
+
+    @property
+    def has_events(self) -> bool:
+        """Whether the producer emitted simulation events."""
+        return self.events is not None
+
+    @property
+    def is_replayable(self) -> bool:
+        """Whether emitted events contain independently replayable state."""
+        return bool(self.events) and all(event.replayable for event in self.events)
+
 
 _SEARCH_TRACE_FORMAT = "lczerolens.search-trace"
 _SEARCH_TRACE_FORMAT_VERSION = 1
