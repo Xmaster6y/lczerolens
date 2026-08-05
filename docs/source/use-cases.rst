@@ -150,6 +150,12 @@ observed model difference never implies a causal or strategic conclusion.
 
 Durable evidence records have canonical versioned serialization::
 
+   evaluation_record = evaluation.record()
+   evaluation_record.save("evaluation.json")
+   restored_evaluation = type(evaluation_record).load("evaluation.json")
+
+   assert restored_evaluation.digest() == evaluation_record.digest()
+
    decision.save("decision.json")
    restored = type(decision).load("decision.json")
 

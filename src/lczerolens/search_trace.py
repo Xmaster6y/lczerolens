@@ -18,6 +18,8 @@ from typing import Any, TypeAlias, Union, get_args, get_origin, get_type_hints
 
 import chess
 
+from lczerolens.provenance import ChessPlayer
+
 
 ParameterValue: TypeAlias = str | int | float | bool | None
 
@@ -59,13 +61,6 @@ class ValuePerspective(str, Enum):
 
     SIDE_TO_MOVE = "side_to_move"
     ROOT_PLAYER = "root_player"
-    WHITE = "white"
-    BLACK = "black"
-
-
-class ChessPlayer(str, Enum):
-    """An absolute chess player used to identify the root side to move."""
-
     WHITE = "white"
     BLACK = "black"
 

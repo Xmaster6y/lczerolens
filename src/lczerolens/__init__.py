@@ -26,11 +26,12 @@ from .counterfactuals import (
     sibling_counterfactual,
 )
 from .facts import Evidence, EvidenceSet, FactAnalyzer
-from .evaluation import Evaluation, EvaluationBatch
+from .evaluation import Evaluation, EvaluationBatch, EvaluationRecord
 from .evaluator import LczeroEvaluator
 from .lc0_adapter import Lc0ProcessAdapter, Lc0RootSnapshotParser, Lc0SearchRequest
 from .model import LczeroModel
 from .move_evidence import MoveDelta, VariationEvidence, analyze_move_delta, analyze_variation
+from .provenance import ChessPlayer, EvaluationProvenance, PositionIdentity
 from .reference_search import (
     ReferenceMCTS,
     RetainedEventReplayCosts,
@@ -43,6 +44,7 @@ from .reference_search import (
     replay_root_events,
     replay_search_trace,
 )
+from .serialization import EvaluationRecordFormatError
 from .schema import LczeroKeys
 
 try:
@@ -56,6 +58,7 @@ __all__ = [
     "LczeroKeys",
     "LczeroModel",
     "BehaviorMetric",
+    "ChessPlayer",
     "ControlKind",
     "CounterfactualConstraints",
     "CounterfactualBehaviorComparison",
@@ -66,6 +69,9 @@ __all__ = [
     "EvidenceSet",
     "Evaluation",
     "EvaluationBatch",
+    "EvaluationRecord",
+    "EvaluationRecordFormatError",
+    "EvaluationProvenance",
     "EvaluatorBehavior",
     "FactAnalyzer",
     "Lc0ProcessAdapter",
@@ -73,6 +79,7 @@ __all__ = [
     "Lc0SearchRequest",
     "MoveDelta",
     "PositionAttribute",
+    "PositionIdentity",
     "ReferenceMCTS",
     "RetainedEventReplayCosts",
     "RetainedEventReplayPlan",

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+import math
+from os import PathLike
 from typing import Iterator, Sequence, overload
 
 import chess
 from tensordict import TensorDictBase
 
-from lczerolens._codec import decode_move
+from lczerolens._codec import InputFormat, decode_move, encode_move
+from lczerolens.provenance import ChessPlayer, EvaluationProvenance, PositionIdentity
 from lczerolens.schema import LczeroKeys
 
 
@@ -37,6 +40,161 @@ class WdlEvaluation:
     draw: float
     loss: float
     perspective: chess.Color
+
+
+@dataclass(frozen=True)
+class ActionEvaluationRecord:
+    """Frozen evaluator preference for one legal UCI action."""
+
+    move: str
+    index: int
+    logit: float
+    probability: float
+    rank: int
+
+    def __post_init__(self) -> None:
+        try:
+            chess.Move.from_uci(self.move)
+        except ValueError as error:
+            raise ValueError("Recorded actions require a valid UCI move.") from error
+        if isinstance(self.index, bool) or not isinstance(self.index, int) or not 0 <= self.index < 1858:
+            raise ValueError("Recorded policy indices must be integers in [0, 1858).")
+        if not math.isfinite(self.logit):
+            raise ValueError("Recorded policy logits must be finite.")
+        if not math.isfinite(self.probability) or not 0 <= self.probability <= 1:
+            raise ValueError("Recorded policy probabilities must be finite and in [0, 1].")
+        if isinstance(self.rank, bool) or not isinstance(self.rank, int) or self.rank < 1:
+            raise ValueError("Recorded policy ranks must be positive integers.")
+
+
+@dataclass(frozen=True)
+class ScalarEvaluationRecord:
+    """Frozen scalar value with explicit origin and player perspective."""
+
+    value: float
+    origin: ValueOrigin
+    perspective: ChessPlayer
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.value) or not -1 <= self.value <= 1:
+            raise ValueError("Recorded scalar values must be finite and in [-1, 1].")
+        if not isinstance(self.origin, ValueOrigin):
+            raise ValueError("Recorded scalar origins must be ValueOrigin values.")
+        if not isinstance(self.perspective, ChessPlayer):
+            raise ValueError("Recorded scalar perspectives must be ChessPlayer values.")
+
+
+@dataclass(frozen=True)
+class WdlEvaluationRecord:
+    """Frozen win/draw/loss probabilities for one absolute player."""
+
+    win: float
+    draw: float
+    loss: float
+    perspective: ChessPlayer
+
+    def __post_init__(self) -> None:
+        values = (self.win, self.draw, self.loss)
+        if any(not math.isfinite(value) or not 0 <= value <= 1 for value in values):
+            raise ValueError("Recorded WDL values must be finite probabilities in [0, 1].")
+        if not math.isclose(sum(values), 1.0, abs_tol=1e-5):
+            raise ValueError("Recorded WDL probabilities must sum to one.")
+        if not isinstance(self.perspective, ChessPlayer):
+            raise ValueError("Recorded WDL perspectives must be ChessPlayer values.")
+
+
+@dataclass(frozen=True)
+class EvaluationRecord:
+    """Immutable, tensor-free evidence produced by one evaluator call."""
+
+    position: PositionIdentity
+    provenance: EvaluationProvenance
+    input_format: str
+    policy: tuple[ActionEvaluationRecord, ...]
+    wdl: WdlEvaluationRecord | None = None
+    value: ScalarEvaluationRecord | None = None
+    mlh: float | None = None
+    schema_version: int = field(default=1, init=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.position, PositionIdentity):
+            raise ValueError("Evaluation records require a PositionIdentity.")
+        if not isinstance(self.provenance, EvaluationProvenance):
+            raise ValueError("Evaluation records require EvaluationProvenance.")
+        if not self.input_format:
+            raise ValueError("Evaluation records require an input format.")
+        try:
+            InputFormat(self.input_format)
+        except ValueError as error:
+            raise ValueError(f"Unsupported evaluation input format {self.input_format!r}.") from error
+        if any(not isinstance(action, ActionEvaluationRecord) for action in self.policy):
+            raise ValueError("Recorded policy entries must be ActionEvaluationRecord values.")
+        if self.wdl is not None and not isinstance(self.wdl, WdlEvaluationRecord):
+            raise ValueError("Evaluation record WDL must be a WdlEvaluationRecord.")
+        if self.value is not None and not isinstance(self.value, ScalarEvaluationRecord):
+            raise ValueError("Evaluation record value must be a ScalarEvaluationRecord.")
+        moves = [action.move for action in self.policy]
+        indices = [action.index for action in self.policy]
+        if len(moves) != len(set(moves)) or len(indices) != len(set(indices)):
+            raise ValueError("Recorded policy actions and indices must be unique.")
+        board = self.position.board()
+        legal_moves = {move.uci() for move in board.legal_moves} if not board.is_game_over() else set()
+        if set(moves) != legal_moves:
+            raise ValueError("Recorded policy actions must exactly match the position's legal moves.")
+        if moves != sorted(moves):
+            raise ValueError("Recorded policy actions must use canonical UCI order.")
+        if any(encode_move(board, chess.Move.from_uci(action.move)) != action.index for action in self.policy):
+            raise ValueError("Recorded policy indices must match their moves in position context.")
+        expected_ranks: dict[str, int] = {}
+        previous_logit: float | None = None
+        rank = 0
+        for offset, action in enumerate(sorted(self.policy, key=lambda item: (-item.logit, item.move)), start=1):
+            if previous_logit is None or action.logit != previous_logit:
+                rank = offset
+                previous_logit = action.logit
+            expected_ranks[action.move] = rank
+        if any(action.rank != expected_ranks[action.move] for action in self.policy):
+            raise ValueError("Recorded policy ranks must agree with policy logits.")
+        if self.policy and not math.isclose(sum(action.probability for action in self.policy), 1.0, abs_tol=1e-5):
+            raise ValueError("Recorded legal policy probabilities must sum to one.")
+        if self.wdl is not None and self.wdl.perspective is not self.position.player:
+            raise ValueError("Recorded WDL perspective must match the position side to move.")
+        if self.value is not None and self.value.perspective is not self.position.player:
+            raise ValueError("Recorded scalar perspective must match the position side to move.")
+        if self.mlh is not None and not math.isfinite(self.mlh):
+            raise ValueError("Recorded MLH must be finite when present.")
+
+    def to_bytes(self) -> bytes:
+        """Return the canonical versioned JSON bytes for this record."""
+        from lczerolens.serialization import serialize_evaluation_record
+
+        return serialize_evaluation_record(self)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "EvaluationRecord":
+        """Restore a record from canonical versioned JSON bytes."""
+        from lczerolens.serialization import deserialize_evaluation_record
+
+        return deserialize_evaluation_record(data)
+
+    def digest(self) -> str:
+        """Return the SHA-256 digest of the canonical bytes."""
+        from lczerolens.serialization import evaluation_record_digest
+
+        return evaluation_record_digest(self)
+
+    def save(self, path: str | PathLike[str]) -> None:
+        """Write the canonical bytes to ``path``."""
+        from pathlib import Path
+
+        Path(path).write_bytes(self.to_bytes())
+
+    @classmethod
+    def load(cls, path: str | PathLike[str]) -> "EvaluationRecord":
+        """Load canonical bytes from ``path``."""
+        from pathlib import Path
+
+        return cls.from_bytes(Path(path).read_bytes())
 
 
 @dataclass(frozen=True)
@@ -118,11 +276,23 @@ class PolicyEvaluation:
 class Evaluation:
     """One position bound to one row of canonical evaluator tensors."""
 
-    def __init__(self, board: chess.Board, tensors: TensorDictBase):
+    def __init__(
+        self,
+        board: chess.Board,
+        tensors: TensorDictBase,
+        provenance: EvaluationProvenance,
+        input_format: str,
+    ):
         if tensors.batch_size:
             raise ValueError("Evaluation requires one unbatched TensorDict row.")
+        if not isinstance(provenance, EvaluationProvenance):
+            raise TypeError("Evaluation requires EvaluationProvenance.")
+        if not input_format:
+            raise ValueError("Evaluation requires an input format.")
         self._position = board.copy(stack=True)
         self._tensors = tensors
+        self._provenance = provenance
+        self._input_format = input_format
 
     @property
     def position(self) -> chess.Board:
@@ -167,15 +337,52 @@ class Evaluation:
             return None
         return float(self._tensors[LczeroKeys.NETWORK_MLH].reshape(-1)[0])
 
+    def record(self) -> EvaluationRecord:
+        """Freeze the current runtime values into immutable tensor-free evidence."""
+        player = ChessPlayer.from_color(self._position.turn)
+        policy = tuple(
+            ActionEvaluationRecord(
+                move=action.move.uci(),
+                index=action.index,
+                logit=action.logit,
+                probability=action.probability,
+                rank=action.rank,
+            )
+            for action in self.policy.actions
+        )
+        wdl = self.wdl
+        value = self.value
+        return EvaluationRecord(
+            position=PositionIdentity.from_board(self._position),
+            provenance=self._provenance,
+            input_format=self._input_format,
+            policy=policy,
+            wdl=(WdlEvaluationRecord(wdl.win, wdl.draw, wdl.loss, player) if wdl is not None else None),
+            value=(ScalarEvaluationRecord(value.value, value.origin, player) if value is not None else None),
+            mlh=self.mlh,
+        )
+
 
 class EvaluationBatch(Sequence[Evaluation]):
     """Batch-preserving collection of position evaluation views."""
 
-    def __init__(self, boards: Sequence[chess.Board], tensors: TensorDictBase):
+    def __init__(
+        self,
+        boards: Sequence[chess.Board],
+        tensors: TensorDictBase,
+        provenance: EvaluationProvenance,
+        input_format: str,
+    ):
         if len(boards) != tensors.batch_size[0]:
             raise ValueError("Board count must match the TensorDict batch size.")
+        if not isinstance(provenance, EvaluationProvenance):
+            raise TypeError("EvaluationBatch requires EvaluationProvenance.")
+        if not input_format:
+            raise ValueError("EvaluationBatch requires an input format.")
         self._boards = tuple(board.copy(stack=True) for board in boards)
         self._tensors = tensors
+        self._provenance = provenance
+        self._input_format = input_format
 
     @property
     def tensors(self) -> TensorDictBase:
@@ -193,8 +400,13 @@ class EvaluationBatch(Sequence[Evaluation]):
     def __getitem__(self, index: int | slice) -> Evaluation | "EvaluationBatch":
         if isinstance(index, slice):
             positions = range(*index.indices(len(self)))
-            return EvaluationBatch(tuple(self._boards[position] for position in positions), self._tensors[index])
-        return Evaluation(self._boards[index], self._tensors[index])
+            return EvaluationBatch(
+                tuple(self._boards[position] for position in positions),
+                self._tensors[index],
+                self._provenance,
+                self._input_format,
+            )
+        return Evaluation(self._boards[index], self._tensors[index], self._provenance, self._input_format)
 
     def __iter__(self) -> Iterator[Evaluation]:
         return (self[index] for index in range(len(self)))
@@ -202,10 +414,14 @@ class EvaluationBatch(Sequence[Evaluation]):
 
 __all__ = [
     "ActionEvaluation",
+    "ActionEvaluationRecord",
     "Evaluation",
     "EvaluationBatch",
+    "EvaluationRecord",
     "PolicyEvaluation",
     "ScalarEvaluation",
+    "ScalarEvaluationRecord",
     "ValueOrigin",
     "WdlEvaluation",
+    "WdlEvaluationRecord",
 ]

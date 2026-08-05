@@ -182,6 +182,8 @@ def test_evaluator_constructor_and_board_collection_validation():
         LczeroEvaluator(nn.Identity())
     with pytest.raises(TypeError, match="InputFormat"):
         LczeroEvaluator(LczeroModel(PolicyOnlyNetwork(), out_keys=["policy"]), input_format="classical")
+    with pytest.raises(TypeError, match="provenance"):
+        LczeroEvaluator(LczeroModel(PolicyOnlyNetwork(), out_keys=["policy"]), provenance="fixture")
     with pytest.raises(ValueError, match="requires a policy head"):
         LczeroEvaluator(LczeroModel(nn.Identity(), out_keys=["value"]))
     with pytest.raises(ValueError, match="only supports"):
@@ -228,9 +230,18 @@ def test_evaluation_views_reject_incompatible_batch_shapes():
     tensors = evaluator.model(evaluator.prepare([chess.Board()]))
 
     with pytest.raises(ValueError, match="unbatched"):
-        Evaluation(chess.Board(), tensors)
+        Evaluation(chess.Board(), tensors, evaluator.provenance, evaluator.input_format.value)
     with pytest.raises(ValueError, match="Board count"):
-        EvaluationBatch([], tensors)
+        EvaluationBatch([], tensors, evaluator.provenance, evaluator.input_format.value)
+    row = tensors[0]
+    with pytest.raises(TypeError, match="EvaluationProvenance"):
+        Evaluation(chess.Board(), row, "not provenance", evaluator.input_format.value)
+    with pytest.raises(ValueError, match="input format"):
+        Evaluation(chess.Board(), row, evaluator.provenance, "")
+    with pytest.raises(TypeError, match="EvaluationProvenance"):
+        EvaluationBatch([chess.Board()], tensors, "not provenance", evaluator.input_format.value)
+    with pytest.raises(ValueError, match="input format"):
+        EvaluationBatch([chess.Board()], tensors, evaluator.provenance, "")
 
 
 def test_finish_rejects_container_dtype_and_finite_value_errors():

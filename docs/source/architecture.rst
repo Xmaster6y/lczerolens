@@ -68,6 +68,11 @@ Public vocabulary
    One position bound to one row of evaluator tensors, with a legal-move policy
    view and explicit native or derived head origins.
 
+``EvaluationRecord``
+   An immutable, tensor-free evaluation snapshot with reconstructable position
+   history, producer and network provenance, canonical bytes, and a stable
+   digest.
+
 ``MoveAnalysis`` and ``LineAnalysis``
    Exact python-chess-derived position transitions.  These concrete names are
    preferred over a generic evidence-first interface.
@@ -165,6 +170,13 @@ They are immutable, typed, provenance-bearing, and canonically serializable.
 ``Evaluation`` is an ergonomic runtime view.  ``Evaluation.record()`` freezes
 the selected tensor values and position identity for persistence.  Composite
 analysis APIs store records rather than references to live tensors or modules.
+
+The position identity stores its variant, Chess960 mode, retained starting FEN,
+and UCI move sequence in addition to the final FEN.  Restoration therefore
+reconstructs the available history instead of pretending that a final FEN
+alone contains repetition state.  Network checksums are recorded when the
+evaluator loaded a local model path; in-memory models retain their concrete
+module type without fabricating a weights identity.
 
 Search contract
 ---------------

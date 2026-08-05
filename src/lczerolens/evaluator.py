@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+import hashlib
+from pathlib import Path
 
 import chess
 import torch
@@ -13,6 +15,7 @@ from torch import nn
 from lczerolens._codec import InputFormat, POLICY_SIZE, encode_input, legal_mask
 from lczerolens.evaluation import Evaluation, EvaluationBatch
 from lczerolens.model import LczeroModel
+from lczerolens.provenance import EvaluationProvenance
 from lczerolens.schema import LczeroKeys, _NETWORK_HEAD_KEYS
 
 
@@ -38,11 +41,14 @@ class LczeroEvaluator:
         model: LczeroModel,
         *,
         input_format: InputFormat = InputFormat.CLASSICAL_112,
+        provenance: EvaluationProvenance | None = None,
     ):
         if not isinstance(model, LczeroModel):
             raise TypeError("model must be an LczeroModel.")
         if not isinstance(input_format, InputFormat):
             raise TypeError("input_format must be an InputFormat.")
+        if provenance is not None and not isinstance(provenance, EvaluationProvenance):
+            raise TypeError("provenance must be EvaluationProvenance when provided.")
         heads = tuple(key for key in model.out_keys if isinstance(key, str) and key != "_")
         if "policy" not in heads or any(head not in _NETWORK_HEAD_KEYS for head in heads):
             raise ValueError("LczeroEvaluator requires a policy head and only supports policy, wdl, value, and mlh.")
@@ -53,6 +59,7 @@ class LczeroEvaluator:
             out_keys=[_NETWORK_HEAD_KEYS[head] for head in heads],
         )
         self.input_format = input_format
+        self.provenance = provenance or _model_provenance(model)
 
     @classmethod
     def from_path(
@@ -60,10 +67,13 @@ class LczeroEvaluator:
         model_path: str,
         *,
         input_format: InputFormat = InputFormat.CLASSICAL_112,
+        provenance: EvaluationProvenance | None = None,
         **model_kwargs,
     ) -> "LczeroEvaluator":
         """Load a model using the current Lczero model-format adapters."""
-        return cls(LczeroModel.from_path(model_path, **model_kwargs), input_format=input_format)
+        model = LczeroModel.from_path(model_path, **model_kwargs)
+        resolved_provenance = provenance or _model_provenance(model, network_path=model_path)
+        return cls(model, input_format=input_format, provenance=resolved_provenance)
 
     @property
     def device(self) -> torch.device:
@@ -157,7 +167,7 @@ class LczeroEvaluator:
             if not torch.isfinite(mlh).all():
                 raise ValueError("network/mlh must be finite.")
             tensors[LczeroKeys.NETWORK_MLH] = mlh
-        return EvaluationBatch(resolved, tensors)
+        return EvaluationBatch(resolved, tensors, self.provenance, self.input_format.value)
 
     def evaluate(self, boards: chess.Board | Iterable[chess.Board]) -> Evaluation | EvaluationBatch:
         """Evaluate one position or a batch through the canonical TensorDict path."""
@@ -209,6 +219,27 @@ def _column(value: torch.Tensor, batch_size: int, label: str) -> torch.Tensor:
     if tuple(value.shape) == (batch_size, 1):
         return value
     raise ValueError(f"{label} must have shape [{batch_size}] or [{batch_size}, 1].")
+
+
+def _model_provenance(model: LczeroModel, *, network_path: str | None = None) -> EvaluationProvenance:
+    module_type = type(model.module)
+    network = None
+    checksum = None
+    if network_path is not None:
+        path = Path(network_path)
+        network = path.name
+        if path.is_file():
+            digest = hashlib.sha256()
+            with path.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            checksum = f"sha256:{digest.hexdigest()}"
+    return EvaluationProvenance(
+        source="lczerolens.LczeroEvaluator",
+        model_type=f"{module_type.__module__}.{module_type.__qualname__}",
+        network=network,
+        network_checksum=checksum,
+    )
 
 
 __all__ = ["LczeroEvaluator"]
