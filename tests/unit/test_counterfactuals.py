@@ -1,5 +1,7 @@
 """Tests for constraint-aware chess counterfactuals."""
 
+from dataclasses import replace
+
 import chess
 import pytest
 
@@ -44,20 +46,22 @@ def test_sibling_moves_are_deterministic_history_consistent_and_evidence_bearing
     assert result.history.reachability_proven
     assert result.history.shared_parent
     assert result.history.legal_from_shared_parent
-    assert result.modified is not None
-    assert result.modified.rule_valid
-    assert result.modified.history_complete
-    assert result.original.fen == "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
-    assert result.modified.fen == "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1"
+    assert result.alternative is not None
+    assert result.alternative.rule_valid
+    assert result.alternative.history_complete
+    assert result.factual.fen == "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+    assert result.alternative.fen == "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1"
+    assert result.factual.board().move_stack == [chess.Move.from_uci("e2e4")]
+    assert result.alternative.board().move_stack == [chess.Move.from_uci("d2d4")]
     assert result.changed_attributes[0].satisfied
     assert all(item.satisfied for item in result.preserved_attributes)
-    assert result.preserved_facts[0].original.value == result.preserved_facts[0].modified.value == 39
-    assert result.changed_facts[0].original.value == result.changed_facts[0].modified.value
-    assert result.changed_facts[0].original.supporting_pieces != result.changed_facts[0].modified.supporting_pieces
-    assert result.original_move_analysis is not None
-    assert result.original_move_analysis.move == chess.Move.from_uci("e2e4")
-    assert result.modified_move_analysis is not None
-    assert result.modified_move_analysis.move == chess.Move.from_uci("d2d4")
+    assert result.preserved_facts[0].factual.value == result.preserved_facts[0].alternative.value == 39
+    assert result.changed_facts[0].factual.value == result.changed_facts[0].alternative.value
+    assert result.changed_facts[0].factual.supporting_pieces != result.changed_facts[0].alternative.supporting_pieces
+    assert result.factual_move_analysis is not None
+    assert result.factual_move_analysis.move == chess.Move.from_uci("e2e4")
+    assert result.alternative_move_analysis is not None
+    assert result.alternative_move_analysis.move == chess.Move.from_uci("d2d4")
 
 
 def test_automatic_sibling_selection_uses_uci_order_and_skips_unsatisfied_candidates():
@@ -79,11 +83,52 @@ def test_automatic_sibling_selection_uses_uci_order_and_skips_unsatisfied_candid
 
 
 def test_automatic_sibling_selection_returns_first_uci_alternative():
-    result = sibling_counterfactual(chess.Board(), chess.Move.from_uci("e2e4"))
+    result = sibling_counterfactual(chess.Board(), "e2e4")
 
     assert result.succeeded
     assert isinstance(result.operator, SiblingMoveOperator)
     assert result.operator.alternative_move == chess.Move.from_uci("a2a3")
+
+
+def test_sibling_interface_accepts_concrete_uci_arguments_and_rejects_malformed_input():
+    pair = sibling_counterfactual(chess.Board(), factual="e2e4", alternative="d2d4")
+
+    assert pair.succeeded
+    assert pair.operator.factual_move == chess.Move.from_uci("e2e4")
+    assert pair.operator.alternative_move == chess.Move.from_uci("d2d4")
+    with pytest.raises(ValueError, match="factual must be a valid UCI"):
+        sibling_counterfactual(chess.Board(), factual="not-a-move")
+    with pytest.raises(TypeError, match="alternative must be"):
+        sibling_counterfactual(chess.Board(), factual="e2e4", alternative=object())
+
+
+def test_counterfactual_records_reject_internally_inconsistent_evidence():
+    pair = sibling_counterfactual(chess.Board(), factual="e2e4", alternative="d2d4")
+
+    with pytest.raises(ValueError, match="PositionIdentity"):
+        replace(pair.factual, identity=object())
+    with pytest.raises(ValueError, match="status must match"):
+        replace(pair.factual, rule_valid=False)
+    with pytest.raises(ValueError, match="history status"):
+        replace(pair.factual, history_complete=False)
+    with pytest.raises(ValueError, match="must be booleans"):
+        replace(pair.history, shared_parent=1)
+    with pytest.raises(ValueError, match="Reachability is proven"):
+        replace(pair.history, reachability_proven=False)
+    with pytest.raises(ValueError, match="factual position"):
+        replace(pair, factual=object())
+    with pytest.raises(ValueError, match="CounterfactualValidity"):
+        replace(pair, validity="history_consistent")
+    with pytest.raises(ValueError, match="HistoryGuarantee"):
+        replace(pair, history=object())
+    with pytest.raises(ValueError, match="missing alternative"):
+        replace(pair, alternative=None)
+    with pytest.raises(ValueError, match="produced alternative"):
+        replace(
+            pair,
+            failures=pair.failures
+            + (counterfactuals.CounterfactualFailure(CounterfactualFailureReason.CONSTRAINT_VIOLATION, "fixture"),),
+        )
 
 
 def test_structural_removal_reports_metadata_and_cannot_claim_reachability():
@@ -105,11 +150,11 @@ def test_structural_removal_reports_metadata_and_cannot_claim_reachability():
 
     assert result.succeeded
     assert result.validity is CounterfactualValidity.RULE_VALID
-    assert result.modified is not None
-    assert result.modified.rule_valid
-    assert not result.modified.history_complete
-    assert result.history.original_complete
-    assert not result.history.modified_complete
+    assert result.alternative is not None
+    assert result.alternative.rule_valid
+    assert not result.alternative.history_complete
+    assert result.history.factual_complete
+    assert not result.history.alternative_complete
     assert not result.history.shared_parent
     assert not result.history.legal_from_shared_parent
     assert not result.history.reachability_proven
@@ -124,8 +169,8 @@ def test_structural_removal_reports_metadata_and_cannot_claim_reachability():
     }
     assert all(item.satisfied for item in (*result.changed_attributes, *result.preserved_attributes))
     assert result.changed_facts[0].relation is ConstraintRelation.CHANGED
-    assert result.changed_facts[0].original.value == 39
-    assert result.changed_facts[0].modified.value == 34
+    assert result.changed_facts[0].factual.value == 39
+    assert result.changed_facts[0].alternative.value == 34
     assert result.preserved_facts[0].satisfied
 
 
@@ -151,8 +196,8 @@ def test_relocation_preserves_material_but_loses_structural_history():
     )
 
     assert result.succeeded
-    assert result.modified is not None
-    modified = chess.Board(result.modified.fen)
+    assert result.alternative is not None
+    modified = chess.Board(result.alternative.fen)
     assert modified.piece_at(chess.B1) is None
     assert modified.piece_at(chess.A3) == chess.Piece(chess.KNIGHT, chess.WHITE)
     assert all(item.satisfied for item in (*result.changed_attributes, *result.preserved_attributes))
@@ -177,7 +222,7 @@ def test_structural_operators_return_structured_failures():
     assert occupied.failures[0].reason is CounterfactualFailureReason.OCCUPIED_TARGET_SQUARE
     assert constraint.failures[0].reason is CounterfactualFailureReason.CONSTRAINT_VIOLATION
     assert constraint.failures[0].attribute is PositionAttribute.MATERIAL
-    assert all(result.modified is None for result in (empty, king, occupied, constraint))
+    assert all(result.alternative is None for result in (empty, king, occupied, constraint))
 
 
 def test_relocation_rejects_king_empty_source_and_invalid_result():
@@ -206,11 +251,11 @@ def test_structural_edit_clears_invalid_en_passant_and_reports_the_change():
     )
 
     assert result.succeeded
-    assert result.modified is not None
-    assert chess.Board(result.modified.fen).ep_square is None
+    assert result.alternative is not None
+    assert chess.Board(result.alternative.fen).ep_square is None
     ep = next(item for item in result.attributes if item.attribute is PositionAttribute.EN_PASSANT)
-    assert ep.original == chess.E3
-    assert ep.modified is None
+    assert ep.factual == chess.E3
+    assert ep.alternative is None
     assert ep.changed
 
 
@@ -227,8 +272,8 @@ def test_truncated_sibling_declares_only_shared_parent_legality():
     assert result.validity is CounterfactualValidity.SIBLING_LEGAL_MOVE
     assert result.history.shared_parent
     assert result.history.legal_from_shared_parent
-    assert not result.history.original_complete
-    assert not result.history.modified_complete
+    assert not result.history.factual_complete
+    assert not result.history.alternative_complete
     assert not result.history.reachability_proven
 
 
@@ -289,8 +334,8 @@ def test_property_every_explicit_starting_sibling_is_rule_valid_and_uses_same_pa
         result = sibling_counterfactual(parent, factual, alternative)
 
         assert result.succeeded, alternative.uci()
-        assert result.modified is not None
-        assert result.modified.rule_valid
+        assert result.alternative is not None
+        assert result.alternative.rule_valid
         assert result.history.shared_parent
         assert result.history.legal_from_shared_parent
         assert isinstance(result.operator, SiblingMoveOperator)
@@ -307,6 +352,6 @@ def test_property_removing_any_starting_non_king_piece_never_returns_a_malformed
 
         assert result.succeeded, chess.square_name(square)
         assert result.validity is CounterfactualValidity.RULE_VALID
-        assert result.modified is not None
-        assert result.modified.rule_valid
+        assert result.alternative is not None
+        assert result.alternative.rule_valid
         assert not result.history.reachability_proven

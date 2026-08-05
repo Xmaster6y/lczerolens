@@ -15,6 +15,7 @@ import chess
 
 from .facts import Evidence, FactAnalyzer, FactKind, HistoryRequirement, history_is_available
 from .moves import MoveAnalysis, analyze_move
+from .provenance import PositionIdentity
 
 
 class CounterfactualValidity(str, Enum):
@@ -120,21 +121,54 @@ class CounterfactualConstraints:
 class CounterfactualPosition:
     """Serializable position identity plus rule and history status."""
 
-    fen: str
+    identity: PositionIdentity
     status: chess.Status
     rule_valid: bool
     history_complete: bool
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.identity, PositionIdentity):
+            raise ValueError("Counterfactual positions require a PositionIdentity.")
+        board = self.identity.board()
+        if self.status != board.status() or self.rule_valid is not board.is_valid():
+            raise ValueError("Counterfactual position status must match its identity.")
+        complete = history_is_available(board, HistoryRequirement.FULL_MOVE_STACK)
+        if self.history_complete is not complete:
+            raise ValueError("Counterfactual history status must match its retained position history.")
+
+    @property
+    def fen(self) -> str:
+        """Canonical FEN of the retained position."""
+        return self.identity.fen
+
+    def board(self) -> chess.Board:
+        """Reconstruct a defensive board with every retained history move."""
+        return self.identity.board()
 
 
 @dataclass(frozen=True)
 class HistoryGuarantee:
     """What is known about the relationship between the position histories."""
 
-    original_complete: bool
-    modified_complete: bool
+    factual_complete: bool
+    alternative_complete: bool
     shared_parent: bool
     legal_from_shared_parent: bool
     reachability_proven: bool
+
+    def __post_init__(self) -> None:
+        values = (
+            self.factual_complete,
+            self.alternative_complete,
+            self.shared_parent,
+            self.legal_from_shared_parent,
+            self.reachability_proven,
+        )
+        if any(not isinstance(value, bool) for value in values):
+            raise ValueError("Counterfactual history guarantees must be booleans.")
+        proven = all(values[:4])
+        if self.reachability_proven is not proven:
+            raise ValueError("Reachability is proven only for complete legal siblings from one parent.")
 
 
 @dataclass(frozen=True)
@@ -143,8 +177,8 @@ class AttributeVerification:
 
     attribute: PositionAttribute
     relation: ConstraintRelation
-    original: object
-    modified: object
+    factual: object
+    alternative: object
     satisfied: bool
 
 
@@ -153,18 +187,18 @@ class AttributeChange:
     """Observed relation for one metadata attribute, whether constrained or not."""
 
     attribute: PositionAttribute
-    original: object
-    modified: object
+    factual: object
+    alternative: object
     changed: bool
 
 
 @dataclass(frozen=True)
 class FactVerification:
-    """Original evidence and modified evidence for one requested fact relation."""
+    """Factual and alternative evidence for one requested fact relation."""
 
     relation: ConstraintRelation
-    original: Evidence
-    modified: Evidence
+    factual: Evidence
+    alternative: Evidence
     satisfied: bool
 
 
@@ -180,11 +214,11 @@ class CounterfactualFailure:
 
 
 @dataclass(frozen=True)
-class CounterfactualResult:
-    """A successful intervention or structured explanation of its failure."""
+class CounterfactualPair:
+    """Explicit factual and alternative positions with construction evidence."""
 
-    original: CounterfactualPosition
-    modified: CounterfactualPosition | None
+    factual: CounterfactualPosition
+    alternative: CounterfactualPosition | None
     operator: CounterfactualOperator
     validity: CounterfactualValidity
     history: HistoryGuarantee
@@ -193,29 +227,48 @@ class CounterfactualResult:
     preserved_attributes: tuple[AttributeVerification, ...] = ()
     changed_facts: tuple[FactVerification, ...] = ()
     preserved_facts: tuple[FactVerification, ...] = ()
-    original_move_analysis: MoveAnalysis | None = None
-    modified_move_analysis: MoveAnalysis | None = None
+    factual_move_analysis: MoveAnalysis | None = None
+    alternative_move_analysis: MoveAnalysis | None = None
     failures: tuple[CounterfactualFailure, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.factual, CounterfactualPosition):
+            raise ValueError("Counterfactual pairs require a factual position.")
+        if not isinstance(self.validity, CounterfactualValidity):
+            raise ValueError("Counterfactual validity must be a CounterfactualValidity value.")
+        if not isinstance(self.history, HistoryGuarantee):
+            raise ValueError("Counterfactual pairs require a HistoryGuarantee.")
+        if self.alternative is None:
+            if self.validity is not CounterfactualValidity.NO_COUNTERFACTUAL or not self.failures:
+                raise ValueError("A missing alternative requires no-counterfactual validity and a failure.")
+        elif (
+            not isinstance(self.alternative, CounterfactualPosition)
+            or self.validity is CounterfactualValidity.NO_COUNTERFACTUAL
+            or self.failures
+        ):
+            raise ValueError("A produced alternative requires positive validity and no failures.")
 
     @property
     def succeeded(self) -> bool:
-        """Whether a satisfying, valid modified position was produced."""
-        return self.modified is not None and not self.failures
+        """Whether a satisfying, valid alternative position was produced."""
+        return self.alternative is not None and not self.failures
 
 
 def sibling_counterfactual(
     parent: chess.Board,
-    factual_move: chess.Move,
-    alternative_move: chess.Move | None = None,
+    factual: chess.Move | str,
+    alternative: chess.Move | str | None = None,
     *,
     constraints: CounterfactualConstraints | None = None,
-) -> CounterfactualResult:
+) -> CounterfactualPair:
     """Compare two legal children of one parent, choosing deterministically.
 
-    When ``alternative_move`` is omitted, legal alternatives are tried in UCI
+    When ``alternative`` is omitted, legal alternatives are tried in UCI
     order and the first one satisfying all constraints is returned.
     """
     _validate_board(parent)
+    factual_move = _resolve_move(factual, "factual")
+    alternative_move = _resolve_move(alternative, "alternative") if alternative is not None else None
     resolved = constraints or CounterfactualConstraints()
     operator = SiblingMoveOperator(factual_move, alternative_move)
     parent_snapshot = _snapshot(parent)
@@ -280,8 +333,8 @@ def sibling_counterfactual(
             CounterfactualValidity.HISTORY_CONSISTENT if complete else CounterfactualValidity.SIBLING_LEGAL_MOVE,
             _history_guarantee(factual_board, modified_board, shared_parent=True, legal=True),
             verifications,
-            original_move_analysis=analyze_move(parent, factual_move),
-            modified_move_analysis=analyze_move(parent, candidate),
+            factual_move_analysis=analyze_move(parent, factual_move),
+            alternative_move_analysis=analyze_move(parent, candidate),
         )
 
     if alternative_move is not None:
@@ -290,9 +343,9 @@ def sibling_counterfactual(
         reason = CounterfactualFailureReason.NO_SATISFYING_COUNTERFACTUAL
         message = f"None of {len(candidates)} deterministic legal alternatives satisfied the constraints."
         failures = (CounterfactualFailure(reason, message), *candidate_failures)
-    return CounterfactualResult(
-        original=original,
-        modified=None,
+    return CounterfactualPair(
+        factual=original,
+        alternative=None,
         operator=operator,
         validity=CounterfactualValidity.NO_COUNTERFACTUAL,
         history=_history_guarantee(factual_board, None, shared_parent=True, legal=True),
@@ -305,7 +358,7 @@ def remove_piece_counterfactual(
     square: chess.Square,
     *,
     constraints: CounterfactualConstraints | None = None,
-) -> CounterfactualResult:
+) -> CounterfactualPair:
     """Remove a non-king piece and return a rule-valid structural state."""
     _validate_board(board)
     operator = RemovePieceOperator(square)
@@ -340,7 +393,7 @@ def relocate_piece_counterfactual(
     to_square: chess.Square,
     *,
     constraints: CounterfactualConstraints | None = None,
-) -> CounterfactualResult:
+) -> CounterfactualPair:
     """Relocate a non-king piece and return a rule-valid structural state."""
     _validate_board(board)
     operator = RelocatePieceOperator(from_square, to_square)
@@ -379,7 +432,7 @@ def _finish_structural(
     modified: chess.Board,
     operator: CounterfactualOperator,
     constraints: CounterfactualConstraints,
-) -> CounterfactualResult:
+) -> CounterfactualPair:
     history = _history_guarantee(original, modified, shared_parent=False, legal=False)
     if not modified.is_valid():
         return _failure_result(
@@ -391,9 +444,9 @@ def _finish_structural(
         )
     verifications, failures = _verify_constraints(original, modified, constraints)
     if failures:
-        return CounterfactualResult(
-            original=_snapshot(original),
-            modified=None,
+        return CounterfactualPair(
+            factual=_snapshot(original),
+            alternative=None,
             operator=operator,
             validity=CounterfactualValidity.NO_COUNTERFACTUAL,
             history=history,
@@ -460,9 +513,9 @@ def _verify_constraints(
             failures.append(
                 CounterfactualFailure(
                     CounterfactualFailureReason.CONSTRAINT_VIOLATION,
-                    f"Fact {verification.original.provenance.analyzer} was not {verification.relation.value}.",
+                    f"Fact {verification.factual.provenance.analyzer} was not {verification.relation.value}.",
                     candidate_move=candidate_move,
-                    analyzer=verification.original.provenance.analyzer,
+                    analyzer=verification.factual.provenance.analyzer,
                 )
             )
     return (changed_attributes, preserved_attributes, changed_facts, preserved_facts), tuple(failures)
@@ -554,12 +607,12 @@ def _success_result(
     history: HistoryGuarantee,
     verifications: VerificationGroups,
     *,
-    original_move_analysis: MoveAnalysis | None = None,
-    modified_move_analysis: MoveAnalysis | None = None,
-) -> CounterfactualResult:
-    return CounterfactualResult(
-        original=_snapshot(original),
-        modified=_snapshot(modified),
+    factual_move_analysis: MoveAnalysis | None = None,
+    alternative_move_analysis: MoveAnalysis | None = None,
+) -> CounterfactualPair:
+    return CounterfactualPair(
+        factual=_snapshot(original),
+        alternative=_snapshot(modified),
         operator=operator,
         validity=validity,
         history=history,
@@ -568,8 +621,8 @@ def _success_result(
         preserved_attributes=verifications[1],
         changed_facts=verifications[2],
         preserved_facts=verifications[3],
-        original_move_analysis=original_move_analysis,
-        modified_move_analysis=modified_move_analysis,
+        factual_move_analysis=factual_move_analysis,
+        alternative_move_analysis=alternative_move_analysis,
     )
 
 
@@ -581,10 +634,10 @@ def _failure_result(
     message: str,
     *,
     candidate_move: chess.Move | None = None,
-) -> CounterfactualResult:
-    return CounterfactualResult(
-        original=original,
-        modified=None,
+) -> CounterfactualPair:
+    return CounterfactualPair(
+        factual=original,
+        alternative=None,
         operator=operator,
         validity=CounterfactualValidity.NO_COUNTERFACTUAL,
         history=history,
@@ -597,7 +650,7 @@ def _structural_failure(
     operator: CounterfactualOperator,
     reason: CounterfactualFailureReason,
     message: str,
-) -> CounterfactualResult:
+) -> CounterfactualPair:
     return _failure_result(
         _snapshot(board),
         operator,
@@ -609,7 +662,7 @@ def _structural_failure(
 
 def _snapshot(board: chess.Board) -> CounterfactualPosition:
     return CounterfactualPosition(
-        fen=board.fen(en_passant="fen"),
+        identity=PositionIdentity.from_board(board),
         status=board.status(),
         rule_valid=board.is_valid(),
         history_complete=history_is_available(board, HistoryRequirement.FULL_MOVE_STACK),
@@ -623,14 +676,14 @@ def _history_guarantee(
     shared_parent: bool,
     legal: bool,
 ) -> HistoryGuarantee:
-    original_complete = history_is_available(original, HistoryRequirement.FULL_MOVE_STACK)
-    modified_complete = modified is not None and history_is_available(modified, HistoryRequirement.FULL_MOVE_STACK)
+    factual_complete = history_is_available(original, HistoryRequirement.FULL_MOVE_STACK)
+    alternative_complete = modified is not None and history_is_available(modified, HistoryRequirement.FULL_MOVE_STACK)
     return HistoryGuarantee(
-        original_complete=original_complete,
-        modified_complete=modified_complete,
+        factual_complete=factual_complete,
+        alternative_complete=alternative_complete,
         shared_parent=shared_parent,
         legal_from_shared_parent=legal,
-        reachability_proven=original_complete and modified_complete and shared_parent and legal,
+        reachability_proven=factual_complete and alternative_complete and shared_parent and legal,
     )
 
 
@@ -657,3 +710,14 @@ def _is_legal_move(board: chess.Board, move: object) -> bool:
         and move.to_square in chess.SQUARES
         and move in board.legal_moves
     )
+
+
+def _resolve_move(move: chess.Move | str, label: str) -> chess.Move:
+    if isinstance(move, chess.Move):
+        return move
+    if not isinstance(move, str):
+        raise TypeError(f"{label} must be a chess.Move or UCI string.")
+    try:
+        return chess.Move.from_uci(move)
+    except ValueError as error:
+        raise ValueError(f"{label} must be a valid UCI move.") from error

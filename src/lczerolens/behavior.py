@@ -16,7 +16,7 @@ import torch
 from tensordict import TensorDict
 
 from .board import LczeroBoard
-from .counterfactuals import CounterfactualResult
+from .counterfactuals import CounterfactualPair
 from .moves import LineAnalysis
 from .reference_search import replay_root_events
 from .search_trace import (
@@ -463,7 +463,7 @@ class CounterfactualBehaviorComparison:
     modified: EvaluatorBehavior
     targets: tuple[TargetEffect, ...]
     collateral: CollateralEffect
-    counterfactual: CounterfactualResult | None = None
+    counterfactual: CounterfactualPair | None = None
     line_analyses: tuple[tuple[str, LineAnalysis], ...] = ()
 
 
@@ -473,7 +473,7 @@ def compare_counterfactual_behavior(
     target_moves: tuple[str, ...],
     *,
     control_kind: ControlKind = ControlKind.MATCHED,
-    counterfactual: CounterfactualResult | None = None,
+    counterfactual: CounterfactualPair | None = None,
     line_analyses: Mapping[str, LineAnalysis] | None = None,
 ) -> CounterfactualBehaviorComparison:
     """Report declared target effects separately from all collateral effects."""
@@ -494,9 +494,9 @@ def compare_counterfactual_behavior(
     if counterfactual is not None and not counterfactual.succeeded:
         raise ValueError("A linked counterfactual result must have succeeded.")
     if counterfactual is not None and (
-        counterfactual.original.fen != original.fen
-        or counterfactual.modified is None
-        or counterfactual.modified.fen != modified.fen
+        counterfactual.factual.fen != original.fen
+        or counterfactual.alternative is None
+        or counterfactual.alternative.fen != modified.fen
     ):
         raise ValueError("Linked counterfactual positions must match the evaluator behaviours.")
     original_by_move = {action.move: action for action in original.actions}
@@ -534,7 +534,7 @@ def compare_counterfactual_behavior(
 
 
 @dataclass(frozen=True)
-class DecisionComparison:
+class SearchDecisionComparison:
     """Structured checkpoint-D answer without generated explanatory prose."""
 
     evaluator_candidate: str
@@ -552,7 +552,7 @@ def compare_search_decision(
     trace: SearchTrace,
     *,
     line_analyses: Mapping[str, LineAnalysis] | None = None,
-) -> DecisionComparison:
+) -> SearchDecisionComparison:
     """Link a search-over-evaluator preference change to supplied chess evidence."""
     comparison = compare_evaluator_to_search(evaluator, trace)
     if comparison.search_selected_move is None:
@@ -565,7 +565,7 @@ def compare_search_decision(
     for move, line in evidence.items():
         if line.initial_position.fen != evaluator.fen or not line.moves or line.moves[0].uci() != move:
             raise ValueError("Decision line analysis must start at the root and begin with its keyed move.")
-    return DecisionComparison(
+    return SearchDecisionComparison(
         evaluator.selected_move,
         comparison.search_selected_move,
         evaluator_action,
@@ -729,7 +729,7 @@ __all__ = [
     "CollateralEffect",
     "ControlKind",
     "CounterfactualBehaviorComparison",
-    "DecisionComparison",
+    "SearchDecisionComparison",
     "EvaluatorAction",
     "EvaluatorBehavior",
     "METRIC_DEFINITIONS",

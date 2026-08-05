@@ -91,8 +91,8 @@ Constraint-aware counterfactuals
 --------------------------------
 
 ``lczerolens.counterfactuals`` creates position pairs without treating every
-board edit as a reachable game state. ``sibling_counterfactual`` compares a
-factual legal move with a different legal move from the same parent. If the
+board edit as a reachable game state. ``sibling_counterfactual`` accepts
+concrete ``factual`` and ``alternative`` UCI moves from the same parent. If the
 parent has a complete standard-game move stack, both children receive the
 ``history_consistent`` tier; otherwise the result records only the
 ``sibling_legal_move`` guarantee. Omitting the alternative selects the first
@@ -106,11 +106,11 @@ historical reachability is unproven.
 
 Constraints independently request changed or preserved turn, kings, material,
 castling rights, en-passant square, halfmove clock, and complete-history
-availability. Every successful result also reports the observed relation for
+availability. Every successful pair also reports the observed relation for
 all seven attributes, including unconstrained metadata. Fact constraints accept
-any ``FactAnalyzer`` and retain the original and modified ``Evidence`` records
+any ``FactAnalyzer`` and retain the factual and alternative ``Evidence`` records
 in ``FactVerification``. A request that cannot be met returns
-``CounterfactualResult.succeeded == False`` with
+``CounterfactualPair.succeeded == False`` with
 stable ``CounterfactualFailureReason`` values instead of a malformed or
 mischaracterized position.
 

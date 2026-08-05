@@ -15,15 +15,15 @@ from tensordict import TensorDict
 from torch import nn
 
 from lczerolens import LczeroBoard
-from lczerolens.behavior import (
-    CounterfactualBehaviorComparison,
-    DecisionComparison,
-    EvaluatorBehavior,
-    compare_counterfactual_behavior,
-    compare_search_decision,
-    evaluator_behavior,
+from lczerolens.decision import (
+    CounterfactualComparison,
+    DecisionAnalysis,
+    compare_counterfactual,
+    compare_decision,
 )
-from lczerolens.counterfactuals import CounterfactualResult, sibling_counterfactual
+from lczerolens.counterfactuals import CounterfactualPair, sibling_counterfactual
+from lczerolens.evaluation import Evaluation
+from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
 from lczerolens.model import LczeroModel
 from lczerolens.moves import LineAnalysis, analyze_line
@@ -57,9 +57,16 @@ class _TutorialFixtureModule(nn.Module):
         return policy, torch.full((batch,), 0.2, device=board.device)
 
 
-def load_fixture_evaluator() -> LczeroModel:
-    """Load a tiny PyTorch evaluator through the standard TensorDict wrapper."""
-    return LczeroModel(_TutorialFixtureModule(), out_keys=["policy", "value"])
+@dataclass(frozen=True)
+class _FixtureRuntime:
+    model: LczeroModel
+    evaluator: LczeroEvaluator
+
+
+def load_fixture_evaluator() -> _FixtureRuntime:
+    """Load a tiny model and its concrete chess evaluator facade."""
+    model = LczeroModel(_TutorialFixtureModule(), out_keys=["policy", "value"])
+    return _FixtureRuntime(model, LczeroEvaluator(model))
 
 
 def evaluate(model: LczeroModel, board: LczeroBoard) -> TensorDict:
@@ -71,20 +78,20 @@ def evaluate(model: LczeroModel, board: LczeroBoard) -> TensorDict:
 class TutorialResult:
     """Structured observations from the tutorial, with no scientific claim."""
 
-    evaluator: EvaluatorBehavior
+    evaluation: Evaluation
     search: SearchTrace
-    decision: DecisionComparison
-    counterfactual: CounterfactualResult
-    counterfactual_behavior: CounterfactualBehaviorComparison
+    decision: DecisionAnalysis
+    counterfactual: CounterfactualPair
+    counterfactual_comparison: CounterfactualComparison
     variations: dict[str, LineAnalysis]
 
 
 def run_tutorial() -> TutorialResult:
     """Run the documented, hermetic decision-analysis workflow."""
     board = LczeroBoard()
-    model = load_fixture_evaluator()
-    evaluator = evaluator_behavior(board, evaluate(model, board))
-    search = ReferenceMCTS(c_puct=1.0).search(board, lambda position: evaluate(model, position), simulations=4)
+    runtime = load_fixture_evaluator()
+    evaluation = runtime.evaluator.evaluate(board)
+    search = ReferenceMCTS(c_puct=1.0).search(board, lambda position: evaluate(runtime.model, position), simulations=4)
 
     # The candidate lines are exact move evidence, not generated explanation.
     variations = {
@@ -94,35 +101,21 @@ def run_tutorial() -> TutorialResult:
             MaterialAnalyzer(FactPerspective.WHITE),
             MaterialAnalyzer(FactPerspective.BLACK),
         )
-        for move in (evaluator.selected_move, search.snapshots[-1].selection.move)
+        for move in (evaluation.policy.best_move.uci(), search.snapshots[-1].selection.move)
     }
-    decision = compare_search_decision(evaluator, search, line_analyses=variations)
-
-    counterfactual = sibling_counterfactual(board, chess.Move.from_uci("g1f3"), chess.Move.from_uci("b1c3"))
-    if not counterfactual.succeeded or counterfactual.modified is None:
+    counterfactual = sibling_counterfactual(board, factual="g1f3", alternative="b1c3")
+    if not counterfactual.succeeded or counterfactual.alternative is None:
         raise RuntimeError("The tutorial's legal sibling counterfactual unexpectedly failed.")
-    original_board = board.copy(stack=True)
-    original_board.push_uci("g1f3")
-    modified_board = board.copy(stack=True)
-    modified_board.push_uci("b1c3")
-    original = evaluator_behavior(original_board, evaluate(model, original_board))
-    modified = evaluator_behavior(modified_board, evaluate(model, modified_board))
-    comparison = compare_counterfactual_behavior(
-        original,
-        modified,
-        ("e7e5",),
-        counterfactual=counterfactual,
-        line_analyses={
-            "e7e5": analyze_line(
-                original_board,
-                (chess.Move.from_uci("e7e5"),),
-                MaterialAnalyzer(FactPerspective.WHITE),
-            )
-        },
+    comparison = compare_counterfactual(counterfactual, runtime.evaluator)
+    decision = compare_decision(
+        evaluation,
+        search,
+        line_analyses=variations,
+        counterfactuals=(comparison,),
     )
-    return TutorialResult(evaluator, search, decision, counterfactual, comparison, variations)
+    return TutorialResult(evaluation, search, decision, counterfactual, comparison, variations)
 
 
 if __name__ == "__main__":
     result = run_tutorial()
-    print(f"evaluator={result.evaluator.selected_move} search={result.decision.search_candidate}")
+    print(f"policy={result.decision.policy_move} search={result.decision.search_move}")

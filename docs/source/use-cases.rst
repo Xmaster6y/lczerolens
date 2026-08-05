@@ -137,6 +137,11 @@ Counterfactual construction and model comparison remain separate::
 
    pair = sibling_counterfactual(board, factual="e2e4", alternative="d2d4")
    comparison = compare_counterfactual(pair, evaluator)
+   decision = compare_decision(
+       evaluation,
+       search_result,
+       counterfactuals=[comparison],
+   )
 
    pair.validity
    comparison.policy_change

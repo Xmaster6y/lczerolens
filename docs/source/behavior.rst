@@ -57,11 +57,18 @@ variation when the legal move sets differ. ``matched``, ``shuffled``, and
 ``wrong_target`` are first-class :class:`~lczerolens.behavior.ControlKind`
 values rather than labels hidden in prose.
 
-A successful :class:`~lczerolens.counterfactuals.CounterfactualResult` and
-supplied :class:`~lczerolens.moves.LineAnalysis` can be retained
-with the comparison. :func:`~lczerolens.behavior.compare_search_decision`
-combines the evaluator's initial candidate, the source-selected search
-candidate, their root statistics, source capability, and any supplied
-line analysis. It provides the structured checkpoint-D evidence needed
-to ask why search preferred one candidate without generating or asserting a
-heuristic chess explanation.
+The concrete user-facing composition lives in :mod:`lczerolens.decision`.
+:func:`~lczerolens.decision.compare_decision` accepts an
+:class:`~lczerolens.evaluation.Evaluation` (or its immutable record) and a
+:class:`~lczerolens.search_trace.SearchTrace`.  Its
+:class:`~lczerolens.decision.DecisionAnalysis` retains both producer records,
+exposes policy and search observations per legal action, and attaches exact
+:class:`~lczerolens.moves.LineAnalysis` values without generating a heuristic
+or causal explanation.
+
+:func:`~lczerolens.decision.compare_counterfactual` takes an already-validated
+:class:`~lczerolens.counterfactuals.CounterfactualPair` and an evaluator.  Pair
+validity, policy change, and value change remain separate records. Typed
+counterfactual comparisons may be retained on ``DecisionAnalysis`` when they
+use the same evaluator provenance; they are not folded into a synthetic
+decision or explanation score.
