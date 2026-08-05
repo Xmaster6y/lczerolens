@@ -38,19 +38,13 @@ guarantees and limitations defined by :doc:`facts` and :doc:`behavior`.
 Evaluator contract
 ------------------
 
-Conceptually, the chess boundary is an ``LczeroBoard`` position in and a
-``TensorDict`` evaluator result out. At runtime, ``LczeroModel.forward()`` also
-accepts an iterable of boards, a 3D or 4D board tensor, or a ``TensorDict``.
-The output contains raw policy values over the fixed 1858-entry lc0 vocabulary
-and WDL probabilities when the network supplies them; value and MLH are exposed
-when supplied or derived by an explicit adapter such as ``ForceValue``.
-Batching and device movement preserve this contract. Legal masking is a
-downstream operation: the wrapper returns raw policy values, and consumers must
-select the board's legal indices before interpreting a move choice.
-``LczeroBoard.get_legal_policy(policy)`` performs that selection and softmax
-normalization for one policy vector; it rejects terminal positions, malformed
-vectors, and non-finite legal logits rather than returning an invalid
-distribution.
+The chess boundary is a plain ``chess.Board`` position in and an ``Evaluation``
+out. ``LczeroEvaluator.prepare`` encodes a board batch and its legal mask into
+the canonical ``TensorDict`` keys; ``evaluator.model`` performs raw network
+execution; and ``LczeroEvaluator.finish`` validates and standardizes the heads
+without discarding instrumentation keys. ``LczeroModel`` owns loading and raw
+TensorDict execution only. Legal masking and normalization belong to the
+evaluator rather than to a mutable board subclass.
 
 Model-format compatibility
 --------------------------
@@ -73,7 +67,7 @@ Architecture boundary
    rules, FEN, legal moves              hooks, patches, probes, attribution
           |                                            |
           v                                            | wrap or instrument
-   LczeroBoard -- encoding / move vocabulary --> lc0 adapters / PyTorch evaluator
+   chess.Board -- stateless codec --> TensorDict / PyTorch evaluator
                                               conversion, loading, TensorDict batching
           |
           v
@@ -118,14 +112,14 @@ announced compatibility release.
      - Disposition
      - Rationale
    * - ``__init__``
-     - Board/model imports plus facts, counterfactual, trace-adapter, reference
+     - Model/evaluator imports plus facts, counterfactual, reference
        search, move-evidence, and behavior-comparison entry points
      - Retain
      - Stable convenience entry point for the documented chess-decision surface.
-   * - ``board``
-     - ``InputEncoding``, ``LczeroBoard``
-     - Retain
-     - lc0 encoding, legal moves, and policy vocabulary bridge.
+   * - ``_codec``
+     - ``InputFormat`` and stateless input/policy helpers
+     - Internalize
+     - Private Lczero transport used by the public evaluator and search boundaries.
    * - ``constants``
      - Policy-index and encoding constants
      - Internalize
@@ -169,13 +163,9 @@ announced compatibility release.
 Compatibility policy
 --------------------
 
-The top-level ``LczeroBoard`` and ``LczeroModel`` imports, the board encoding
-and policy-index mapping, and the evaluator field meanings are the compatibility
-core. A compatible release must preserve their documented semantics or provide a
-deprecation path and migration note. Refocused modules remain importable during
-the 0.x series but may receive narrower contracts; any removal or behavior break
-requires a deprecation warning in one minor release and release notes describing
-the replacement. Internal implementation names may change without that promise.
+For the breaking ``0.5`` release, plain ``chess.Board``, ``LczeroEvaluator``,
+``LczeroModel``, and the evaluator field meanings form the compatibility core.
+The private codec may evolve without becoming a second public board API.
 
 New feature gate
 ----------------

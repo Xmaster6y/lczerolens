@@ -11,7 +11,7 @@ import subprocess
 import chess
 import torch
 
-from lczerolens.board import LczeroBoard
+from lczerolens._codec import encode_move
 
 try:
     from lczero.backends import Backend, GameState
@@ -107,7 +107,7 @@ def prediction_from_backend(
     return filtered_policy, value
 
 
-def moves_with_castling_swap(lczero_game: GameState, board: LczeroBoard):
+def moves_with_castling_swap(lczero_game: GameState, board: chess.Board):
     """
     Return backend legal moves in the project's canonical castling notation.
 
@@ -115,7 +115,7 @@ def moves_with_castling_swap(lczero_game: GameState, board: LczeroBoard):
     move to the rook square (``e1h1`` / ``e1a1``).  Bindings have used both
     that notation and standard UCI (``e1g1`` / ``e1c1``) for ``moves()``,
     while retaining the rook-square policy index.  Normalize both forms to
-    the fixed policy vocabulary used by :class:`LczeroBoard`.
+    the fixed Lczero policy vocabulary.
     """
     lczero_legal_moves = list(lczero_game.moves())
     lczero_policy_indices = list(lczero_game.policy_indices())
@@ -135,5 +135,5 @@ def moves_with_castling_swap(lczero_game: GameState, board: LczeroBoard):
             continue
 
         lczero_legal_moves[index] = uci_move
-        lczero_policy_indices[index] = LczeroBoard.encode_move(move, board.turn)
+        lczero_policy_indices[index] = encode_move(board, move)
     return lczero_legal_moves, lczero_policy_indices

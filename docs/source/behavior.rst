@@ -9,7 +9,7 @@ Evaluator behaviour
 -------------------
 
 :func:`~lczerolens.behavior.evaluator_behavior` accepts one
-:class:`~lczerolens.board.LczeroBoard` and the canonical evaluator output.
+:class:`chess.Board` and the canonical evaluator output.
 ``policy`` is required and interpreted as 1858 raw logits. Illegal actions are
 removed before a legal-action softmax. Candidate ranks use competition ranking;
 exact maximum-logit ties are retained and the selected representative uses UCI

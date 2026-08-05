@@ -242,4 +242,4 @@ def _model_provenance(model: LczeroModel, *, network_path: str | None = None) ->
     )
 
 
-__all__ = ["LczeroEvaluator"]
+__all__ = ["InputFormat", "LczeroEvaluator"]

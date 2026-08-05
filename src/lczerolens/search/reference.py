@@ -15,7 +15,7 @@ import chess
 import torch
 from tensordict import TensorDict
 
-from lczerolens.board import LczeroBoard
+from lczerolens._codec import encode_move, legal_indices
 from lczerolens.evaluation import Evaluation
 from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.schema import LczeroKeys
@@ -47,7 +47,7 @@ from lczerolens.search.trace import (
 class Evaluator(Protocol):
     """The stable #130 evaluator shape consumed by reference search."""
 
-    def __call__(self, board: LczeroBoard) -> TensorDict: ...
+    def __call__(self, board: chess.Board) -> TensorDict: ...
 
 
 @dataclass
@@ -65,7 +65,7 @@ class _Edge:
 
 @dataclass
 class _Node:
-    board: LczeroBoard
+    board: chess.Board
     node_id: str
     edges: dict[str, _Edge] = field(default_factory=dict)
     expanded: bool = False
@@ -130,7 +130,7 @@ class _ReferenceMCTS:
 
     The evaluator returns a single-board TensorDict with a raw 1858-logit
     ``policy`` and scalar ``value`` for the side to move.  Legal logits are
-    masked and softmaxed using :meth:`LczeroBoard.get_legal_policy`.
+    masked and softmaxed over the stateless Lczero legal-policy mapping.
     """
 
     def __init__(self, c_puct: float = 1.0):
@@ -140,8 +140,8 @@ class _ReferenceMCTS:
 
     def search(
         self,
-        board: LczeroBoard,
-        evaluator: Evaluator | Callable[[LczeroBoard], TensorDict],
+        board: chess.Board,
+        evaluator: Evaluator | Callable[[chess.Board], TensorDict],
         simulations: int,
     ) -> SearchTrace:
         """Run a fixed number of simulations and return their full trace."""
@@ -224,7 +224,7 @@ class _ReferenceMCTS:
         )
 
     def _expand(
-        self, node: _Node, evaluator: Evaluator | Callable[[LczeroBoard], TensorDict], perspective: ValuePerspective
+        self, node: _Node, evaluator: Evaluator | Callable[[chess.Board], TensorDict], perspective: ValuePerspective
     ) -> tuple[PositionEvaluation, NodeExpansion, EvaluatorCall]:
         output = self._single_evaluation(evaluator(node.board))
         policy = output.get("policy")
@@ -233,23 +233,26 @@ class _ReferenceMCTS:
             raise ValueError("Evaluator must return TensorDict tensors named 'policy' and 'value'.")
         if value.numel() != 1 or not torch.isfinite(value).all() or not -1 <= value.item() <= 1:
             raise ValueError("Evaluator value must be one finite scalar in [-1, 1].")
+        if policy.ndim != 1 or policy.shape[0] != 1858:
+            raise ValueError("Evaluator policy must contain exactly 1858 raw logits.")
         legal_moves = sorted(node.board.legal_moves, key=lambda move: move.uci())
-        priors = node.board.get_legal_policy(policy.detach())
-        legal_indices = node.board.get_legal_indices().tolist()
-        by_index = {index: prior.item() for index, prior in zip(legal_indices, priors)}
-        node.edges = {
-            move.uci(): _Edge(move, by_index[node.board.encode_move(move, node.board.turn)]) for move in legal_moves
-        }
+        indices = legal_indices(node.board).to(policy.device)
+        legal_logits = policy.detach().gather(0, indices)
+        if not torch.isfinite(legal_logits).all():
+            raise ValueError("Evaluator policy must not contain non-finite legal logits.")
+        priors = torch.softmax(legal_logits, dim=0)
+        index_values = indices.detach().cpu().tolist()
+        by_index = {index: prior.item() for index, prior in zip(index_values, priors)}
+        node.edges = {move.uci(): _Edge(move, by_index[encode_move(node.board, move)]) for move in legal_moves}
         node.expanded = True
         edge_stats = self._edge_stats(node, perspective)
-        legal_logits = policy.detach().gather(0, node.board.get_legal_indices().to(policy.device))
-        by_index = {index: logit.item() for index, logit in zip(legal_indices, legal_logits)}
+        by_index = {index: logit.item() for index, logit in zip(index_values, legal_logits)}
         evaluator_call = EvaluatorCall(
             dtype=str(policy.dtype).removeprefix("torch."),
             source_device=str(policy.device),
             search_device=str(policy.device),
             legal_policy_logits=tuple(
-                (move.uci(), float(by_index[node.board.encode_move(move, node.board.turn)])) for move in legal_moves
+                (move.uci(), float(by_index[encode_move(node.board, move)])) for move in legal_moves
             ),
         )
         return (
@@ -270,7 +273,7 @@ class _ReferenceMCTS:
         raise ValueError("Reference search requires one evaluator result per board.")
 
     def _leaf(
-        self, node: _Node, evaluator: Evaluator | Callable[[LczeroBoard], TensorDict], root_turn: chess.Color
+        self, node: _Node, evaluator: Evaluator | Callable[[chess.Board], TensorDict], root_turn: chess.Color
     ) -> tuple[LeafRecord, NodeExpansion | None]:
         perspective = ValuePerspective.ROOT_PLAYER if node.board.turn == root_turn else ValuePerspective.SIDE_TO_MOVE
         if node.board.is_game_over():
@@ -345,11 +348,11 @@ class ReferenceSearch:
             raise TypeError("ReferenceSearch.run requires a python-chess Board.")
         if not isinstance(limit, Simulations):
             raise ValueError("ReferenceSearch supports only Simulations limits.")
-        internal = _as_lczero_board(board)
-        trace = self._core.search(internal, self._evaluate, simulations=limit.value)
+        _validate_reference_board(board)
+        trace = self._core.search(board.copy(stack=True), self._evaluate, simulations=limit.value)
         return SearchResult.from_trace(trace)
 
-    def _evaluate(self, board: LczeroBoard) -> TensorDict:
+    def _evaluate(self, board: chess.Board) -> TensorDict:
         evaluated = self.evaluator.evaluate(board)
         if not isinstance(evaluated, Evaluation):
             raise TypeError("ReferenceSearch requires one Evaluation per position.")
@@ -366,16 +369,9 @@ class ReferenceSearch:
         )
 
 
-def _as_lczero_board(board: chess.Board) -> LczeroBoard:
+def _validate_reference_board(board: chess.Board) -> None:
     if board.uci_variant != "chess" or board.chess960:
         raise ValueError("ReferenceSearch currently supports standard chess positions.")
-    root = board.root()
-    converted = LczeroBoard(root.fen(), chess960=board.chess960)
-    for move in board.move_stack:
-        converted.push(converted.parse_uci(move.uci()))
-    if converted.fen() != board.fen():
-        raise ValueError("ReferenceSearch could not preserve the supplied board history.")
-    return converted
 
 
 def replay_root_events(events: tuple[SimulationEvent, ...]) -> tuple[EdgeStatistics, ...]:
@@ -596,13 +592,13 @@ def _replay_c_puct(trace: SearchTrace) -> float:
     return value
 
 
-def _replay_root_board(trace: SearchTrace) -> LczeroBoard:
+def _replay_root_board(trace: SearchTrace) -> chess.Board:
     if trace.root_start_fen is None or trace.root_move_history is None:
         raise SemanticReplayError(
             "reference traces need root history to replay history-dependent terminality.",
             phase="root_history",
         )
-    board = LczeroBoard(trace.root_start_fen)
+    board = chess.Board(trace.root_start_fen)
     for move_uci in trace.root_move_history:
         board.push_uci(move_uci)
     if board.fen() != trace.root_fen:

@@ -15,7 +15,7 @@ import chess
 import torch
 from tensordict import TensorDict
 
-from .board import LczeroBoard
+from ._codec import encode_move
 from .counterfactuals import CounterfactualPair
 from .moves import LineAnalysis
 from .search.reference import replay_root_events
@@ -201,7 +201,7 @@ class EvaluatorBehavior:
 
 
 def evaluator_behavior(
-    board: LczeroBoard,
+    board: chess.Board,
     output: TensorDict | Mapping[str, torch.Tensor],
     *,
     perspective: ValuePerspective = ValuePerspective.SIDE_TO_MOVE,
@@ -212,8 +212,8 @@ def evaluator_behavior(
     already-normalized lc0 ``(win, draw, loss)`` head. Optional scalar heads are
     retained only when present; no head is derived from another head.
     """
-    if not isinstance(board, LczeroBoard):
-        raise TypeError("Evaluator behaviour requires an LczeroBoard.")
+    if not isinstance(board, chess.Board):
+        raise TypeError("Evaluator behaviour requires a python-chess Board.")
     if not isinstance(perspective, ValuePerspective):
         raise ValueError("perspective must be a ValuePerspective.")
     policy = _single_tensor(output, "policy", required=True)
@@ -223,7 +223,7 @@ def evaluator_behavior(
     if not legal_moves:
         raise ValueError("Evaluator behaviour requires a non-terminal position with legal moves.")
     logits = torch.tensor(
-        [float(policy[board.encode_move(move, board.turn)].item()) for move in legal_moves], dtype=torch.float64
+        [float(policy[encode_move(board, move)].item()) for move in legal_moves], dtype=torch.float64
     )
     probabilities = torch.softmax(logits, dim=0)
     values = logits.tolist()

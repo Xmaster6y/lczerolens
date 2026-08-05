@@ -8,16 +8,22 @@ from huggingface_hub import delete_repo
 from torch import nn
 from tensordict import TensorDict
 
-from lczerolens.model import LczeroBoard, PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue, LczeroModel
+from lczerolens._codec import encode_input
+from lczerolens.model import PolicyFlow, ValueFlow, WdlFlow, MlhFlow, ForceValue, LczeroModel
 from lczerolens import backends as lczero_utils
+
+
+def _model_input(board: chess.Board) -> TensorDict:
+    planes = encode_input(board).unsqueeze(0)
+    return TensorDict({"board": planes}, batch_size=[1])
 
 
 @pytest.mark.backends
 class TestModel:
     def test_model_prediction(self, tiny_lczero_backend, tiny_model):
         """Test that the model prediction works."""
-        board = LczeroBoard()
-        (out,) = tiny_model(board)
+        board = chess.Board()
+        (out,) = tiny_model(_model_input(board))
         policy = out["policy"]
         value = out["value"]
         lczero_game = GameState()
@@ -29,7 +35,7 @@ class TestModel:
         """Test that the model prediction works."""
         move_list, board_list = random_move_board_list
         for i, board in enumerate(board_list):
-            (out,) = tiny_model(board)
+            (out,) = tiny_model(_model_input(board))
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
@@ -41,7 +47,7 @@ class TestModel:
         """Test that the model prediction works."""
         move_list, board_list = repetition_move_board_list
         for i, board in enumerate(board_list):
-            (out,) = tiny_model(board)
+            (out,) = tiny_model(_model_input(board))
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
@@ -53,7 +59,7 @@ class TestModel:
         """Test that the model prediction works."""
         move_list, board_list = long_move_board_list
         for i, board in enumerate(board_list):
-            (out,) = tiny_model(board)
+            (out,) = tiny_model(_model_input(board))
             policy = out["policy"]
             value = out["value"]
             lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
@@ -63,19 +69,6 @@ class TestModel:
 
 
 class TestManageModels:
-    def test_prepare_boards_rejects_empty_or_invalid_input(self):
-        model = LczeroModel(nn.Identity(), out_keys=["output"])
-        with pytest.raises(ValueError, match="at least one"):
-            model.prepare_boards()
-        with pytest.raises(TypeError, match="Expected LczeroBoard"):
-            model.prepare_boards(chess.Board())
-
-    def test_raw_tensor_is_batched_and_moved_to_evaluator_device(self):
-        model = LczeroModel(nn.Identity(), out_keys=["output"])
-        output = model(torch.zeros((112, 8, 8)))
-        assert output["output"].shape == (1, 112, 8, 8)
-        assert output["output"].device == model.device
-
     def test_tensordict_input_remains_transparent(self):
         model = LczeroModel(nn.Identity(), out_keys=["output"])
         inputs = TensorDict({"board": torch.zeros((1, 112, 8, 8))}, batch_size=1)
@@ -155,19 +148,19 @@ class TestManageModels:
     @pytest.mark.network
     def test_model_from_hf(self):
         """Test that the model save and load works."""
-        board = LczeroBoard()
+        board = chess.Board()
         model = LczeroModel.from_hf("lczerolens/maia-1100")
-        output = model(board)
+        output = model(_model_input(board))
         assert "policy" in output
         assert "wdl" in output
 
     @pytest.mark.network
     def test_model_push_to_hf(self):
         """Test that the model push to hf works."""
-        board = LczeroBoard()
+        board = chess.Board()
         model = LczeroModel.from_hf("lczerolens/maia-1100")
         model.push_to_hf("lczerolens/tests")
-        output = model(board)
+        output = model(_model_input(board))
         assert "policy" in output
         assert "wdl" in output
         delete_repo("lczerolens/tests")
@@ -177,43 +170,43 @@ class TestFlows:
     def test_policy_flow(self, tiny_model):
         """Test that the policy flow works."""
         policy_flow = PolicyFlow.from_model(tiny_model.module)
-        board = LczeroBoard()
-        output = policy_flow(board)
+        board = chess.Board()
+        output = policy_flow(_model_input(board))
         assert "value" not in output
 
     def test_value_flow(self, tiny_model):
         """Test that the value flow works."""
         value_flow = ValueFlow.from_model(tiny_model.module)
-        board = LczeroBoard()
-        output = value_flow(board)
+        board = chess.Board()
+        output = value_flow(_model_input(board))
         assert "policy" not in output
 
     def test_wdl_flow(self, winner_model):
         """Test that the wdl flow works."""
         wdl_flow = WdlFlow.from_model(winner_model.module)
-        board = LczeroBoard()
-        output = wdl_flow(board)
+        board = chess.Board()
+        output = wdl_flow(_model_input(board))
         assert "policy" not in output
 
     def test_mlh_flow(self, winner_model):
         """Test that the mlh flow works."""
         mlh_flow = MlhFlow.from_model(winner_model.module)
-        board = LczeroBoard()
-        output = mlh_flow(board)
+        board = chess.Board()
+        output = mlh_flow(_model_input(board))
         assert "policy" not in output
 
     def test_force_value(self, tiny_model):
         """Test that the force value flow works."""
         force_value = ForceValue.from_model(tiny_model.module)
-        board = LczeroBoard()
-        output = force_value(board)
+        board = chess.Board()
+        output = force_value(_model_input(board))
         assert "value" in output
 
     def test_force_value_wdl(self, winner_model):
         """Test that the force value flow works."""
         force_value = ForceValue.from_model(winner_model.module)
-        board = LczeroBoard()
-        output = force_value(board)
+        board = chess.Board()
+        output = force_value(_model_input(board))
         assert "value" in output
 
         value = output["wdl"] @ torch.tensor([1.0, 0.0, -1.0], device=output.device)

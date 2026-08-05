@@ -8,7 +8,7 @@ import pytest
 import torch
 from tensordict import TensorDict
 
-from lczerolens import LczeroBoard
+from lczerolens._codec import encode_move, legal_indices
 from lczerolens.behavior import (
     BehaviorMetric,
     ControlKind,
@@ -48,7 +48,7 @@ ROOT_FEN = chess.STARTING_FEN
 def output_for(board, logits, *, value=None, wdl=None, mlh=None):
     policy = torch.full((1858,), -10.0)
     for move, logit in logits.items():
-        policy[board.encode_move(chess.Move.from_uci(move), board.turn)] = logit
+        policy[encode_move(board, chess.Move.from_uci(move))] = logit
     values = {"policy": policy}
     if value is not None:
         values["value"] = torch.tensor(value)
@@ -70,9 +70,9 @@ class FixedEvaluator:
 
 
 def test_evaluator_behavior_masks_illegal_moves_and_defines_optional_heads_and_ties():
-    board = LczeroBoard()
+    board = chess.Board()
     output = output_for(board, {"e2e4": 3.0, "d2d4": 3.0}, value=0.25, wdl=(0.5, 0.3, 0.2), mlh=17)
-    illegal_index = next(index for index in range(1858) if index not in set(board.get_legal_indices().tolist()))
+    illegal_index = next(index for index in range(1858) if index not in set(legal_indices(board).tolist()))
     output["policy"][illegal_index] = 100.0
 
     behavior = evaluator_behavior(board, output)
@@ -87,7 +87,7 @@ def test_evaluator_behavior_masks_illegal_moves_and_defines_optional_heads_and_t
 
 
 def test_counterfactual_comparison_separates_positive_target_and_collateral_effects():
-    board = LczeroBoard()
+    board = chess.Board()
     original = evaluator_behavior(board, output_for(board, {"e2e4": 4.0, "d2d4": 2.0}))
     modified = evaluator_behavior(board, output_for(board, {"e2e4": 1.0, "d2d4": 4.0}))
 
@@ -101,7 +101,7 @@ def test_counterfactual_comparison_separates_positive_target_and_collateral_effe
 
 @pytest.mark.parametrize("kind", tuple(ControlKind))
 def test_null_controls_are_first_class_structured_outputs(kind):
-    board = LczeroBoard()
+    board = chess.Board()
     behavior = evaluator_behavior(board, output_for(board, {"e2e4": 2.0}))
 
     comparison = compare_counterfactual_behavior(behavior, behavior, ("e2e4",), control_kind=kind)
@@ -112,7 +112,7 @@ def test_null_controls_are_first_class_structured_outputs(kind):
 
 
 def test_failures_are_explicit_for_missing_heads_bad_targets_and_capabilities():
-    board = LczeroBoard()
+    board = chess.Board()
     with pytest.raises(ValueError, match="missing required 'policy'"):
         evaluator_behavior(board, TensorDict({"value": torch.tensor(0.0)}))
     behavior = evaluator_behavior(board, output_for(board, {"e2e4": 1.0}))
@@ -132,7 +132,7 @@ def test_failures_are_explicit_for_missing_heads_bad_targets_and_capabilities():
 
 
 def test_raw_evaluator_preference_compares_separately_with_reference_and_official_lc0():
-    board = LczeroBoard()
+    board = chess.Board()
     evaluator = evaluator_behavior(board, FixedEvaluator()(board))
     reference = _ReferenceMCTS(c_puct=1.0).search(board, FixedEvaluator(), simulations=4)
     fixture = Path(__file__).parents[1] / "assets" / "lc0_root_snapshot_v1.txt"
@@ -162,7 +162,7 @@ def test_raw_evaluator_preference_compares_separately_with_reference_and_officia
 
 
 def test_budgeted_snapshots_report_rank_q_selection_discovery_and_pv_evolution():
-    board = LczeroBoard()
+    board = chess.Board()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 3.0, "d2d4": 2.0}))
 
     def action(move, visits, q, pv):
@@ -202,7 +202,7 @@ def test_budgeted_snapshots_report_rank_q_selection_discovery_and_pv_evolution()
 
 
 def test_decision_comparison_links_both_candidates_to_line_analyses():
-    board = LczeroBoard()
+    board = chess.Board()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 4.0, "d2d4": 2.0}))
     trace = _ReferenceMCTS(c_puct=0.0).search(board, FixedEvaluator(), simulations=1)
     search_move = trace.snapshots[-1].selection.move
@@ -243,48 +243,48 @@ def test_every_metric_definition_states_all_required_semantics():
 @pytest.mark.parametrize(
     ("board", "output", "perspective", "message"),
     [
-        (chess.Board(), {"policy": torch.zeros(1858)}, ValuePerspective.SIDE_TO_MOVE, "LczeroBoard"),
-        (LczeroBoard(), {"policy": torch.zeros(1858)}, "white", "ValuePerspective"),
-        (LczeroBoard(), {"policy": torch.zeros(17)}, ValuePerspective.SIDE_TO_MOVE, "1858 finite"),
+        ("not a board", {"policy": torch.zeros(1858)}, ValuePerspective.SIDE_TO_MOVE, "python-chess Board"),
+        (chess.Board(), {"policy": torch.zeros(1858)}, "white", "ValuePerspective"),
+        (chess.Board(), {"policy": torch.zeros(17)}, ValuePerspective.SIDE_TO_MOVE, "1858 finite"),
         (
-            LczeroBoard(),
+            chess.Board(),
             {"policy": torch.full((1858,), float("nan"))},
             ValuePerspective.SIDE_TO_MOVE,
             "1858 finite",
         ),
         (
-            LczeroBoard("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1"),
+            chess.Board("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1"),
             {"policy": torch.zeros(1858)},
             ValuePerspective.SIDE_TO_MOVE,
             "non-terminal",
         ),
         (
-            LczeroBoard(),
+            chess.Board(),
             {"policy": torch.zeros(1858), "wdl": torch.zeros(2)},
             ValuePerspective.SIDE_TO_MOVE,
             "exactly",
         ),
-        (LczeroBoard(), {"policy": "not a tensor"}, ValuePerspective.SIDE_TO_MOVE, "must be a tensor"),
+        (chess.Board(), {"policy": "not a tensor"}, ValuePerspective.SIDE_TO_MOVE, "must be a tensor"),
         (
-            LczeroBoard(),
+            chess.Board(),
             {"policy": torch.zeros(1858), "value": torch.tensor((0.0, 0.1))},
             ValuePerspective.SIDE_TO_MOVE,
             "one finite scalar",
         ),
         (
-            LczeroBoard(),
+            chess.Board(),
             {"policy": torch.zeros(1858), "mlh": torch.tensor(float("nan"))},
             ValuePerspective.SIDE_TO_MOVE,
             "one finite scalar",
         ),
         (
-            LczeroBoard(),
+            chess.Board(),
             {"policy": torch.zeros(1858), "value": torch.tensor(1.1)},
             ValuePerspective.SIDE_TO_MOVE,
             r"in \[-1.0, 1.0\]",
         ),
         (
-            LczeroBoard(),
+            chess.Board(),
             {"policy": torch.zeros(1858), "value": torch.tensor(-1.1)},
             ValuePerspective.SIDE_TO_MOVE,
             r"in \[-1.0, 1.0\]",
@@ -297,7 +297,7 @@ def test_evaluator_behavior_rejects_malformed_inputs_and_optional_heads(board, o
 
 
 def test_evaluator_behavior_accepts_singleton_batched_heads():
-    board = LczeroBoard()
+    board = chess.Board()
     output = TensorDict(
         {
             "policy": torch.zeros((1, 1858)),
@@ -315,7 +315,7 @@ def test_evaluator_behavior_accepts_singleton_batched_heads():
 
 
 def test_root_comparisons_reject_mismatches_and_retain_unavailable_statistics():
-    board = LczeroBoard()
+    board = chess.Board()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 3.0}))
     root_action = RootAction(EdgeStatistics("e2e4", ValuePerspective.ROOT_PLAYER, prior=1.0))
     action_only = SearchTrace(
@@ -358,7 +358,7 @@ def test_root_comparisons_reject_mismatches_and_retain_unavailable_statistics():
     with pytest.raises(ValueError, match="selection"):
         compare_search_decision(evaluator, empty_actions)
 
-    other = LczeroBoard()
+    other = chess.Board()
     other.push_uci("e2e4")
     other_evaluator = evaluator_behavior(other, output_for(other, {"e7e5": 1.0}))
     with pytest.raises(ValueError, match="same root FEN"):
@@ -373,7 +373,7 @@ def test_root_comparisons_reject_mismatches_and_retain_unavailable_statistics():
 
 
 def test_counterfactual_comparison_rejects_invalid_controls_links_and_evidence():
-    board = LczeroBoard()
+    board = chess.Board()
     behavior = evaluator_behavior(board, output_for(board, {"e2e4": 2.0}))
     variation = analyze_line(board, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
     other_variation = analyze_line(board, (chess.Move.from_uci("d2d4"),), MaterialAnalyzer())
@@ -392,7 +392,7 @@ def test_counterfactual_comparison_rejects_invalid_controls_links_and_evidence()
         compare_counterfactual_behavior(
             behavior, replace(behavior, perspective=ValuePerspective.ROOT_PLAYER), ("e2e4",)
         )
-    black_board = LczeroBoard()
+    black_board = chess.Board()
     black_board.push_uci("e2e4")
     black_behavior = evaluator_behavior(black_board, output_for(black_board, {"e7e5": 1.0}))
     with pytest.raises(ValueError, match="absolute side"):
@@ -412,14 +412,14 @@ def test_counterfactual_comparison_rejects_invalid_controls_links_and_evidence()
         compare_counterfactual_behavior(behavior, behavior, ("e2e4",), line_analyses={"d2d4": variation})
     with pytest.raises(ValueError, match="at least one"):
         replace(variation, steps=())
-    unrelated = LczeroBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 12 7")
+    unrelated = chess.Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 12 7")
     unrelated_variation = analyze_line(unrelated, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
     with pytest.raises(ValueError, match="original or modified evaluator FEN"):
         compare_counterfactual_behavior(behavior, behavior, ("e2e4",), line_analyses={"e2e4": unrelated_variation})
 
 
 def test_decision_evidence_and_non_replay_event_paths_fail_explicitly():
-    board = LczeroBoard()
+    board = chess.Board()
     evaluator = evaluator_behavior(board, output_for(board, {"e2e4": 3.0}))
     trace = _ReferenceMCTS().search(board, FixedEvaluator(), simulations=1)
     variation = analyze_line(board, (chess.Move.from_uci("e2e4"),), MaterialAnalyzer())
@@ -428,7 +428,7 @@ def test_decision_evidence_and_non_replay_event_paths_fail_explicitly():
     with pytest.raises(ValueError, match="start at the root"):
         compare_search_decision(evaluator, trace, line_analyses={"d2d4": variation})
 
-    wrong_root = LczeroBoard()
+    wrong_root = chess.Board()
     wrong_root.push_uci("e2e4")
     wrong_root_variation = analyze_line(wrong_root, (chess.Move.from_uci("e7e5"),), MaterialAnalyzer())
     with pytest.raises(ValueError, match="start at the root"):

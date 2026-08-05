@@ -2,7 +2,6 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .board import LczeroBoard
 from .behavior import (
     BehaviorMetric,
     ControlKind,
@@ -33,7 +32,7 @@ from .decision import (
 )
 from .facts import Evidence, EvidenceSet, FactAnalyzer
 from .evaluation import Evaluation, EvaluationBatch, EvaluationRecord
-from .evaluator import LczeroEvaluator
+from .evaluator import InputFormat, LczeroEvaluator
 from .model import LczeroModel
 from .moves import (
     ExactMoveEffect,
@@ -83,7 +82,6 @@ except PackageNotFoundError:
     __version__ = "unknown version"
 
 __all__ = [
-    "LczeroBoard",
     "LczeroEvaluator",
     "LczeroKeys",
     "LczeroModel",
@@ -109,6 +107,7 @@ __all__ = [
     "FactAnalyzer",
     "ExactMoveEffect",
     "HistoryPolicy",
+    "InputFormat",
     "Depth",
     "LczeroSearch",
     "MoveAnalysis",

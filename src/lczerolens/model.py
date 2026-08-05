@@ -2,19 +2,15 @@
 
 import os
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Any, Union, Iterable, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 import tempfile
 
 import torch
 from onnx2torch import convert
 from onnx2torch.utils.safe_shape_inference import safe_shape_inference
-from tensordict import TensorDict
 from torch import nn
 
 from tensordict.nn import TensorDictModule
-
-from lczerolens.board import InputEncoding, LczeroBoard
-
 
 MISSING_HF_ERROR = (
     "huggingface_hub is required to push or load the model from the Hugging Face Hub. "
@@ -44,72 +40,6 @@ class LczeroModel(TensorDictModule):
         if not isinstance(module, nn.Module):
             raise TypeError(f"Got invalid module type {type(module)}. Expected nn.Module.")
         super().__init__(module, ["board"], out_keys, **kwargs)
-
-    def prepare_boards(
-        self,
-        *boards: LczeroBoard,
-        input_encoding: InputEncoding = InputEncoding.INPUT_CLASSICAL_112_PLANE,
-    ) -> torch.Tensor:
-        """Prepares the boards for the model.
-
-        Parameters
-        ----------
-        *boards : LczeroBoard
-            The boards to prepare.
-        input_encoding : InputEncoding, optional
-            The encoding of the boards.
-
-        Returns
-        -------
-        torch.Tensor
-            The prepared boards.
-        """
-        if not boards:
-            raise ValueError("Expected at least one LczeroBoard.")
-        for board in boards:
-            if not isinstance(board, LczeroBoard):
-                raise TypeError(f"Got invalid board type {type(board)}. Expected LczeroBoard.")
-
-        tensor_list = [board.to_input_tensor(input_encoding=input_encoding).unsqueeze(0) for board in boards]
-        batched_tensor = torch.cat(tensor_list, dim=0)
-        batched_tensor = batched_tensor.to(self.device)
-
-        return batched_tensor
-
-    def forward(
-        self,
-        inputs: Union[TensorDict, LczeroBoard, Iterable[LczeroBoard], torch.Tensor],
-        prepare_kwargs: Optional[Dict[str, Any]] = None,
-        **kwargs,
-    ) -> TensorDict:
-        """
-        Parameters
-        ----------
-        inputs : Union[TensorDict, Iterable[LczeroBoard], torch.Tensor]
-            The inputs to the model.
-        prepare_kwargs : Optional[Dict[str, Any]], optional
-            Keyword arguments to pass to the prepare_boards method, by default None
-        **kwargs : Any
-            Additional keyword arguments to pass to the super().forward method.
-
-        Returns
-        -------
-        TensorDict
-            The output of the model.
-        """
-        prepare_kwargs = prepare_kwargs or {}
-        if isinstance(inputs, LczeroBoard):  # TODO: Move to prepare_baords
-            inputs = (inputs,)
-        if not isinstance(inputs, TensorDict) and not isinstance(inputs, torch.Tensor):
-            inputs = self.prepare_boards(*inputs, **prepare_kwargs)
-        if not isinstance(inputs, TensorDict):
-            if len(inputs.shape) == 3:
-                inputs = inputs.unsqueeze(0)
-            elif len(inputs.shape) != 4:
-                raise ValueError(f"Expected 3D or 4D tensor, got {inputs.shape}.")
-            inputs = inputs.to(self.device)
-            inputs = TensorDict({"board": inputs}, batch_size=inputs.shape[0])
-        return super().forward(inputs, **kwargs)
 
     def _call_module(self, tensors: Sequence[torch.Tensor], **kwargs: Any) -> Sequence[torch.Tensor]:
         out = super()._call_module(tensors, **kwargs)

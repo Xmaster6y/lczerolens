@@ -64,6 +64,10 @@ Public vocabulary
    ``model`` attribute is the canonical :class:`tensordict.nn.TensorDictModule`
    instrumentation boundary using the documented nested keys.
 
+``InputFormat``
+   The public evaluator configuration for the supported 112-plane history
+   policies. The encoding implementation remains private and stateless.
+
 ``Evaluation``
    One position bound to one row of evaluator tensors, with a legal-move policy
    view and explicit native or derived head origins.

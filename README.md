@@ -31,10 +31,9 @@ Loading or publishing models through Hugging Face Hub requires the `hub` extra:
 pip install "lczerolens[hub]"
 ```
 
-Install `viz` to render heatmaps or `backends` to use the `lc0` bindings:
+Install `backends` to use the optional `lc0` bindings:
 
 ```bash
-pip install "lczerolens[viz]"
 pip install "lczerolens[backends]"
 ```
 
@@ -47,22 +46,21 @@ select either tier for diagnosis. Notebook and release checks are opt-in with
 `just tests-slow`; CI retains JUnit and coverage artifacts to make failures
 inspectable.
 
-### Run Models
+### Evaluate a position
 
 Get the best move predicted by a model:
 
 ```python
-from lczerolens import LczeroBoard, LczeroModel
+import chess
+from lczerolens import LczeroEvaluator, LczeroModel
 
 model = LczeroModel.from_hf("lczerolens/maia-1100")
-board = LczeroBoard()
+evaluator = LczeroEvaluator(model)
+board = chess.Board()
 
-output = model(board)
-policy = output["policy"].squeeze(0)
-legal_indices = board.get_legal_indices()
-best_legal_offset = policy[legal_indices].argmax()
-best_move_idx = legal_indices[best_legal_offset]
-print(board.decode_move(best_move_idx.item()))
+evaluation = evaluator.evaluate(board)
+print(evaluation.policy.best_move)
+print(evaluation.policy["e2e4"].probability)
 ```
 
 ### External Interpretability Integrations
@@ -72,27 +70,30 @@ Use `lczerolens` with your preferred PyTorch interpretability framework
 they are not lczerolens abstractions or dependencies of its evaluator contract.
 
 ```python
-from lczerolens import LczeroBoard, LczeroModel
+import chess
+from lczerolens import LczeroEvaluator, LczeroKeys, LczeroModel
 from tdhook.attribution import Saliency
 from tensordict import TensorDict
 
 model = LczeroModel.from_hf("lczerolens/maia-1100")
-board = LczeroBoard()
+evaluator = LczeroEvaluator(model)
+board = chess.Board()
 
 def best_logit_init_targets(td: TensorDict, _):
-    policy = td["policy"]
+    policy = td[LczeroKeys.NETWORK_POLICY_LOGITS]
     best_logit = policy.max(dim=-1).values
     return TensorDict(out=best_logit, batch_size=td.batch_size)
 
 saliency_context = Saliency(init_attr_targets=best_logit_init_targets)
-with saliency_context.prepare(model) as hooked_model:
-    output = hooked_model(TensorDict(board=model.prepare_boards(board), batch_size=1))
-    attr = output.get(("attr", "board"))
+with saliency_context.prepare(evaluator.model) as hooked_model:
+    tensors = hooked_model(evaluator.prepare([board]))
+    evaluation = evaluator.finish([board], tensors)[0]
+    attr = tensors.get(("attr", "input", "planes"))
 ```
 
 ### Decision-analysis documentation
 
-The maintained documentation covers the evaluator and board contract, exact
+The maintained documentation covers the evaluator and position contract, exact
 facts and move/variation evidence, constrained counterfactuals, typed search
 traces, and observable behavior comparisons. Start with the [scope and
 compatibility policy](https://lczerolens.readthedocs.io/en/latest/scope.html),

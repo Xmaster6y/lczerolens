@@ -32,10 +32,6 @@ issues = "https://github.com/Xmaster6y/lczerolens/issues"
 releasenotes = "https://github.com/Xmaster6y/lczerolens/releases"
 
 [project.optional-dependencies]
-viz = [
-    "graphviz>=0.21",
-    "matplotlib>=3.10.0",
-]
 backends = [
     "v-lczero-bindings>=0.31.2"
 ]

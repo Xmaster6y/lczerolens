@@ -14,8 +14,8 @@ Installation
 
    pip install lczerolens
 
-Use the ``hub`` extra for Hugging Face model loading, ``backends`` for optional
-lc0 bindings, and ``viz`` for rendering helpers.
+Use the ``hub`` extra for Hugging Face model loading and ``backends`` for
+optional lc0 bindings.
 
 Supported user path
 -------------------
