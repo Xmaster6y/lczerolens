@@ -1,14 +1,19 @@
 """Tests for the release artifacts."""
 
 import subprocess
+import sys
 import tarfile
 import zipfile
 from pathlib import Path
 
 import pytest
 
+from examples.decision_analysis_tutorial import TUTORIAL_DECISION_DIGEST
+from lczerolens import DecisionAnalysis
+
 
 ROOT = Path(__file__).parents[2]
+TUTORIAL = ROOT / "examples" / "decision_analysis_tutorial.py"
 
 
 def _build_distributions(output_dir: Path) -> tuple[Path, Path]:
@@ -57,3 +62,47 @@ def test_distributions_contain_only_library_release_files(tmp_path: Path) -> Non
         path in allowed_roots or path.startswith("src/lczerolens/") or path.startswith("src/lczerolens.egg-info/")
         for path in sdist_files
     )
+
+
+@pytest.mark.slow
+def test_built_wheel_runs_maintained_workflow_in_clean_environment(tmp_path: Path) -> None:
+    """Install only the wheel, exclude checkout imports, and run all six use cases."""
+    wheel_path, _ = _build_distributions(tmp_path / "dist")
+    environment = tmp_path / "environment"
+    subprocess.run(
+        ["uv", "venv", "--python", sys.executable, str(environment)],
+        cwd=tmp_path,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    python = environment / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+    subprocess.run(
+        ["uv", "pip", "install", "--python", str(python), str(wheel_path)],
+        cwd=tmp_path,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    probe = subprocess.run(
+        [str(python), "-I", "-c", "import lczerolens; print(lczerolens.__file__)"],
+        cwd=tmp_path,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    installed_module = Path(probe.stdout.strip()).resolve()
+    assert not installed_module.is_relative_to(ROOT)
+
+    artifact = tmp_path / "decision.json"
+    completed = subprocess.run(
+        [str(python), "-I", str(TUTORIAL), str(artifact)],
+        cwd=tmp_path,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    restored = DecisionAnalysis.load(artifact)
+    assert restored.digest() == TUTORIAL_DECISION_DIGEST
+    assert f"digest={TUTORIAL_DECISION_DIGEST}" in completed.stdout

@@ -106,6 +106,25 @@ result still has a useful ``move`` and trace, but ``result.root`` is
 unavailable.  Public root snapshots never imply private engine events, a
 complete tree, or replayability.
 
+Pinned live conformance
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The normal suite uses a versioned captured root snapshot and mocked process
+tests; it does not silently depend on a local engine or network.  A release
+operator can explicitly test the real process boundary with three pins::
+
+   LC0_EXECUTABLE=/path/to/lc0 \
+   LC0_NETWORK=/path/to/network.pb.gz \
+   LC0_VERSION=v0.31.2 \
+   just tests-live-lczero
+
+``LC0_EXECUTABLE`` must be the exact binary under test, ``LC0_NETWORK`` must be
+the exact network file, and ``LC0_VERSION`` must occur in the output of
+``LC0_EXECUTABLE --version``.  The check records the SHA-256 digest of the
+network in search provenance and runs a one-node public-UCI request.  Absence
+of these pins skips the live integration test; it never changes fixture-backed
+conformance results.
+
 Trace evidence
 --------------
 

@@ -12,6 +12,12 @@ Run it from a clean environment with the development group installed::
    uv sync --group dev
    uv run pytest -q -m integration tests/integration/test_decision_analysis_tutorial.py
 
+The release boundary runs the same workflow from the built wheel in a fresh
+virtual environment, with isolated Python startup and an explicit assertion
+that ``lczerolens.__file__`` is outside the checkout::
+
+   just tests-wheel
+
 The test is an explicit integration tier, so normal unit runs do not silently
 present this tutorial as model validation. The fixture is defined alongside the
 tutorial and has only the standard ``policy`` and ``value`` TensorDict heads.

@@ -1,5 +1,7 @@
+import hashlib
 import os
 from pathlib import Path
+import subprocess
 from types import SimpleNamespace
 
 import pytest
@@ -181,7 +183,28 @@ def test_optional_pinned_lczero_process_adapter():
     executable, network, version = (os.environ.get(name) for name in ("LC0_EXECUTABLE", "LC0_NETWORK", "LC0_VERSION"))
     if not all((executable, network, version)):
         pytest.skip("set LC0_EXECUTABLE, LC0_NETWORK, and LC0_VERSION for pinned lc0 adapter conformance")
-    trace = _LczeroProcessAdapter(executable, engine_version=version, network=network).run(
-        _LczeroSearchRequest(ROOT_FEN, nodes=1, options={"WeightsFile": network, "VerboseMoveStats": True})
+    executable_path = Path(executable)
+    network_path = Path(network)
+    assert executable_path.is_file(), "LC0_EXECUTABLE must name the pinned lc0 binary"
+    assert network_path.is_file(), "LC0_NETWORK must name the pinned network file"
+    reported_version = subprocess.run(
+        [str(executable_path), "--version"],
+        check=True,
+        text=True,
+        capture_output=True,
+        timeout=10,
     )
+    assert version in f"{reported_version.stdout}\n{reported_version.stderr}", (
+        "LC0_VERSION must match the version reported by LC0_EXECUTABLE --version"
+    )
+    with network_path.open("rb") as network_file:
+        checksum = f"sha256:{hashlib.file_digest(network_file, 'sha256').hexdigest()}"
+    trace = _LczeroProcessAdapter(
+        executable_path,
+        engine_version=version,
+        network=str(network_path),
+        network_checksum=checksum,
+    ).run(_LczeroSearchRequest(ROOT_FEN, nodes=1, options={"WeightsFile": network, "VerboseMoveStats": True}))
     assert trace.capability in {SearchCapability.ROOT_RESULT, SearchCapability.ROOT_SNAPSHOTS}
+    assert trace.provenance.engine_version == version
+    assert trace.provenance.network_checksum == checksum

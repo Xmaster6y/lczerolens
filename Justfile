@@ -16,5 +16,16 @@ tests-conformance:
 tests-slow:
 	uv run --group dev --extra hub pytest tests -m 'slow or integration' --cov=src --cov-report=term-missing --cov-branch --cov-report=xml --junitxml=junit.xml -o junit_family=legacy -s -v
 
+tests-wheel:
+	uv run --group dev pytest -q tests/unit/test_distributions.py
+
+tests-live-lczero:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	: "${LC0_EXECUTABLE:?set LC0_EXECUTABLE to the pinned lc0 binary}"
+	: "${LC0_NETWORK:?set LC0_NETWORK to the pinned network file}"
+	: "${LC0_VERSION:?set LC0_VERSION to the exact output version token}"
+	uv run --group dev pytest -q tests/unit/test_lczero_search.py::test_optional_pinned_lczero_process_adapter
+
 docs:
 	cd docs && uv run --group docs make html

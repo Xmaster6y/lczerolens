@@ -33,6 +33,27 @@ To run the tests (using `pytest`):
 just tests
 ```
 
+To build the wheel, install it into a fresh virtual environment, and run the
+maintained six-use-case workflow without importing the checkout:
+
+```bash
+just tests-wheel
+```
+
+Official-Lczero process conformance is deliberately opt-in. Pin the exact
+binary, network, and version token reported by `lc0 --version`:
+
+```bash
+LC0_EXECUTABLE=/path/to/lc0 \
+LC0_NETWORK=/path/to/network.pb.gz \
+LC0_VERSION=v0.31.2 \
+just tests-live-lczero
+```
+
+The live check verifies both paths, matches the declared version against the
+binary, records the network SHA-256 digest, and never upgrades public root
+output to event or replayable evidence.
+
 To build the documentation locally:
 
 ```bash

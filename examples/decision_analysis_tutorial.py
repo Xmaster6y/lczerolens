@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from os import PathLike
+from pathlib import Path
+import sys
 
 import chess
 import torch
@@ -28,9 +30,10 @@ from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.facts import FactPerspective, MaterialAnalyzer
 from lczerolens.model import LczeroModel
 from lczerolens.moves import LineAnalysis, analyze_line
+from lczerolens.provenance import EvaluationProvenance
 
 
-TUTORIAL_DECISION_DIGEST = "6ab2f10ab07a9b51743ca504738a520b6c339780effd94223126ec3df028be0e"
+TUTORIAL_DECISION_DIGEST = "8a6646663724282bd88cb89ac303ce80702aa4ac46a728b99be002e12550b49c"
 
 
 class _TutorialFixtureModule(nn.Module):
@@ -65,7 +68,12 @@ class _FixtureRuntime:
 def load_fixture_evaluator() -> _FixtureRuntime:
     """Load a tiny model and its concrete chess evaluator facade."""
     model = LczeroModel(_TutorialFixtureModule(), out_keys=["policy", "value"])
-    return _FixtureRuntime(LczeroEvaluator(model))
+    provenance = EvaluationProvenance(
+        source="lczerolens-tutorial-fixture",
+        model_type="lczerolens.tutorial.fixture-v1",
+        network="decision-analysis-tutorial-v1",
+    )
+    return _FixtureRuntime(LczeroEvaluator(model, provenance=provenance))
 
 
 @dataclass(frozen=True)
@@ -130,5 +138,8 @@ def run_tutorial(artifact_path: str | PathLike[str] | None = None) -> TutorialRe
 
 
 if __name__ == "__main__":
-    result = run_tutorial()
-    print(f"policy={result.decision.policy_move} search={result.decision.search_move}")
+    if len(sys.argv) > 2:
+        raise SystemExit("usage: decision_analysis_tutorial.py [artifact-path]")
+    artifact = Path(sys.argv[1]) if len(sys.argv) == 2 else None
+    result = run_tutorial(artifact)
+    print(f"policy={result.decision.policy_move} search={result.decision.search_move} digest={result.decision_digest}")

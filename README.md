@@ -39,7 +39,9 @@ produces the coverage report. `just tests-unit` and `just tests-conformance`
 select either tier for diagnosis. The native Lczero bindings are a test-only
 conformance oracle, installed through the `conformance` dependency group rather
 than exposed as library API. Notebook and release checks are opt-in with `just
-tests-slow`; CI retains JUnit and coverage artifacts to make failures inspectable.
+tests-slow`; `just tests-wheel` builds and installs the wheel in a fresh virtual
+environment before running the maintained workflow. CI retains JUnit and
+coverage artifacts to make failures inspectable.
 
 ### Evaluate a position
 

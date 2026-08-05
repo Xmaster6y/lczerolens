@@ -82,3 +82,16 @@ jobs:
       run: uv sync --locked ${{ matrix.sync-args }}
     - name: Check imports
       run: uv run --no-sync python -c "${{ matrix.import }}"
+
+  wheel:
+    if: inputs.tests-type == 'tests'
+    runs-on: ubuntu-latest
+    name: Installed wheel workflow
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: "3.11"
+    - name: Run clean installed-wheel workflow
+      run: uv run --group dev pytest -q tests/unit/test_distributions.py
