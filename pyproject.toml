@@ -39,7 +39,6 @@ hub = [
 [dependency-groups]
 dev = [
     "gdown>=5.2.0",
-    "onnxruntime>=1.20.1",
     "pre-commit>=4.0.1",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
@@ -48,19 +47,12 @@ conformance = [
     "v-lczero-bindings>=0.31.2",
 ]
 docs = [
-    "plotly>=5.24.1",
     "pydata-sphinx-theme>=0.16.1",
     "sphinx>=8.1.3",
     "sphinx-autoapi>=3.6.0",
-    "sphinx-charts>=0.2.1",
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
     "sphinx-llm>=0.3.0",
-]
-scripts = [
-    "huggingface-hub>=0.27.1",
-    "loguru>=0.7.3",
-    "requests>=2.32.0",
 ]
 
 [build]

@@ -220,6 +220,8 @@ The target source layout is organized by user action::
        moves.py
        counterfactuals.py
        decision.py
+       behavior.py
+       facts.py
        provenance.py
        serialization.py
        search/
@@ -227,14 +229,23 @@ The target source layout is organized by user action::
            trace.py
            reference.py
            lczero.py
-           replay.py
        _codec/
            input.py
            policy.py
 
-Dependencies point upward from private codec and model execution toward
-evaluation, search, and decision analysis.  Exact chess analysis does not
-depend on Torch, TensorDict, datasets, or a model.
+Module initialization is acyclic. The package ``__init__`` files are composition
+roots, not layers. Foundations (constants, provenance, schema, facts, codec,
+and raw model execution) do not import chess-facing orchestration. Evaluation
+may depend on those foundations; trace/result records do not depend on an
+evaluator; reference search may depend on both. Decision and behavior modules
+compose completed records. Evaluation persistence is imported lazily from its
+record methods so serialization does not become an initialization cycle.
+
+Exact chess analysis (facts, moves, provenance, and counterfactual
+construction) does not depend on Torch, TensorDict, or a model. Native bindings
+and Hugging Face remain outside module initialization: bindings are a
+conformance-only development group, while Hub imports occur only when a Hub
+method is called.
 
 Breaking deletion list
 ----------------------

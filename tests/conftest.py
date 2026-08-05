@@ -7,7 +7,6 @@ from pathlib import Path
 import subprocess
 
 import pytest
-from lczero.backends import Backend, Weights
 
 from lczerolens import LczeroModel
 
@@ -46,6 +45,8 @@ def _convert_to_onnx(source: Path, destination: Path) -> None:
 
 @pytest.fixture(scope="session")
 def tiny_lczero_backend():
+    from lczero.backends import Backend, Weights
+
     lczero_weights = Weights(str(_require_fixture("tinygyal-8.pb.gz")))
     yield Backend(weights=lczero_weights)
 

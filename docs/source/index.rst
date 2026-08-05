@@ -83,7 +83,7 @@ lczerolens
 
           **Adaptability**
 
-          Load a network from lc0 (``.pb`` or ``.onnx``) and load it with lczerolens using ``torch``.
+          Load converted Lczero ONNX or serialized PyTorch networks through one TensorDict model boundary.
 
     .. grid-item::
 
@@ -96,4 +96,4 @@ lczerolens
 
           **Interpretability utilities**
 
-          Load ONNX networks, run inference, and produce board-aligned heatmaps for analysis with your preferred framework.
+          Run board-aware evaluation while external frameworks instrument the same nested TensorDict execution path.

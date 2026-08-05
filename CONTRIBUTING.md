@@ -12,13 +12,13 @@ Additionally, install `just` to run the project shortcut commands.
 To install the dependencies:
 
 ```bash
-uv sync
+uv sync --group dev --group conformance --extra hub
 ```
 
 Before committing, install `pre-commit`:
 
 ```bash
-uv run pre-commit install
+uv run --group dev pre-commit install
 ```
 
 To run the checks (`pre-commit` checks):

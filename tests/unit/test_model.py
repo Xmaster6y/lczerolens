@@ -3,7 +3,6 @@
 import pytest
 import torch
 import chess
-from lczero.backends import GameState
 from huggingface_hub import delete_repo
 from torch import nn
 from tensordict import TensorDict
@@ -24,6 +23,12 @@ def _prediction_from_backend(backend, game):
     return policy, torch.tensor(output.q())
 
 
+def _game_state(*, moves=None):
+    from lczero.backends import GameState
+
+    return GameState() if moves is None else GameState(moves=moves)
+
+
 @pytest.mark.conformance
 class TestModel:
     def test_model_prediction(self, tiny_lczero_backend, tiny_model):
@@ -32,7 +37,7 @@ class TestModel:
         (out,) = tiny_model(_model_input(board))
         policy = out["policy"]
         value = out["value"]
-        lczero_game = GameState()
+        lczero_game = _game_state()
         lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
         assert torch.allclose(policy, lczero_policy, atol=1e-4)
         assert torch.allclose(value, lczero_value, atol=1e-4)
@@ -44,7 +49,7 @@ class TestModel:
             (out,) = tiny_model(_model_input(board))
             policy = out["policy"]
             value = out["value"]
-            lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
+            lczero_game = _game_state(moves=[move.uci() for move in move_list[:i]])
             lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
@@ -56,7 +61,7 @@ class TestModel:
             (out,) = tiny_model(_model_input(board))
             policy = out["policy"]
             value = out["value"]
-            lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
+            lczero_game = _game_state(moves=[move.uci() for move in move_list[:i]])
             lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)
@@ -68,7 +73,7 @@ class TestModel:
             (out,) = tiny_model(_model_input(board))
             policy = out["policy"]
             value = out["value"]
-            lczero_game = GameState(moves=[move.uci() for move in move_list[:i]])
+            lczero_game = _game_state(moves=[move.uci() for move in move_list[:i]])
             lczero_policy, lczero_value = _prediction_from_backend(tiny_lczero_backend, lczero_game)
             assert torch.allclose(policy, lczero_policy, atol=1e-4)
             assert torch.allclose(value, lczero_value, atol=1e-4)

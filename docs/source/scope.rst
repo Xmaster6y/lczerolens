@@ -17,8 +17,8 @@ Supported use cases
 
 The currently shipped public surface includes:
 
-* loading or converting lc0-family weights and evaluating one position or a
-  batch in PyTorch;
+* loading converted lc0-family weights and evaluating one position or a batch
+  in PyTorch;
 * encoding positions and mapping policy indices to legal chess moves;
 * consuming a standardized policy, WDL, value, and MLH evaluator result;
 * passing an evaluator through arbitrary external instrumentation while
@@ -50,10 +50,11 @@ Model-format compatibility
 --------------------------
 
 ``LczeroModel.from_path`` supports ``.onnx`` files through ``onnx2torch`` and
-serialized ``.pt`` ``torch.nn.Module`` objects. Official lc0 weights are
-converted with the optional native backend's ``leela2onnx`` command, then loaded
-from the resulting ONNX file. Native bindings are a conversion and conformance
-oracle only; ordinary PyTorch inference and unit tests do not require them.
+serialized ``.pt`` ``torch.nn.Module`` objects. Official lc0 weights can be
+converted externally with the ``leela2onnx`` command supplied by lc0, then
+loaded from the resulting ONNX file. Native bindings remain a test-only
+conformance oracle; ordinary PyTorch inference and unit tests do not require
+them.
 Arbitrary PyTorch modules can be wrapped with ``LczeroModel(module, out_keys)``;
 automatic head discovery is reserved for converted lc0 graphs and reports how
 to provide explicit keys when that structure is unavailable.
@@ -96,12 +97,9 @@ implementation-specific interpretability method is required by the core API.
 Public-surface disposition
 --------------------------
 
-The table covers every current importable package module and its public symbols.
-``Retain`` means supported as part of the stated boundary; ``refocus`` means the
-symbol stays available but future changes must serve that boundary. ``Internalize``
-means keep it implementation-facing rather than adding compatibility commitments;
-``deprecate`` means do not extend it and replace it in a later, separately
-announced compatibility release.
+The table covers every package responsibility. ``Retain`` means supported as
+part of the stated boundary. ``Internalize`` means implementation-facing rather
+than a separate compatibility commitment.
 
 .. list-table::
    :header-rows: 1
@@ -129,6 +127,29 @@ announced compatibility release.
      - Retain
      - Raw TensorDict execution and model-format loading beneath the evaluator;
        no head-filtering flow hierarchy or hook API.
+   * - ``schema``
+     - ``LczeroKeys``
+     - Retain
+     - One stable vocabulary for the nested TensorDict execution contract.
+   * - ``evaluator``
+     - ``LczeroEvaluator``, ``InputFormat``
+     - Retain
+     - Natural board preparation, TensorDict execution, head validation, and
+       chess-semantic finishing boundary.
+   * - ``evaluation``
+     - ``Evaluation``, ``EvaluationBatch``, ``EvaluationRecord`` and their
+       typed policy/value/WDL views
+     - Retain
+     - Separate ergonomic runtime tensors from immutable, reproducible evidence.
+   * - ``provenance``
+     - ``ChessPlayer``, ``PositionIdentity``, ``EvaluationProvenance``
+     - Retain
+     - Reconstructable board history and explicit producer/network identity.
+   * - ``serialization``
+     - Canonical evaluation-record encoding helpers
+     - Internalize
+     - Persistence is naturally exposed by ``EvaluationRecord`` methods; the
+       wire-format machinery is not a second user workflow.
    * - ``search``
      - ``SearchResult``, typed limits, ``ReferenceSearch``, ``LczeroSearch``,
        trace and replay records
@@ -149,6 +170,11 @@ announced compatibility release.
      - Constraints, validity/result records, and sibling/structural operators
      - Retain
      - Constrained position pairs that state rule validity and historical reachability separately.
+   * - ``decision``
+     - ``DecisionAnalysis``, action records, and evaluator/search/counterfactual
+       comparison helpers
+     - Retain
+     - Compose already-produced evidence without merging its guarantees.
    * - ``behavior``
      - Behaviour records, metric definitions, and evaluator/search/counterfactual comparison helpers
      - Retain

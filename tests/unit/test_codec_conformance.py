@@ -3,9 +3,12 @@
 import chess
 import pytest
 import torch
-from lczero.backends import GameState
 
 from lczerolens._codec import encode_input, encode_move
+
+GameState = pytest.importorskip(
+    "lczero.backends", reason="native Lczero bindings are a conformance-only dependency"
+).GameState
 
 
 def _input_from_backend(backend, game):
