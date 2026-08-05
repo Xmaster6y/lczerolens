@@ -19,9 +19,9 @@ Execution flow
        -> Evaluation
        -> immutable evidence and comparisons
 
-``chess.Board`` remains the chess position and history object. TensorDict is
-the neural execution substrate. Domain records are the persistence and
-analysis boundary.
+``chess.Board`` from python-chess :cite:p:`python-chess` remains the chess
+position and history object. TensorDict :cite:p:`tensordict` is the neural
+execution substrate. Domain records are the persistence and analysis boundary.
 
 Responsibilities
 ----------------

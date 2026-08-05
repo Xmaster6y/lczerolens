@@ -58,6 +58,7 @@ docs = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
     "sphinx-llm>=0.3.0",
+    "sphinxcontrib-bibtex>=2.6.5",
 ]
 
 [build]

@@ -56,3 +56,41 @@ lczerolens
             :outline:
 
                 API Reference
+
+Explore
+-------
+
+.. grid:: 1 2 2 2
+   :gutter: 3
+
+   .. grid-item-card:: Start evaluating
+      :link: start
+      :class-card: surface
+
+      :octicon:`play;2em;sd-text-primary`
+
+      Install the package and evaluate a board.
+
+   .. grid-item-card:: Workflows
+      :link: features
+      :class-card: surface
+
+      :octicon:`workflow;2em;sd-text-primary`
+
+      Load models, inspect positions, and produce chess evidence.
+
+   .. grid-item-card:: Guided examples
+      :link: tutorials
+      :class-card: surface
+
+      :octicon:`mortar-board;2em;sd-text-primary`
+
+      Follow complete, deterministic analysis workflows.
+
+   .. grid-item-card:: Contracts
+      :link: use-cases
+      :class-card: surface
+
+      :octicon:`shield-check;2em;sd-text-primary`
+
+      Review supported guarantees, boundaries, and compatibility.

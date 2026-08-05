@@ -57,13 +57,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Development and test commands live there
 
 ## Citation
 
-If you're using `lczerolens` in your research, please cite it using the following BibTeX entry:
+If you use `lczerolens` in research, cite the version you used. The canonical
+metadata is in [CITATION.cff](CITATION.cff).
 
 ```bibtex
 @software{poupart_lczerolens_2026,
   author = {Poupart, Yoann},
-  title = {LCZeroLens},
-  version = {0.4.0},
+  title = {LczeroLens},
+  version = {0.5.0},
   year = {2026},
   url = {https://github.com/Xmaster6y/lczerolens}
 }

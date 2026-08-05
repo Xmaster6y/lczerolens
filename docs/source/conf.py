@@ -29,9 +29,13 @@ extensions = [
     "sphinx_copybutton",  # Copy button for code blocks
     "sphinx_design",  # Boostrap design components
     "nbsphinx",  # Executable first-class notebook pages
+    "sphinxcontrib.bibtex",  # Citations and bibliography pages
     "autoapi.extension",
     "sphinx_llm.txt",
 ]
+
+bibtex_bibfiles = ["references.bib"]
+bibtex_default_style = "unsrt"
 
 templates_path = ["_templates"]
 fixed_sidebar = True
