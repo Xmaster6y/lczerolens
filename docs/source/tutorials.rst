@@ -11,6 +11,7 @@ Feature notebooks
 
    .. grid-item-card:: Models and inputs
       :link: notebooks/features/models-and-inputs
+      :link-type: doc
       :class-card: surface
 
       :octicon:`cpu;2em;sd-text-primary`
@@ -19,6 +20,7 @@ Feature notebooks
 
    .. grid-item-card:: Evaluate positions
       :link: notebooks/features/evaluate-positions
+      :link-type: doc
       :class-card: surface
 
       :octicon:`pulse;2em;sd-text-primary`
@@ -27,6 +29,7 @@ Feature notebooks
 
    .. grid-item-card:: Chess evidence
       :link: notebooks/features/chess-evidence
+      :link-type: doc
       :class-card: surface
 
       :octicon:`telescope;2em;sd-text-primary`
@@ -35,6 +38,7 @@ Feature notebooks
 
    .. grid-item-card:: Replayable search
       :link: notebooks/features/replayable-search
+      :link-type: doc
       :class-card: surface
 
       :octicon:`history;2em;sd-text-primary`
@@ -49,6 +53,7 @@ Tutorial notebooks
 
    .. grid-item-card:: Decision analysis
       :link: notebooks/tutorials/decision-analysis
+      :link-type: doc
       :class-card: surface
 
       :octicon:`workflow;2em;sd-text-primary`
@@ -57,6 +62,7 @@ Tutorial notebooks
 
    .. grid-item-card:: Compare models
       :link: notebooks/tutorials/compare-models
+      :link-type: doc
       :class-card: surface
 
       :octicon:`git-compare;2em;sd-text-primary`
@@ -65,6 +71,7 @@ Tutorial notebooks
 
    .. grid-item-card:: Analyze puzzles
       :link: notebooks/tutorials/analyze-puzzles
+      :link-type: doc
       :class-card: surface
 
       :octicon:`tasklist;2em;sd-text-primary`

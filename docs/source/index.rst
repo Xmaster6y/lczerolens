@@ -65,6 +65,7 @@ Explore
 
    .. grid-item-card:: Start evaluating
       :link: start
+      :link-type: doc
       :class-card: surface
 
       :octicon:`play;2em;sd-text-primary`
@@ -73,6 +74,7 @@ Explore
 
    .. grid-item-card:: Workflows
       :link: features
+      :link-type: doc
       :class-card: surface
 
       :octicon:`workflow;2em;sd-text-primary`
@@ -81,6 +83,7 @@ Explore
 
    .. grid-item-card:: Guided examples
       :link: tutorials
+      :link-type: doc
       :class-card: surface
 
       :octicon:`mortar-board;2em;sd-text-primary`
@@ -89,6 +92,7 @@ Explore
 
    .. grid-item-card:: Contracts
       :link: use-cases
+      :link-type: doc
       :class-card: surface
 
       :octicon:`shield-check;2em;sd-text-primary`

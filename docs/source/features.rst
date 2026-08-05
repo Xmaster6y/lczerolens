@@ -9,6 +9,7 @@ Executable workflows
 
    .. grid-item-card:: Models and inputs
       :link: notebooks/features/models-and-inputs
+      :link-type: doc
       :class-card: surface
 
       :octicon:`cpu;2em;sd-text-primary`
@@ -17,6 +18,7 @@ Executable workflows
 
    .. grid-item-card:: Position evaluation
       :link: notebooks/features/evaluate-positions
+      :link-type: doc
       :class-card: surface
 
       :octicon:`pulse;2em;sd-text-primary`
@@ -25,6 +27,7 @@ Executable workflows
 
    .. grid-item-card:: Chess evidence
       :link: notebooks/features/chess-evidence
+      :link-type: doc
       :class-card: surface
 
       :octicon:`telescope;2em;sd-text-primary`
@@ -33,6 +36,7 @@ Executable workflows
 
    .. grid-item-card:: Search and replay
       :link: notebooks/features/replayable-search
+      :link-type: doc
       :class-card: surface
 
       :octicon:`history;2em;sd-text-primary`
@@ -47,6 +51,7 @@ Reference guides
 
    .. grid-item-card:: Evidence
       :link: facts
+      :link-type: doc
       :class-card: surface
 
       :octicon:`checklist;2em;sd-text-primary`
@@ -55,22 +60,34 @@ Reference guides
 
    .. grid-item-card:: Search contract
       :link: search-contract
+      :link-type: doc
       :class-card: surface
 
       :octicon:`history;2em;sd-text-primary`
 
       Typed limits, capabilities, official-engine output, and replay.
 
-   .. grid-item-card:: Scope and architecture
+   .. grid-item-card:: Scope
       :link: scope
+      :link-type: doc
       :class-card: surface
 
       :octicon:`shield-check;2em;sd-text-primary`
 
-      Ownership, supported workflows, and compatibility boundaries.
+      Supported workflows, compatibility, and project boundaries.
+
+   .. grid-item-card:: Architecture
+      :link: architecture
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`workflow;2em;sd-text-primary`
+
+      Execution flow, component ownership, and evidence boundaries.
 
    .. grid-item-card:: API reference
       :link: api/index
+      :link-type: doc
       :class-card: surface
 
       :octicon:`code-square;2em;sd-text-primary`
