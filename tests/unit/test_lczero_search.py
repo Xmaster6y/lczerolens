@@ -4,8 +4,11 @@ from pathlib import Path
 import subprocess
 from types import SimpleNamespace
 
+import chess
 import pytest
 
+from lczerolens.provenance import PositionIdentity
+from lczerolens.search import LczeroSearch, Nodes
 from lczerolens.search import lczero as lczero_adapter
 from lczerolens.search.lczero import (
     LczeroOutputError,
@@ -290,18 +293,18 @@ def test_optional_pinned_lczero_process_adapter():
     with network_path.open("rb") as network_file:
         checksum = f"sha256:{hashlib.file_digest(network_file, 'sha256').hexdigest()}"
     backend = os.environ.get("LC0_BACKEND", "eigen")
-    trace = _LczeroProcessAdapter(
-        executable_path,
-        engine_version=version,
+    board = chess.Board()
+    board.push_uci("e2e4")
+    result = LczeroSearch(
+        executable=executable_path,
         network=str(network_path),
+        engine_version=version,
         network_checksum=checksum,
-    ).run(
-        _LczeroSearchRequest(
-            ROOT_FEN,
-            nodes=1,
-            options={"Backend": backend, "WeightsFile": network, "VerboseMoveStats": True},
-        )
-    )
+        options={"Backend": backend},
+    ).run(board, Nodes(1))
+    trace = result.trace
+    assert result.move in board.legal_moves
     assert trace.capability in {SearchCapability.ROOT_RESULT, SearchCapability.ROOT_SNAPSHOTS}
+    assert trace.root_position == PositionIdentity.from_board(board)
     assert trace.provenance.engine_version == version
     assert trace.provenance.network_checksum == checksum
