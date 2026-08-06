@@ -1,33 +1,82 @@
 Tutorials
 =========
 
-All notebooks use deterministic fixtures and run offline during the docs build.
+All tutorials use deterministic fixtures and run offline during the docs build.
 
 Feature notebooks
 -----------------
 
-* :doc:`notebooks/features/models-and-inputs` loads a local model, encodes
-  position batches, moves execution to the available device, and preserves an
-  instrumentation key through ``finish``.
-* :doc:`notebooks/features/evaluate-positions` inspects legal policy, scalar
-  evaluation, batching, and immutable evaluation records.
-* :doc:`notebooks/features/chess-evidence` keeps exact facts, move/line
-  analysis, counterfactual validity, and authored puzzle correctness distinct.
-* :doc:`notebooks/features/replayable-search` runs deterministic reference
-  search, inspects capabilities, and replays semantic and retained-event
-  evidence. It also states the official-engine boundary.
+.. grid:: 1 2 2 2
+   :gutter: 3
+
+   .. grid-item-card:: Models and inputs
+      :link: notebooks/features/models-and-inputs
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`cpu;2em;sd-text-primary`
+
+      Prepare boards, input planes, legal masks, devices, and hooks.
+
+   .. grid-item-card:: Evaluate positions
+      :link: notebooks/features/evaluate-positions
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`pulse;2em;sd-text-primary`
+
+      Work with legal policies, heads, batches, and evaluation records.
+
+   .. grid-item-card:: Chess evidence
+      :link: notebooks/features/chess-evidence
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`telescope;2em;sd-text-primary`
+
+      Keep rule-exact analysis and authored correctness distinct from preference.
+
+   .. grid-item-card:: Replayable search
+      :link: notebooks/features/replayable-search
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`history;2em;sd-text-primary`
+
+      Run deterministic search, inspect capabilities, and replay trace evidence.
 
 Tutorial notebooks
 ------------------
 
-* :doc:`notebooks/tutorials/decision-analysis` composes evaluator, search,
-  exact line, counterfactual, puzzle, and serialization records end to end.
-* :doc:`notebooks/tutorials/compare-models` compares two pinned evaluator
-  producers across the same positions without turning disagreement into a
-  causal or strength claim.
-* :doc:`notebooks/tutorials/analyze-puzzles` grades branching authored
-  solutions, analyzes an accepted line, and keeps model preference separate
-  from puzzle correctness.
+.. grid:: 1 2 2 2
+   :gutter: 3
+
+   .. grid-item-card:: Decision analysis
+      :link: notebooks/tutorials/decision-analysis
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`workflow;2em;sd-text-primary`
+
+      Compose evaluation, search, exact chess evidence, and persistence.
+
+   .. grid-item-card:: Compare models
+      :link: notebooks/tutorials/compare-models
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`git-compare;2em;sd-text-primary`
+
+      Compare pinned evaluator outputs on the same positions.
+
+   .. grid-item-card:: Analyze puzzles
+      :link: notebooks/tutorials/analyze-puzzles
+      :link-type: doc
+      :class-card: surface
+
+      :octicon:`tasklist;2em;sd-text-primary`
+
+      Grade authored solution trees and inspect accepted lines.
 
 .. toctree::
    :hidden:

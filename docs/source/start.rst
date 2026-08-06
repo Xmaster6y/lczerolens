@@ -8,8 +8,9 @@ Installation
 
    pip install lczerolens
 
-Use ``pip install "lczerolens[hub]"`` for Hugging Face model loading. Then run
-an evaluation:
+Use ``pip install "lczerolens[hub]"`` for Hugging Face model loading. The
+example uses Maia, a model family trained to predict human chess moves
+:cite:p:`mcilroy-young2020`. Then run an evaluation:
 
 .. code-block:: python
 

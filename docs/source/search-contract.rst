@@ -35,8 +35,11 @@ Search producers
 ----------------
 
 ``ReferenceSearch`` is deterministic, sequential, and replayable. It is an
-analysis oracle, not an lc0-equivalent or production-strength search. Semantic
-and retained-event replay apply to its full event evidence.
+analysis oracle, not an lc0-equivalent or production-strength search. Its
+``c_puct`` vocabulary follows the UCT and policy-guided search lineage
+:cite:p:`kocsis2006,silver2018`; this does not make it an AlphaZero or lc0
+reproduction. Semantic and retained-event replay apply to its full event
+evidence.
 
 ``audit_search_trace`` returns a reconstructed root checkpoint after every
 event (and marks a stopped divergent event incomplete), cumulative
@@ -48,9 +51,9 @@ and ancestor-closure status induced by the selected events. It never inserts
 omitted events or backup contributions; selectors, fidelity metrics, and pass
 thresholds remain downstream concerns.
 
-``LczeroSearch`` invokes a supplied lc0 executable and translates its public
-root output. Public root snapshots do not imply private events, a complete
-tree, or replayability.
+``LczeroSearch`` invokes a supplied lc0 executable :cite:p:`lczero` and
+translates its public root output. Public root snapshots do not imply private
+events, a complete tree, or replayability.
 
 Live engine validation is explicit:
 

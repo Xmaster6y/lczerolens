@@ -7,7 +7,8 @@ Run :doc:`notebooks/features/chess-evidence` for the complete feature path or
 Facts
 -----
 
-The bundled analyzers report exact ``python-chess`` observations:
+The bundled analyzers report exact observations from python-chess
+:cite:p:`python-chess`:
 
 * material and piece presence;
 * attackers and defenders;

@@ -27,8 +27,8 @@ Model compatibility
 extra. Arbitrary PyTorch modules can be wrapped by declaring their output
 heads.
 
-Official lc0 weights are converted externally. Native bindings are a
-conformance-test dependency, not a runtime abstraction.
+Official lc0 :cite:p:`lczero` weights are converted externally. Native bindings
+are a conformance-test dependency, not a runtime abstraction.
 
 Ownership boundary
 ------------------
