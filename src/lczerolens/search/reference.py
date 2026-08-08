@@ -8,6 +8,8 @@ reuse, transpositions, pruning, or FPU behaviour.  It emits the public
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+import hashlib
+import json
 import math
 from typing import Callable, Protocol
 
@@ -138,6 +140,143 @@ class SemanticReplayError(ValueError):
 
 
 @dataclass(frozen=True)
+class LeafEvaluationReplacement:
+    """One explicit policy/value replacement at a recorded leaf event."""
+
+    event_id: str
+    value: float
+    legal_policy_logits: tuple[tuple[str, float], ...]
+    dtype: str = "float32"
+    device: str = "cpu"
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.event_id, str) or not self.event_id:
+            raise ValueError("A leaf-evaluation replacement requires a non-empty event ID.")
+        if not math.isfinite(self.value) or not -1 <= self.value <= 1:
+            raise ValueError("Replacement value must be finite and in [-1, 1].")
+        moves = tuple(move for move, _ in self.legal_policy_logits)
+        if not moves or len(moves) != len(set(moves)) or moves != tuple(sorted(moves)):
+            raise ValueError("Replacement legal-policy logits must have unique moves in sorted order.")
+        if any(not isinstance(move, str) or not math.isfinite(logit) for move, logit in self.legal_policy_logits):
+            raise ValueError("Replacement legal-policy logits must contain finite values for string moves.")
+        dtype = getattr(torch, self.dtype, None)
+        if not isinstance(dtype, torch.dtype) or not dtype.is_floating_point:
+            raise ValueError(f"Unsupported replacement dtype {self.dtype!r}.")
+        try:
+            torch.device(self.device)
+        except (RuntimeError, TypeError) as error:
+            raise ValueError(f"Unsupported replacement device {self.device!r}.") from error
+
+    @classmethod
+    def from_event(cls, event: SimulationEvent) -> LeafEvaluationReplacement:
+        """Build an exact no-op replacement from recorded evaluator evidence."""
+        evaluator = event.leaf.evaluator
+        value = event.leaf.evaluation.value
+        if event.leaf.terminal or evaluator is None or value is None or evaluator.legal_policy_logits is None:
+            raise ValueError(f"Event {event.event_id} has no replaceable leaf evaluation.")
+        return cls(
+            event.event_id,
+            value,
+            tuple(evaluator.legal_policy_logits),
+            evaluator.dtype,
+            evaluator.source_device,
+        )
+
+
+class CounterfactualReplayFormatError(ValueError):
+    """Raised when leaf-replacement bytes are malformed or noncanonical."""
+
+
+def serialize_leaf_evaluation_replacement(replacement: LeafEvaluationReplacement) -> bytes:
+    """Return canonical versioned JSON bytes for one leaf replacement."""
+    if not isinstance(replacement, LeafEvaluationReplacement):
+        raise TypeError("serialize_leaf_evaluation_replacement expects a LeafEvaluationReplacement.")
+    envelope = {
+        "format": "lczerolens.leaf-evaluation-replacement",
+        "format_version": 1,
+        "replacement": {
+            "device": replacement.device,
+            "dtype": replacement.dtype,
+            "event_id": replacement.event_id,
+            "legal_policy_logits": [list(item) for item in replacement.legal_policy_logits],
+            "value": replacement.value,
+        },
+    }
+    try:
+        return json.dumps(
+            envelope,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    except (UnicodeEncodeError, ValueError) as error:
+        raise CounterfactualReplayFormatError(f"Replacement is not canonical JSON: {error}") from error
+
+
+def deserialize_leaf_evaluation_replacement(data: bytes) -> LeafEvaluationReplacement:
+    """Restore one replacement while rejecting malformed or noncanonical bytes."""
+    if not isinstance(data, bytes):
+        raise TypeError("deserialize_leaf_evaluation_replacement expects bytes.")
+
+    def reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        record: dict[str, object] = {}
+        for key, value in pairs:
+            if key in record:
+                raise CounterfactualReplayFormatError(f"Duplicate JSON field {key!r}.")
+            record[key] = value
+        return record
+
+    try:
+        envelope = json.loads(data.decode("utf-8"), object_pairs_hook=reject_duplicates)
+    except CounterfactualReplayFormatError:
+        raise
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise CounterfactualReplayFormatError(f"Invalid replacement JSON: {error}") from error
+    if not isinstance(envelope, dict) or set(envelope) != {"format", "format_version", "replacement"}:
+        raise CounterfactualReplayFormatError("Replacement envelope has invalid fields.")
+    version = envelope["format_version"]
+    if envelope["format"] != "lczerolens.leaf-evaluation-replacement" or isinstance(version, bool) or version != 1:
+        raise CounterfactualReplayFormatError("Unsupported replacement format or version.")
+    record = envelope["replacement"]
+    expected = {"device", "dtype", "event_id", "legal_policy_logits", "value"}
+    if not isinstance(record, dict) or set(record) != expected:
+        raise CounterfactualReplayFormatError("Replacement record has invalid fields.")
+    logits = record["legal_policy_logits"]
+    if not isinstance(logits, list) or any(not isinstance(item, list) or len(item) != 2 for item in logits):
+        raise CounterfactualReplayFormatError("Replacement legal-policy logits have an invalid shape.")
+    try:
+        replacement = LeafEvaluationReplacement(
+            event_id=record["event_id"],
+            value=record["value"],
+            legal_policy_logits=tuple((item[0], item[1]) for item in logits),
+            dtype=record["dtype"],
+            device=record["device"],
+        )
+    except (TypeError, ValueError) as error:
+        raise CounterfactualReplayFormatError(f"Invalid replacement record: {error}") from error
+    if serialize_leaf_evaluation_replacement(replacement) != data:
+        raise CounterfactualReplayFormatError("Replacement bytes are valid JSON but are not canonical.")
+    return replacement
+
+
+def leaf_evaluation_replacement_digest(replacement: LeafEvaluationReplacement) -> str:
+    """Return the SHA-256 digest of one canonical replacement."""
+    return hashlib.sha256(serialize_leaf_evaluation_replacement(replacement)).hexdigest()
+
+
+@dataclass(frozen=True)
+class CounterfactualReplayResult:
+    """A replayable counterfactual trace and its declared source relationship."""
+
+    source_trace: SearchTrace
+    replacement: LeafEvaluationReplacement
+    restored_prefix_event_ids: tuple[str, ...]
+    first_divergence_event_id: str | None
+    trace: SearchTrace
+
+
+@dataclass(frozen=True)
 class RetainedEventReplayPlan:
     """An ordered, explicit selection of events from one replayable trace.
 
@@ -221,11 +360,21 @@ class _ReferenceMCTS:
             raise ValueError("Reference search requires a non-terminal root position.")
 
         root = _Node(board.copy(stack=True), "node-0")
-        node_count = 1
         root_evaluation, root_expansion, root_evaluator = self._expand(root, evaluator, ValuePerspective.ROOT_PLAYER)
-        events: list[SimulationEvent] = []
+        events, _ = self._run_simulations(root, evaluator, 0, simulations, 1)
+        return self._trace(root, simulations, root_evaluation, root_expansion, root_evaluator, events)
 
-        for simulation in range(simulations):
+    def _run_simulations(
+        self,
+        root: _Node,
+        evaluator: Evaluator | Callable[[chess.Board], TensorDict],
+        start: int,
+        stop: int,
+        node_count: int,
+        replacement: LeafEvaluationReplacement | None = None,
+    ) -> tuple[list[SimulationEvent], int]:
+        events: list[SimulationEvent] = []
+        for simulation in range(start, stop):
             root_before = self._edge_stats(root, ValuePerspective.ROOT_PLAYER)
             node = root
             path: list[tuple[_Node, _Edge, _Node]] = []
@@ -244,7 +393,14 @@ class _ReferenceMCTS:
                 if not node.expanded:
                     break
 
-            leaf, expansion = self._leaf(node, evaluator, root.board.turn)
+            leaf_evaluator = evaluator
+            if replacement is not None and simulation == start:
+
+                def replace_leaf_evaluation(board: chess.Board) -> TensorDict:
+                    return _replacement_output(board, replacement)
+
+                leaf_evaluator = replace_leaf_evaluation
+            leaf, expansion = self._leaf(node, leaf_evaluator, root.board.turn)
             backups = self._backup(path, leaf.evaluation.value or 0.0)
             root_after = self._edge_stats(root, ValuePerspective.ROOT_PLAYER)
             events.append(
@@ -261,7 +417,17 @@ class _ReferenceMCTS:
                     root_after=root_after,
                 )
             )
+        return events, node_count
 
+    def _trace(
+        self,
+        root: _Node,
+        simulations: int,
+        root_evaluation: PositionEvaluation,
+        root_expansion: NodeExpansion,
+        root_evaluator: EvaluatorCall,
+        events: list[SimulationEvent],
+    ) -> SearchTrace:
         actions = tuple(RootAction(edge) for edge in self._edge_stats(root, ValuePerspective.ROOT_PLAYER))
         selection = self._root_selection(actions)
         return SearchTrace(
@@ -291,6 +457,75 @@ class _ReferenceMCTS:
             root_evaluator=root_evaluator,
             root_start_fen=root.board.root().fen(en_passant="fen"),
             root_move_history=tuple(move.uci() for move in root.board.move_stack),
+        )
+
+    def replay_counterfactual(
+        self,
+        trace: SearchTrace,
+        evaluator: Evaluator | Callable[[chess.Board], TensorDict],
+        replacement: LeafEvaluationReplacement,
+    ) -> CounterfactualReplayResult:
+        """Restore a validated prefix and re-execute the original remaining budget."""
+        if not isinstance(trace, SearchTrace):
+            raise TypeError("Counterfactual replay requires a SearchTrace.")
+        if not isinstance(replacement, LeafEvaluationReplacement):
+            raise TypeError("Counterfactual replay requires a LeafEvaluationReplacement.")
+        replay_search_trace(trace)
+        events = trace.events or ()
+        by_id = {event.event_id: index for index, event in enumerate(events)}
+        if replacement.event_id not in by_id:
+            raise ValueError(f"Unknown replacement event ID {replacement.event_id!r}.")
+        target_index = by_id[replacement.event_id]
+        target = events[target_index]
+        if target.leaf.terminal or target.leaf.evaluator is None:
+            raise ValueError(f"Event {replacement.event_id} has no replaceable leaf evaluation.")
+        if not math.isclose(self.c_puct, _replay_c_puct(trace), rel_tol=0.0, abs_tol=0.0):
+            raise ValueError("Counterfactual replay c_puct must match the source trace.")
+
+        root_board = _replay_root_board(trace)
+        root_id = events[0].path[0].node_id
+        root = _Node(root_board, root_id)
+        _initialize_replay_root(root, trace, events[0])
+        nodes = {root_id: root}
+        for event in events[:target_index]:
+            path = _replay_path(root, nodes, event, self.c_puct)
+            _replay_leaf(path[-1][2], event, root.board.turn)
+            _replay_backups(path, event)
+        expected_node_ids = {f"node-{index}" for index in range(len(nodes))}
+        if nodes.keys() != expected_node_ids:
+            raise SemanticReplayError("restored prefix has non-canonical node IDs.", phase="prefix")
+
+        suffix, _ = self._run_simulations(
+            root,
+            evaluator,
+            target_index,
+            len(events),
+            len(nodes),
+            replacement,
+        )
+        counterfactual = self._trace(
+            root,
+            len(events),
+            trace.snapshots[0].evaluation,
+            trace.root_expansion,
+            trace.root_evaluator,
+            [*events[:target_index], *suffix],
+        )
+        replay_search_trace(counterfactual)
+        first_divergence = next(
+            (
+                original.event_id
+                for original, changed in zip(events, counterfactual.events or ())
+                if original != changed
+            ),
+            None,
+        )
+        return CounterfactualReplayResult(
+            trace,
+            replacement,
+            tuple(event.event_id for event in events[:target_index]),
+            first_divergence,
+            counterfactual,
         )
 
     def _expand(
@@ -422,6 +657,12 @@ class ReferenceSearch:
         trace = self._core.search(board.copy(stack=True), self._evaluate, simulations=limit.value)
         return SearchResult.from_trace(trace)
 
+    def replay_counterfactual(
+        self, trace: SearchTrace, replacement: LeafEvaluationReplacement
+    ) -> CounterfactualReplayResult:
+        """Apply one leaf replacement and deterministically rerun the original suffix."""
+        return self._core.replay_counterfactual(trace, self._evaluate, replacement)
+
     def _evaluate(self, board: chess.Board) -> TensorDict:
         evaluated = self.evaluator.evaluate(board)
         if not isinstance(evaluated, Evaluation):
@@ -437,6 +678,28 @@ class ReferenceSearch:
             },
             batch_size=[],
         )
+
+
+def _replacement_output(board: chess.Board, replacement: LeafEvaluationReplacement) -> TensorDict:
+    legal_moves = tuple(sorted((move.uci() for move in board.legal_moves)))
+    replacement_moves = tuple(move for move, _ in replacement.legal_policy_logits)
+    if replacement_moves != legal_moves:
+        raise ValueError(
+            f"Replacement event {replacement.event_id} legal moves do not match the selected leaf position."
+        )
+    dtype = getattr(torch, replacement.dtype)
+    device = torch.device(replacement.device)
+    policy = torch.zeros(1858, dtype=dtype, device=device)
+    for move_uci, logit in replacement.legal_policy_logits:
+        move = chess.Move.from_uci(move_uci)
+        policy[encode_move(board, move)] = logit
+    return TensorDict(
+        {
+            "policy": policy,
+            "value": torch.tensor(replacement.value, dtype=dtype, device=device),
+        },
+        batch_size=[],
+    )
 
 
 def _validate_reference_board(board: chess.Board) -> None:
@@ -1160,7 +1423,12 @@ def _close(left: float | None, right: float | None, tolerance: ReplayTolerance |
 
 
 __all__ = [
+    "CounterfactualReplayFormatError",
+    "CounterfactualReplayResult",
     "Evaluator",
+    "LeafEvaluationReplacement",
+    "deserialize_leaf_evaluation_replacement",
+    "leaf_evaluation_replacement_digest",
     "ReferenceSearch",
     "ReplayDiscrepancy",
     "ReplayTolerance",
@@ -1178,4 +1446,5 @@ __all__ = [
     "replay_root_events",
     "replay_retained_events",
     "replay_search_trace",
+    "serialize_leaf_evaluation_replacement",
 ]

@@ -51,6 +51,16 @@ and ancestor-closure status induced by the selected events. It never inserts
 omitted events or backup contributions; selectors, fidelity metrics, and pass
 thresholds remain downstream concerns.
 
+``ReferenceSearch.replay_counterfactual`` provides a distinct intervention
+contract. It first audits and restores the source trace through the event
+prefix, applies one canonical ``LeafEvaluationReplacement`` to the selected
+non-terminal leaf, and deterministically executes the original remaining
+simulation budget. The returned trace is independently replayable and reports
+its first divergent event. Exact no-op replacements reproduce the source
+trace. Canonical replacement bytes and digests are available through
+``serialize_leaf_evaluation_replacement`` and
+``leaf_evaluation_replacement_digest``.
+
 ``LczeroSearch`` invokes a supplied lc0 executable :cite:p:`lczero` and
 translates its public root output. Public root snapshots do not imply private
 events, a complete tree, or replayability.
