@@ -61,6 +61,8 @@ EXPECTED_MODULE_DEPENDENCIES = {
 
 EXPECTED_ROOT_EXPORTS = {
     "ChessPlayer",
+    "CounterfactualReplayFormatError",
+    "CounterfactualReplayResult",
     "CounterfactualComparison",
     "CounterfactualConstraints",
     "CounterfactualPair",
@@ -91,6 +93,7 @@ EXPECTED_ROOT_EXPORTS = {
     "LineIntent",
     "LineRole",
     "LineTerminal",
+    "LeafEvaluationReplacement",
     "MoveAnalysis",
     "Nodes",
     "PositionAttribute",
@@ -124,6 +127,8 @@ EXPECTED_ROOT_EXPORTS = {
     "analyze_line",
     "analyze_move",
     "audit_search_trace",
+    "deserialize_leaf_evaluation_replacement",
+    "leaf_evaluation_replacement_digest",
     "compare_counterfactual",
     "compare_decision",
     "plan_retained_events",
@@ -132,6 +137,7 @@ EXPECTED_ROOT_EXPORTS = {
     "replay_retained_events",
     "replay_root_events",
     "replay_search_trace",
+    "serialize_leaf_evaluation_replacement",
     "sibling_counterfactual",
 }
 

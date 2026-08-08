@@ -61,6 +61,9 @@ from .search import (
     Visits,
 )
 from .search.reference import (
+    CounterfactualReplayFormatError,
+    CounterfactualReplayResult,
+    LeafEvaluationReplacement,
     ReplayDiscrepancy,
     ReplayTolerance,
     RetainedEventReplayCosts,
@@ -73,10 +76,13 @@ from .search.reference import (
     SemanticReplayError,
     SemanticReplayResult,
     audit_search_trace,
+    deserialize_leaf_evaluation_replacement,
+    leaf_evaluation_replacement_digest,
     plan_retained_events,
     replay_retained_events,
     replay_root_events,
     replay_search_trace,
+    serialize_leaf_evaluation_replacement,
 )
 from .serialization import EvaluationRecordFormatError
 from .schema import LczeroKeys
@@ -90,6 +96,8 @@ __all__ = [
     "LczeroEvaluator",
     "LczeroKeys",
     "LczeroModel",
+    "CounterfactualReplayFormatError",
+    "CounterfactualReplayResult",
     "ChessPlayer",
     "CounterfactualConstraints",
     "CounterfactualComparison",
@@ -148,9 +156,12 @@ __all__ = [
     "LineIntent",
     "LineRole",
     "LineTerminal",
+    "LeafEvaluationReplacement",
     "analyze_move",
     "analyze_line",
     "audit_search_trace",
+    "deserialize_leaf_evaluation_replacement",
+    "leaf_evaluation_replacement_digest",
     "compare_counterfactual",
     "compare_decision",
     "plan_retained_events",
@@ -159,5 +170,6 @@ __all__ = [
     "replay_root_events",
     "replay_retained_events",
     "replay_search_trace",
+    "serialize_leaf_evaluation_replacement",
     "sibling_counterfactual",
 ]

@@ -9,6 +9,8 @@ from tensordict import TensorDict
 
 from lczerolens._codec import encode_move
 from lczerolens.search.reference import (
+    CounterfactualReplayFormatError,
+    LeafEvaluationReplacement,
     _ReferenceMCTS,
     ReplayTolerance,
     SemanticReplayError,
@@ -18,10 +20,13 @@ from lczerolens.search.reference import (
     _retained_root_transition,
     plan_retained_events,
     audit_search_trace,
+    deserialize_leaf_evaluation_replacement,
+    leaf_evaluation_replacement_digest,
     replay_retained_events,
     _replay_path,
     replay_root_events,
     replay_search_trace,
+    serialize_leaf_evaluation_replacement,
 )
 from lczerolens.search.trace import (
     BackupUpdate,
@@ -88,6 +93,72 @@ def test_reference_search_revisits_a_child_and_alternates_backup_signs():
 
     assert len(trace.events[1].path) == 2
     assert [backup.signed_value for backup in trace.events[1].backups] == pytest.approx((0.4, -0.4))
+
+
+def test_counterfactual_replay_restores_prefix_replaces_leaf_and_reexecutes_budget():
+    core = _ReferenceMCTS(c_puct=1.5)
+    evaluator = FixedEvaluator()
+    trace = core.search(chess.Board(), evaluator, simulations=8)
+    target = trace.events[2]
+    replacement = replace(LeafEvaluationReplacement.from_event(target), value=-0.75)
+
+    result = core.replay_counterfactual(trace, evaluator, replacement)
+
+    assert result.source_trace is trace
+    assert result.restored_prefix_event_ids == ("simulation-0", "simulation-1")
+    assert result.first_divergence_event_id == "simulation-2"
+    assert result.trace.events[:2] == trace.events[:2]
+    assert len(result.trace.events) == len(trace.events)
+    assert result.trace.events[2].leaf.evaluation.value == -0.75
+    assert result.trace.snapshots[-1].budget == trace.snapshots[-1].budget
+    assert replay_search_trace(result.trace).selected_move == result.trace.snapshots[-1].selection.move
+
+
+def test_counterfactual_exact_replacement_is_a_no_op():
+    core = _ReferenceMCTS(c_puct=1.5)
+    evaluator = FixedEvaluator()
+    trace = core.search(chess.Board(), evaluator, simulations=8)
+
+    result = core.replay_counterfactual(trace, evaluator, LeafEvaluationReplacement.from_event(trace.events[4]))
+
+    assert result.first_divergence_event_id is None
+    assert result.trace == trace
+
+
+def test_leaf_evaluation_replacement_has_canonical_round_trip_and_digest():
+    trace = _ReferenceMCTS().search(chess.Board(), FixedEvaluator(), simulations=1)
+    replacement = LeafEvaluationReplacement.from_event(trace.events[0])
+    encoded = serialize_leaf_evaluation_replacement(replacement)
+
+    assert deserialize_leaf_evaluation_replacement(encoded) == replacement
+    assert len(leaf_evaluation_replacement_digest(replacement)) == 64
+    with pytest.raises(CounterfactualReplayFormatError, match="not canonical"):
+        deserialize_leaf_evaluation_replacement(encoded.replace(b'"value":0.25', b'"value":0.250'))
+    with pytest.raises(CounterfactualReplayFormatError, match="Duplicate"):
+        deserialize_leaf_evaluation_replacement(encoded.replace(b'"event_id":', b'"event_id":"duplicate","event_id":'))
+
+
+def test_counterfactual_replay_rejects_unknown_terminal_incompatible_and_wrong_search_replacements():
+    core = _ReferenceMCTS(c_puct=1.0)
+    evaluator = FixedEvaluator()
+    trace = core.search(chess.Board(), evaluator, simulations=2)
+    replacement = LeafEvaluationReplacement.from_event(trace.events[0])
+
+    with pytest.raises(ValueError, match="Unknown replacement"):
+        core.replay_counterfactual(trace, evaluator, replace(replacement, event_id="missing"))
+    with pytest.raises(ValueError, match="legal moves do not match"):
+        core.replay_counterfactual(
+            trace,
+            evaluator,
+            replace(replacement, legal_policy_logits=replacement.legal_policy_logits[:-1]),
+        )
+    with pytest.raises(ValueError, match="c_puct must match"):
+        _ReferenceMCTS(c_puct=2.0).replay_counterfactual(trace, evaluator, replacement)
+
+    terminal_board = chess.Board("8/8/8/8/8/8/4Q3/K1k5 w - - 0 1")
+    terminal_trace = _ReferenceMCTS(c_puct=0.0).search(terminal_board, evaluator, simulations=1)
+    with pytest.raises(ValueError, match="no replaceable leaf evaluation"):
+        LeafEvaluationReplacement.from_event(terminal_trace.events[0])
 
 
 @pytest.mark.parametrize(
