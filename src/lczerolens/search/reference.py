@@ -482,6 +482,15 @@ class _ReferenceMCTS:
         if not math.isclose(self.c_puct, _replay_c_puct(trace), rel_tol=0.0, abs_tol=0.0):
             raise ValueError("Counterfactual replay c_puct must match the source trace.")
 
+        # An exact recorded replacement is the identity intervention. Restore
+        # the target event semantically as part of the certified prefix rather
+        # than round-tripping its logits through a backend softmax kernel: two
+        # mathematically identical softmax calls can differ by an ulp across
+        # tensor layouts. The remaining suffix is still selected and evaluated
+        # live, so this is a genuine prefix-resume check rather than returning
+        # the source trace unchanged.
+        identity_replacement = replacement == LeafEvaluationReplacement.from_event(target)
+
         root_board = _replay_root_board(trace)
         root_id = events[0].path[0].node_id
         root = _Node(root_board, root_id)
@@ -491,6 +500,12 @@ class _ReferenceMCTS:
             path = _replay_path(root, nodes, event, self.c_puct)
             _replay_leaf(path[-1][2], event, root.board.turn)
             _replay_backups(path, event)
+        resume_index = target_index
+        if identity_replacement:
+            path = _replay_path(root, nodes, target, self.c_puct)
+            _replay_leaf(path[-1][2], target, root.board.turn)
+            _replay_backups(path, target)
+            resume_index += 1
         expected_node_ids = {f"node-{index}" for index in range(len(nodes))}
         if nodes.keys() != expected_node_ids:
             raise SemanticReplayError("restored prefix has non-canonical node IDs.", phase="prefix")
@@ -498,10 +513,10 @@ class _ReferenceMCTS:
         suffix, _ = self._run_simulations(
             root,
             evaluator,
-            target_index,
+            resume_index,
             len(events),
             len(nodes),
-            replacement,
+            None if identity_replacement else replacement,
         )
         counterfactual = self._trace(
             root,
@@ -509,7 +524,7 @@ class _ReferenceMCTS:
             trace.snapshots[0].evaluation,
             trace.root_expansion,
             trace.root_evaluator,
-            [*events[:target_index], *suffix],
+            [*events[:resume_index], *suffix],
         )
         replay_search_trace(counterfactual)
         first_divergence = next(
@@ -523,7 +538,7 @@ class _ReferenceMCTS:
         return CounterfactualReplayResult(
             trace,
             replacement,
-            tuple(event.event_id for event in events[:target_index]),
+            tuple(event.event_id for event in events[:resume_index]),
             first_divergence,
             counterfactual,
         )
@@ -1112,7 +1127,9 @@ def _initialize_replay_root(
             raise SemanticReplayError(
                 f"root edge {move} does not match the evaluator-derived initial state.", phase="root_expansion"
             )
-        root.edges[move] = _Edge(legal[move], priors[move])
+        # Validate against evaluator logits above, then retain the producer's
+        # exact serialized float so prefix-resume does not introduce an ulp.
+        root.edges[move] = _Edge(legal[move], edge.prior)
     for edge in initial:
         if edge.perspective is not ValuePerspective.ROOT_PLAYER:
             raise SemanticReplayError(
@@ -1284,7 +1301,9 @@ def _replay_expansion(
                 event_id=event.event_id,
                 phase="expansion",
             )
-        node.edges[move] = _Edge(legal[move], priors[move])
+        # The recorded prior already passed the evaluator-derived check. Keep
+        # that exact evidence value when reconstructing resumable state.
+        node.edges[move] = _Edge(legal[move], edge.prior)
     node.expanded = True
 
 
