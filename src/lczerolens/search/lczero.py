@@ -49,6 +49,7 @@ _FIELD = re.compile(
     r"(?:\((?P<name>P|Q|U|V|WL|D|PV|W|M|S|Q\+U):\s*(?P<value>[^)]*)\)|"
     r"\b(?P<bare_name>N):\s*(?P<bare_value>\d+)(?:\s*\(\+\s*\d+\))?)"
 )
+_MOVE_STAT_ANNOTATIONS = re.compile(r"(?:\(\s*\d+\s*\))?(?:\s*\([TWL]\))?")
 _INFO_NUMBER = re.compile(r"\b(?P<name>nodes|time)\s+(?P<value>\d+)\b")
 
 
@@ -198,8 +199,10 @@ class _LczeroRootSnapshotParser:
     """Parse the pinned public ``VerboseMoveStats``/UCI text contract.
 
     Supported fields are ``P``, ``N``, ``Q``, ``U``, ``V``, ``WL``, ``D``,
-    and ``PV``. Lines which look like a move-stat record but do not use this
-    shape fail rather than silently yielding partial evidence.
+    and ``PV``. Lc0's ``(T)``, ``(W)``, and ``(L)`` proven-outcome markers
+    are recognized as annotations, but are not promoted to trace evidence.
+    Lines which look like a move-stat record but do not use this shape fail
+    rather than silently yielding partial evidence.
     """
 
     format_version = "lc0-public-root-v1"
@@ -279,7 +282,7 @@ class _LczeroRootSnapshotParser:
             for field in _FIELD.finditer(match["fields"])
         }
         remainder = _FIELD.sub("", match["fields"]).strip()
-        if not fields or not re.fullmatch(r"(?:\(\s*\d+\s*\))?", remainder):
+        if not fields or _MOVE_STAT_ANNOTATIONS.fullmatch(remainder) is None:
             raise LczeroOutputError(f"Unsupported lc0 root move-stat fields: {line!r}")
         try:
             prior = _number(fields["P"], percent=True) if "P" in fields else None

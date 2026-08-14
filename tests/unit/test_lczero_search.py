@@ -138,6 +138,24 @@ def test_preserves_unreported_lczero_values_as_missing():
     assert action.leaf_evaluation is None
 
 
+@pytest.mark.parametrize("marker", ["T", "W", "L"])
+def test_recognizes_lczero_proven_outcome_markers(marker):
+    trace = _LczeroRootSnapshotParser().parse(
+        [
+            "info string e2e4 (1561) N: 58 (+ 0) (P: 100.00%) (WL: 1.00000) "
+            f"(D: 0.000) (M: 2.0) (Q: 1.00000) (U: 0.10976) (S: 1.11500) (V: 1.0000) ({marker})",
+            "bestmove e2e4",
+        ],
+        request=_LczeroSearchRequest(ROOT_FEN, nodes=58),
+        engine_version="v0.32.1",
+        network="test",
+    )
+    action = (trace.snapshots[0].actions or ())[0]
+    assert action.statistics.visits == 58
+    assert action.statistics.mean_value == 1.0
+    assert action.evaluation and action.evaluation.value == 1.0
+
+
 def test_rejects_non_positive_priors_and_non_move_stat_records():
     parser = _LczeroRootSnapshotParser()
     with pytest.raises(LczeroOutputError, match="non-positive"):
@@ -158,6 +176,8 @@ def test_rejects_non_positive_priors_and_non_move_stat_records():
         (["bestmove e7e5"], "bestmove"),
         (["e7e5 (P: 100.00%)", "bestmove e2e4"], "illegal move"),
         (["e2e4 (P: 100.00%) unexpected", "bestmove e2e4"], "fields"),
+        (["e2e4 (P: 100.00%) (X)", "bestmove e2e4"], "fields"),
+        (["e2e4 (P: 100.00%) (T) (W)", "bestmove e2e4"], "fields"),
         (["e2e4 (P: 100.00%) (PV: d2d4)", "bestmove e2e4"], "Invalid"),
         (["e2e4 (P: 1.0)", "bestmove e2e4"], "Invalid"),
         (["e2e4 (P: 100.00%) (V: .)", "bestmove e2e4"], "Invalid"),
