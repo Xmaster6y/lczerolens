@@ -179,17 +179,15 @@ class LczeroSearch:
         self._options = dict(options or {})
         self._timeout = float(timeout)
 
-    capabilities: frozenset[SearchAdapterCapability] = frozenset()
-
     def supports(self, capability: SearchAdapterCapability) -> bool:
         """Return whether this adapter implements an optional search input."""
         if not isinstance(capability, SearchAdapterCapability):
             raise TypeError("Search adapter capability checks require a SearchAdapterCapability value.")
-        return capability in self.capabilities
+        return False
 
     def require(self, capability: SearchAdapterCapability) -> LczeroSearch:
         """Require an optional input capability and return this adapter."""
-        require_adapter_capability(self.capabilities, capability)
+        require_adapter_capability(frozenset(), capability)
         return self
 
     def run(

@@ -9,7 +9,6 @@ import torch
 from tensordict import TensorDict
 
 from lczerolens._codec import encode_move
-from lczerolens.search import reference as reference_module
 from lczerolens.search.reference import (
     CounterfactualReplayFormatError,
     LeafEvaluationReplacement,
@@ -18,6 +17,7 @@ from lczerolens.search.reference import (
     SemanticReplayError,
     _Node,
     _apply_retained_root_delta,
+    _canonical_replay_node_count,
     _retained_initial_root_state,
     _retained_root_transition,
     plan_retained_events,
@@ -145,12 +145,15 @@ def test_leaf_evaluation_replacement_has_canonical_round_trip_and_digest():
     (
         ({"event_id": ""}, "event ID"),
         ({"event_id": None}, "event ID"),
+        ({"value": True}, "real number"),
+        ({"value": "0.0"}, "real number"),
         ({"value": float("nan")}, "finite"),
         ({"value": 2.0}, r"\[-1, 1\]"),
         ({"legal_policy_logits": ()}, "unique moves"),
         ({"legal_policy_logits": (("a2a3", 0.0), ("a2a3", 1.0))}, "unique moves"),
         ({"legal_policy_logits": (("b2b3", 0.0), ("a2a3", 1.0))}, "sorted order"),
         ({"legal_policy_logits": ((1, 0.0),)}, "finite values"),
+        ({"legal_policy_logits": (("a2a3", True),)}, "finite values"),
         ({"legal_policy_logits": (("a2a3", float("nan")),)}, "finite values"),
         ({"dtype": "int64"}, "dtype"),
         ({"device": "not-a-device"}, "device"),
@@ -174,6 +177,17 @@ def test_leaf_evaluation_replacement_serialization_rejects_wrong_type_and_non_ut
     replacement = LeafEvaluationReplacement("\ud800", 0.0, (("a2a3", 0.0),))
     with pytest.raises(CounterfactualReplayFormatError, match="canonical JSON"):
         serialize_leaf_evaluation_replacement(replacement)
+
+
+def test_leaf_evaluation_replacement_normalizes_equivalent_numeric_inputs():
+    integer = LeafEvaluationReplacement("simulation-0", 1, (("a2a3", 2),))
+    floating = LeafEvaluationReplacement("simulation-0", 1.0, (("a2a3", 2.0),))
+
+    assert integer == floating
+    assert integer.value == 1.0
+    assert integer.legal_policy_logits == (("a2a3", 2.0),)
+    assert serialize_leaf_evaluation_replacement(integer) == serialize_leaf_evaluation_replacement(floating)
+    assert leaf_evaluation_replacement_digest(integer) == leaf_evaluation_replacement_digest(floating)
 
 
 def test_leaf_evaluation_replacement_decoder_fails_closed_for_every_record_boundary():
@@ -252,26 +266,11 @@ def test_reference_core_rejects_invalid_root_replacement_type():
         _ReferenceMCTS().search(chess.Board(), FixedEvaluator(), 1, root_evaluation=object())
 
 
-def test_counterfactual_replay_rejects_noncanonical_restored_node_ids(monkeypatch):
-    core = _ReferenceMCTS()
-    evaluator = FixedEvaluator()
-    trace = core.search(chess.Board(), evaluator, 2)
-    replacement = replace(LeafEvaluationReplacement.from_event(trace.events[1]), value=-0.5)
-    original_replay_path = reference_module._replay_path
-    calls = 0
-
-    def inject_noncanonical_node(root, nodes, event, c_puct):
-        nonlocal calls
-        calls += 1
-        path = original_replay_path(root, nodes, event, c_puct)
-        if calls == 3:
-            nodes["unexpected-node"] = path[-1][2]
-        return path
-
-    monkeypatch.setattr(reference_module, "_replay_path", inject_noncanonical_node)
-
+def test_restored_replay_node_ids_are_validated_without_call_order_assumptions():
+    root = _Node(chess.Board(), "node-0")
+    assert _canonical_replay_node_count({"node-0": root}) == 1
     with pytest.raises(SemanticReplayError, match="non-canonical node IDs"):
-        core.replay_counterfactual(trace, evaluator, replacement)
+        _canonical_replay_node_count({"node-0": root, "unexpected-node": root})
 
 
 @pytest.mark.parametrize(

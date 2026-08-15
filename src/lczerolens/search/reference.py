@@ -11,6 +11,7 @@ from dataclasses import dataclass, field, replace
 import hashlib
 import json
 import math
+from numbers import Real
 from typing import Callable, Protocol
 
 import chess
@@ -153,13 +154,28 @@ class LeafEvaluationReplacement:
     def __post_init__(self) -> None:
         if not isinstance(self.event_id, str) or not self.event_id:
             raise ValueError("A leaf-evaluation replacement requires a non-empty event ID.")
-        if not math.isfinite(self.value) or not -1 <= self.value <= 1:
+        if isinstance(self.value, bool) or not isinstance(self.value, Real):
+            raise ValueError("Replacement value must be a real number.")
+        value = float(self.value)
+        if not math.isfinite(value) or not -1 <= value <= 1:
             raise ValueError("Replacement value must be finite and in [-1, 1].")
+        object.__setattr__(self, "value", value)
         moves = tuple(move for move, _ in self.legal_policy_logits)
         if not moves or len(moves) != len(set(moves)) or moves != tuple(sorted(moves)):
             raise ValueError("Replacement legal-policy logits must have unique moves in sorted order.")
-        if any(not isinstance(move, str) or not math.isfinite(logit) for move, logit in self.legal_policy_logits):
+        if any(
+            not isinstance(move, str)
+            or isinstance(logit, bool)
+            or not isinstance(logit, Real)
+            or not math.isfinite(logit)
+            for move, logit in self.legal_policy_logits
+        ):
             raise ValueError("Replacement legal-policy logits must contain finite values for string moves.")
+        object.__setattr__(
+            self,
+            "legal_policy_logits",
+            tuple((move, float(logit)) for move, logit in self.legal_policy_logits),
+        )
         dtype = getattr(torch, self.dtype, None)
         if not isinstance(dtype, torch.dtype) or not dtype.is_floating_point:
             raise ValueError(f"Unsupported replacement dtype {self.dtype!r}.")
@@ -383,7 +399,7 @@ class _ReferenceMCTS:
             root_expansion,
             root_evaluator,
             events,
-            root_replacement=root_evaluation,
+            provenance=self._provenance(root_evaluation),
         )
 
     def _run_simulations(
@@ -450,7 +466,7 @@ class _ReferenceMCTS:
         root_evaluator: EvaluatorCall,
         events: list[SimulationEvent],
         *,
-        root_replacement: LeafEvaluationReplacement | None = None,
+        provenance: SearchProvenance,
     ) -> SearchTrace:
         actions = tuple(RootAction(edge) for edge in self._edge_stats(root, ValuePerspective.ROOT_PLAYER))
         selection = self._root_selection(actions)
@@ -458,26 +474,7 @@ class _ReferenceMCTS:
             root_fen=root.board.fen(en_passant="fen"),
             root_player=ChessPlayer.WHITE if root.board.turn else ChessPlayer.BLACK,
             capability=SearchCapability.REPLAYABLE,
-            provenance=SearchProvenance(
-                source="lczerolens-reference-mcts",
-                engine="deterministic-reference",
-                parameters=(
-                    SearchParameter("c_puct", self.c_puct),
-                    SearchParameter("selection", "Q + c_puct * P * sqrt(sum(N)) / (1 + N)"),
-                    SearchParameter("tie_break", "UCI lexicographic order"),
-                )
-                + (
-                    (
-                        SearchParameter("root_evaluation.event_id", root_replacement.event_id),
-                        SearchParameter(
-                            "root_evaluation.replacement_sha256",
-                            leaf_evaluation_replacement_digest(root_replacement),
-                        ),
-                    )
-                    if root_replacement is not None
-                    else ()
-                ),
-            ),
+            provenance=provenance,
             snapshots=(
                 RootSnapshot(
                     sequence=0,
@@ -492,6 +489,26 @@ class _ReferenceMCTS:
             root_evaluator=root_evaluator,
             root_start_fen=root.board.root().fen(en_passant="fen"),
             root_move_history=tuple(move.uci() for move in root.board.move_stack),
+        )
+
+    def _provenance(self, root_replacement: LeafEvaluationReplacement | None) -> SearchProvenance:
+        parameters = (
+            SearchParameter("c_puct", self.c_puct),
+            SearchParameter("selection", "Q + c_puct * P * sqrt(sum(N)) / (1 + N)"),
+            SearchParameter("tie_break", "UCI lexicographic order"),
+        )
+        if root_replacement is not None:
+            parameters += (
+                SearchParameter("root_evaluation.event_id", root_replacement.event_id),
+                SearchParameter(
+                    "root_evaluation.replacement_sha256",
+                    leaf_evaluation_replacement_digest(root_replacement),
+                ),
+            )
+        return SearchProvenance(
+            source="lczerolens-reference-mcts",
+            engine="deterministic-reference",
+            parameters=parameters,
         )
 
     def replay_counterfactual(
@@ -541,16 +558,14 @@ class _ReferenceMCTS:
             _replay_leaf(path[-1][2], target, root.board.turn)
             _replay_backups(path, target)
             resume_index += 1
-        expected_node_ids = {f"node-{index}" for index in range(len(nodes))}
-        if nodes.keys() != expected_node_ids:
-            raise SemanticReplayError("restored prefix has non-canonical node IDs.", phase="prefix")
+        node_count = _canonical_replay_node_count(nodes)
 
         suffix, _ = self._run_simulations(
             root,
             evaluator,
             resume_index,
             len(events),
-            len(nodes),
+            node_count,
             None if identity_replacement else replacement,
         )
         counterfactual = self._trace(
@@ -560,6 +575,7 @@ class _ReferenceMCTS:
             trace.root_expansion,
             trace.root_evaluator,
             [*events[:resume_index], *suffix],
+            provenance=trace.provenance,
         )
         replay_search_trace(counterfactual)
         first_divergence = next(
@@ -697,17 +713,15 @@ class ReferenceSearch:
         self.evaluator = evaluator
         self._core = _ReferenceMCTS(c_puct)
 
-    capabilities = frozenset({SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT})
-
     def supports(self, capability: SearchAdapterCapability) -> bool:
         """Return whether this adapter implements an optional search input."""
         if not isinstance(capability, SearchAdapterCapability):
             raise TypeError("Search adapter capability checks require a SearchAdapterCapability value.")
-        return capability in self.capabilities
+        return capability is SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT
 
     def require(self, capability: SearchAdapterCapability) -> ReferenceSearch:
         """Require an optional input capability and return this adapter."""
-        require_adapter_capability(self.capabilities, capability)
+        require_adapter_capability(frozenset({SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT}), capability)
         return self
 
     def run(
@@ -771,6 +785,14 @@ def _replacement_output(board: chess.Board, replacement: LeafEvaluationReplaceme
         },
         batch_size=[],
     )
+
+
+def _canonical_replay_node_count(nodes: dict[str, _Node]) -> int:
+    """Return the next node index after validating a restored reference tree."""
+    expected = {f"node-{index}" for index in range(len(nodes))}
+    if nodes.keys() != expected:
+        raise SemanticReplayError("restored prefix has non-canonical node IDs.", phase="prefix")
+    return len(nodes)
 
 
 def _validate_reference_board(board: chess.Board) -> None:

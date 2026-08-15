@@ -134,6 +134,13 @@ def test_reference_search_injects_root_evaluation_and_records_provenance():
     replay = search.replay_counterfactual(clean.trace, LeafEvaluationReplacement.from_event(clean.trace.events[0]))
     assert replay.trace == clean.trace
 
+    injected_replay = search.replay_counterfactual(
+        result.trace, LeafEvaluationReplacement.from_event(result.trace.events[0])
+    )
+    assert injected_replay.first_divergence_event_id is None
+    assert injected_replay.trace == result.trace
+    assert injected_replay.trace.provenance is result.trace.provenance
+
 
 def test_reference_search_rejects_root_replacement_for_another_position():
     replacement = LeafEvaluationReplacement(
@@ -220,9 +227,6 @@ def test_lczero_search_reports_root_evaluation_injection_as_unsupported(monkeypa
     with pytest.raises(SearchAdapterCapabilityError, match="root_evaluation_replacement"):
         search.run(chess.Board(), Nodes(1), root_evaluation=replacement)
     assert not called
-
-    search.capabilities = frozenset({SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT})
-    assert search.require(SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT) is search
 
 
 def test_lczero_search_preserves_history_and_canonical_en_passant_identity(monkeypatch):
