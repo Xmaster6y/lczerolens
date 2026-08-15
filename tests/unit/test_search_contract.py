@@ -15,6 +15,8 @@ from lczerolens import (
     LczeroSearch,
     Nodes,
     ReferenceSearch,
+    SearchAdapterCapability,
+    SearchAdapterCapabilityError,
     Simulations,
     Time,
     Visits,
@@ -24,6 +26,7 @@ from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.provenance import ChessPlayer
 from lczerolens.provenance import PositionIdentity
 from lczerolens.search import lczero as lczero_module
+from lczerolens.search.reference import LeafEvaluationReplacement, leaf_evaluation_replacement_digest
 from lczerolens.search.result import SearchEvidenceUnavailable, SearchResult, SearchRoot
 from lczerolens.search.trace import (
     PositionEvaluation,
@@ -99,6 +102,43 @@ def test_reference_search_returns_replayable_natural_result_from_plain_board():
     assert result.trace.is_replayable
 
 
+def test_reference_search_injects_root_evaluation_and_records_provenance():
+    search = ReferenceSearch(fixture_evaluator())
+    clean = search.run(chess.Board(), Simulations(1))
+    replacement = LeafEvaluationReplacement(
+        event_id="root-intervention",
+        value=-0.75,
+        legal_policy_logits=tuple(
+            (move.uci(), 0.0) for move in sorted(chess.Board().legal_moves, key=lambda move: move.uci())
+        ),
+    )
+
+    result = search.run(chess.Board(), Simulations(1), root_evaluation=replacement)
+
+    assert search.supports(SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT)
+    assert search.require(SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT) is search
+    assert result.evaluation and result.evaluation.value == -0.75
+    assert (
+        result.trace.root_evaluator
+        and result.trace.root_evaluator.legal_policy_logits == replacement.legal_policy_logits
+    )
+    assert result.trace != clean.trace
+    parameters = {parameter.name: parameter.value for parameter in result.trace.provenance.parameters}
+    assert parameters["root_evaluation.event_id"] == "root-intervention"
+    assert parameters["root_evaluation.replacement_sha256"] == leaf_evaluation_replacement_digest(replacement)
+
+
+def test_reference_search_rejects_root_replacement_for_another_position():
+    replacement = LeafEvaluationReplacement(
+        event_id="wrong-root",
+        value=0.0,
+        legal_policy_logits=(("e2e4", 0.0),),
+    )
+
+    with pytest.raises(ValueError, match="legal moves do not match"):
+        ReferenceSearch(fixture_evaluator()).run(chess.Board(), Simulations(1), root_evaluation=replacement)
+
+
 def test_reference_search_preserves_retained_history_and_rejects_unsupported_inputs():
     board = chess.Board()
     board.push_uci("g1f3")
@@ -150,6 +190,25 @@ def test_lczero_search_maps_supported_limits_and_preserves_root_only_absence(mon
     assert "setoption name WeightsFile value weights.pb.gz" in command
     assert "setoption name VerboseMoveStats value true" in command
     assert "go nodes 2" in command
+
+
+def test_lczero_search_reports_root_evaluation_injection_as_unsupported(monkeypatch):
+    called = False
+
+    def fake_run(*args, **kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(lczero_module, "_run_uci_process", fake_run)
+    search = LczeroSearch(executable="lc0", network="weights", engine_version="v-test")
+    replacement = LeafEvaluationReplacement("root", 0.0, (("e2e4", 0.0),))
+
+    assert not search.supports(SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT)
+    with pytest.raises(SearchAdapterCapabilityError, match="root_evaluation_replacement"):
+        search.require(SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT)
+    with pytest.raises(SearchAdapterCapabilityError, match="root_evaluation_replacement"):
+        search.run(chess.Board(), Nodes(1), root_evaluation=replacement)
+    assert not called
 
 
 def test_lczero_search_preserves_history_and_canonical_en_passant_identity(monkeypatch):

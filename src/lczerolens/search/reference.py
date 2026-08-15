@@ -21,6 +21,7 @@ from lczerolens._codec import encode_move, legal_indices
 from lczerolens.evaluation import Evaluation
 from lczerolens.evaluator import LczeroEvaluator
 from lczerolens.schema import LczeroKeys
+from lczerolens.search.capabilities import SearchAdapterCapability, require_adapter_capability
 from lczerolens.search.limits import SearchLimit, Simulations
 from lczerolens.search.result import SearchResult
 from lczerolens.search.trace import (
@@ -352,6 +353,8 @@ class _ReferenceMCTS:
         board: chess.Board,
         evaluator: Evaluator | Callable[[chess.Board], TensorDict],
         simulations: int,
+        *,
+        root_evaluation: LeafEvaluationReplacement | None = None,
     ) -> SearchTrace:
         """Run a fixed number of simulations and return their full trace."""
         if not isinstance(simulations, int) or isinstance(simulations, bool) or simulations < 1:
@@ -360,9 +363,28 @@ class _ReferenceMCTS:
             raise ValueError("Reference search requires a non-terminal root position.")
 
         root = _Node(board.copy(stack=True), "node-0")
-        root_evaluation, root_expansion, root_evaluator = self._expand(root, evaluator, ValuePerspective.ROOT_PLAYER)
+        root_evaluator_source = evaluator
+        if root_evaluation is not None:
+            if not isinstance(root_evaluation, LeafEvaluationReplacement):
+                raise TypeError("Root evaluation must be a LeafEvaluationReplacement.")
+
+            def replace_root_evaluation(board: chess.Board) -> TensorDict:
+                return _replacement_output(board, root_evaluation)
+
+            root_evaluator_source = replace_root_evaluation
+        root_value, root_expansion, root_evaluator = self._expand(
+            root, root_evaluator_source, ValuePerspective.ROOT_PLAYER
+        )
         events, _ = self._run_simulations(root, evaluator, 0, simulations, 1)
-        return self._trace(root, simulations, root_evaluation, root_expansion, root_evaluator, events)
+        return self._trace(
+            root,
+            simulations,
+            root_value,
+            root_expansion,
+            root_evaluator,
+            events,
+            root_replacement=root_evaluation,
+        )
 
     def _run_simulations(
         self,
@@ -427,6 +449,8 @@ class _ReferenceMCTS:
         root_expansion: NodeExpansion,
         root_evaluator: EvaluatorCall,
         events: list[SimulationEvent],
+        *,
+        root_replacement: LeafEvaluationReplacement | None = None,
     ) -> SearchTrace:
         actions = tuple(RootAction(edge) for edge in self._edge_stats(root, ValuePerspective.ROOT_PLAYER))
         selection = self._root_selection(actions)
@@ -441,6 +465,17 @@ class _ReferenceMCTS:
                     SearchParameter("c_puct", self.c_puct),
                     SearchParameter("selection", "Q + c_puct * P * sqrt(sum(N)) / (1 + N)"),
                     SearchParameter("tie_break", "UCI lexicographic order"),
+                )
+                + (
+                    (
+                        SearchParameter("root_evaluation.event_id", root_replacement.event_id),
+                        SearchParameter(
+                            "root_evaluation.replacement_sha256",
+                            leaf_evaluation_replacement_digest(root_replacement),
+                        ),
+                    )
+                    if root_replacement is not None
+                    else ()
                 ),
             ),
             snapshots=(
@@ -662,14 +697,35 @@ class ReferenceSearch:
         self.evaluator = evaluator
         self._core = _ReferenceMCTS(c_puct)
 
-    def run(self, board: chess.Board, limit: SearchLimit) -> SearchResult:
+    capabilities = frozenset({SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT})
+
+    def supports(self, capability: SearchAdapterCapability) -> bool:
+        """Return whether this adapter implements an optional search input."""
+        if not isinstance(capability, SearchAdapterCapability):
+            raise TypeError("Search adapter capability checks require a SearchAdapterCapability value.")
+        return capability in self.capabilities
+
+    def require(self, capability: SearchAdapterCapability) -> ReferenceSearch:
+        """Require an optional input capability and return this adapter."""
+        require_adapter_capability(self.capabilities, capability)
+        return self
+
+    def run(
+        self,
+        board: chess.Board,
+        limit: SearchLimit,
+        *,
+        root_evaluation: LeafEvaluationReplacement | None = None,
+    ) -> SearchResult:
         """Run exactly the requested simulations on a plain chess board."""
         if not isinstance(board, chess.Board):
             raise TypeError("ReferenceSearch.run requires a python-chess Board.")
         if not isinstance(limit, Simulations):
             raise ValueError("ReferenceSearch supports only Simulations limits.")
         _validate_reference_board(board)
-        trace = self._core.search(board.copy(stack=True), self._evaluate, simulations=limit.value)
+        trace = self._core.search(
+            board.copy(stack=True), self._evaluate, simulations=limit.value, root_evaluation=root_evaluation
+        )
         return SearchResult.from_trace(trace)
 
     def replay_counterfactual(

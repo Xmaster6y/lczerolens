@@ -65,6 +65,20 @@ trace. Canonical replacement bytes and digests are available through
 translates its public root output. Public root snapshots do not imply private
 events, a complete tree, or replayability.
 
+Search-input capabilities
+-------------------------
+
+Search adapters separately advertise optional inputs through ``supports`` and
+``require`` with ``SearchAdapterCapability``. ``ReferenceSearch`` accepts a
+canonical ``LeafEvaluationReplacement`` as ``root_evaluation`` and applies its
+policy/value only to root expansion. The replacement event ID and canonical
+digest are retained in ``SearchProvenance`` parameters. Descendant evaluations
+still come from the configured evaluator; this is not full-tree replay.
+
+Stock lc0 UCI has no root-evaluation injection mechanism. ``LczeroSearch``
+therefore reports ``ROOT_EVALUATION_REPLACEMENT`` as unsupported and raises
+``SearchAdapterCapabilityError`` before starting a process when one is supplied.
+
 Live engine validation is explicit:
 
 .. code-block:: console

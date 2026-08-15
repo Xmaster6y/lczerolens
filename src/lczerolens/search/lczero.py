@@ -14,10 +14,11 @@ import threading
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import TYPE_CHECKING, Iterable, Mapping
 
 import chess
 
+from .capabilities import SearchAdapterCapability, require_adapter_capability
 from .limits import Nodes, SearchLimit, Time
 from .result import SearchResult
 
@@ -38,6 +39,9 @@ from .trace import (
     ValuePerspective,
     Wdl,
 )
+
+if TYPE_CHECKING:
+    from .reference import LeafEvaluationReplacement
 
 
 class LczeroOutputError(ValueError):
@@ -175,8 +179,29 @@ class LczeroSearch:
         self._options = dict(options or {})
         self._timeout = float(timeout)
 
-    def run(self, board: chess.Board, limit: SearchLimit) -> SearchResult:
+    capabilities: frozenset[SearchAdapterCapability] = frozenset()
+
+    def supports(self, capability: SearchAdapterCapability) -> bool:
+        """Return whether this adapter implements an optional search input."""
+        if not isinstance(capability, SearchAdapterCapability):
+            raise TypeError("Search adapter capability checks require a SearchAdapterCapability value.")
+        return capability in self.capabilities
+
+    def require(self, capability: SearchAdapterCapability) -> LczeroSearch:
+        """Require an optional input capability and return this adapter."""
+        require_adapter_capability(self.capabilities, capability)
+        return self
+
+    def run(
+        self,
+        board: chess.Board,
+        limit: SearchLimit,
+        *,
+        root_evaluation: LeafEvaluationReplacement | None = None,
+    ) -> SearchResult:
         """Run official Lczero with a supported limit and return root evidence."""
+        if root_evaluation is not None:
+            self.require(SearchAdapterCapability.ROOT_EVALUATION_REPLACEMENT)
         if not isinstance(board, chess.Board):
             raise TypeError("LczeroSearch.run requires a python-chess Board.")
         if board.uci_variant != "chess" or board.chess960:
