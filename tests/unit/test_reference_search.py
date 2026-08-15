@@ -1,6 +1,7 @@
 """Hermetic checks for the deterministic, replayable MCTS reference core."""
 
 from dataclasses import replace
+import json
 
 import pytest
 import chess
@@ -9,19 +10,25 @@ from tensordict import TensorDict
 
 from lczerolens._codec import encode_move
 from lczerolens.search.reference import (
+    CounterfactualReplayFormatError,
+    LeafEvaluationReplacement,
     _ReferenceMCTS,
     ReplayTolerance,
     SemanticReplayError,
     _Node,
     _apply_retained_root_delta,
+    _canonical_replay_node_count,
     _retained_initial_root_state,
     _retained_root_transition,
     plan_retained_events,
     audit_search_trace,
+    deserialize_leaf_evaluation_replacement,
+    leaf_evaluation_replacement_digest,
     replay_retained_events,
     _replay_path,
     replay_root_events,
     replay_search_trace,
+    serialize_leaf_evaluation_replacement,
 )
 from lczerolens.search.trace import (
     BackupUpdate,
@@ -88,6 +95,182 @@ def test_reference_search_revisits_a_child_and_alternates_backup_signs():
 
     assert len(trace.events[1].path) == 2
     assert [backup.signed_value for backup in trace.events[1].backups] == pytest.approx((0.4, -0.4))
+
+
+def test_counterfactual_replay_restores_prefix_replaces_leaf_and_reexecutes_budget():
+    core = _ReferenceMCTS(c_puct=1.5)
+    evaluator = FixedEvaluator()
+    trace = core.search(chess.Board(), evaluator, simulations=8)
+    target = trace.events[2]
+    replacement = replace(LeafEvaluationReplacement.from_event(target), value=-0.75)
+
+    result = core.replay_counterfactual(trace, evaluator, replacement)
+
+    assert result.source_trace is trace
+    assert result.restored_prefix_event_ids == ("simulation-0", "simulation-1")
+    assert result.first_divergence_event_id == "simulation-2"
+    assert result.trace.events[:2] == trace.events[:2]
+    assert len(result.trace.events) == len(trace.events)
+    assert result.trace.events[2].leaf.evaluation.value == -0.75
+    assert result.trace.snapshots[-1].budget == trace.snapshots[-1].budget
+    assert replay_search_trace(result.trace).selected_move == result.trace.snapshots[-1].selection.move
+
+
+def test_counterfactual_exact_replacement_is_a_no_op():
+    core = _ReferenceMCTS(c_puct=1.5)
+    evaluator = FixedEvaluator()
+    trace = core.search(chess.Board(), evaluator, simulations=8)
+
+    result = core.replay_counterfactual(trace, evaluator, LeafEvaluationReplacement.from_event(trace.events[4]))
+
+    assert result.first_divergence_event_id is None
+    assert result.trace == trace
+
+
+def test_leaf_evaluation_replacement_has_canonical_round_trip_and_digest():
+    trace = _ReferenceMCTS().search(chess.Board(), FixedEvaluator(), simulations=1)
+    replacement = LeafEvaluationReplacement.from_event(trace.events[0])
+    encoded = serialize_leaf_evaluation_replacement(replacement)
+
+    assert deserialize_leaf_evaluation_replacement(encoded) == replacement
+    assert len(leaf_evaluation_replacement_digest(replacement)) == 64
+    with pytest.raises(CounterfactualReplayFormatError, match="not canonical"):
+        deserialize_leaf_evaluation_replacement(encoded.replace(b'"value":0.25', b'"value":0.250'))
+    with pytest.raises(CounterfactualReplayFormatError, match="Duplicate"):
+        deserialize_leaf_evaluation_replacement(encoded.replace(b'"event_id":', b'"event_id":"duplicate","event_id":'))
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    (
+        ({"event_id": ""}, "event ID"),
+        ({"event_id": None}, "event ID"),
+        ({"value": True}, "real number"),
+        ({"value": "0.0"}, "real number"),
+        ({"value": float("nan")}, "finite"),
+        ({"value": 2.0}, r"\[-1, 1\]"),
+        ({"legal_policy_logits": ()}, "unique moves"),
+        ({"legal_policy_logits": (("a2a3", 0.0), ("a2a3", 1.0))}, "unique moves"),
+        ({"legal_policy_logits": (("b2b3", 0.0), ("a2a3", 1.0))}, "sorted order"),
+        ({"legal_policy_logits": ((1, 0.0),)}, "finite values"),
+        ({"legal_policy_logits": (("a2a3", True),)}, "finite values"),
+        ({"legal_policy_logits": (("a2a3", float("nan")),)}, "finite values"),
+        ({"dtype": "int64"}, "dtype"),
+        ({"device": "not-a-device"}, "device"),
+    ),
+)
+def test_leaf_evaluation_replacement_rejects_malformed_fields(kwargs, message):
+    values = {
+        "event_id": "simulation-0",
+        "value": 0.0,
+        "legal_policy_logits": (("a2a3", 0.0),),
+        **kwargs,
+    }
+
+    with pytest.raises((TypeError, ValueError), match=message):
+        LeafEvaluationReplacement(**values)
+
+
+def test_leaf_evaluation_replacement_serialization_rejects_wrong_type_and_non_utf8_identity():
+    with pytest.raises(TypeError, match="LeafEvaluationReplacement"):
+        serialize_leaf_evaluation_replacement(object())
+    replacement = LeafEvaluationReplacement("\ud800", 0.0, (("a2a3", 0.0),))
+    with pytest.raises(CounterfactualReplayFormatError, match="canonical JSON"):
+        serialize_leaf_evaluation_replacement(replacement)
+
+
+def test_leaf_evaluation_replacement_normalizes_equivalent_numeric_inputs():
+    integer = LeafEvaluationReplacement("simulation-0", 1, (("a2a3", 2),))
+    floating = LeafEvaluationReplacement("simulation-0", 1.0, (("a2a3", 2.0),))
+
+    assert integer == floating
+    assert integer.value == 1.0
+    assert integer.legal_policy_logits == (("a2a3", 2.0),)
+    assert serialize_leaf_evaluation_replacement(integer) == serialize_leaf_evaluation_replacement(floating)
+    assert leaf_evaluation_replacement_digest(integer) == leaf_evaluation_replacement_digest(floating)
+
+
+def test_leaf_evaluation_replacement_decoder_fails_closed_for_every_record_boundary():
+    replacement = LeafEvaluationReplacement("simulation-0", 0.0, (("a2a3", 0.0),))
+    envelope = json.loads(serialize_leaf_evaluation_replacement(replacement))
+
+    with pytest.raises(TypeError, match="bytes"):
+        deserialize_leaf_evaluation_replacement("not bytes")
+    for malformed in (b"\xff", b"{"):
+        with pytest.raises(CounterfactualReplayFormatError, match="Invalid replacement JSON"):
+            deserialize_leaf_evaluation_replacement(malformed)
+    for malformed in (None, {"extra": None}):
+        with pytest.raises(CounterfactualReplayFormatError, match="envelope"):
+            deserialize_leaf_evaluation_replacement(json.dumps(malformed).encode())
+    for format_name, version in (
+        ("future", 1),
+        ("lczerolens.leaf-evaluation-replacement", True),
+        ("lczerolens.leaf-evaluation-replacement", 2),
+    ):
+        changed = {**envelope, "format": format_name, "format_version": version}
+        with pytest.raises(CounterfactualReplayFormatError, match="format or version"):
+            deserialize_leaf_evaluation_replacement(
+                json.dumps(changed, separators=(",", ":"), sort_keys=True).encode()
+            )
+
+    for record in (None, {"event_id": "simulation-0"}):
+        changed = {**envelope, "replacement": record}
+        with pytest.raises(CounterfactualReplayFormatError, match="record has invalid fields"):
+            deserialize_leaf_evaluation_replacement(
+                json.dumps(changed, separators=(",", ":"), sort_keys=True).encode()
+            )
+    for logits in (None, [["a2a3"], "invalid"]):
+        changed = {**envelope, "replacement": {**envelope["replacement"], "legal_policy_logits": logits}}
+        with pytest.raises(CounterfactualReplayFormatError, match="invalid shape"):
+            deserialize_leaf_evaluation_replacement(
+                json.dumps(changed, separators=(",", ":"), sort_keys=True).encode()
+            )
+    changed = {**envelope, "replacement": {**envelope["replacement"], "value": 2.0}}
+    with pytest.raises(CounterfactualReplayFormatError, match="Invalid replacement record"):
+        deserialize_leaf_evaluation_replacement(json.dumps(changed, separators=(",", ":"), sort_keys=True).encode())
+
+
+def test_counterfactual_replay_rejects_unknown_terminal_incompatible_and_wrong_search_replacements():
+    core = _ReferenceMCTS(c_puct=1.0)
+    evaluator = FixedEvaluator()
+    trace = core.search(chess.Board(), evaluator, simulations=2)
+    replacement = LeafEvaluationReplacement.from_event(trace.events[0])
+
+    with pytest.raises(TypeError, match="SearchTrace"):
+        core.replay_counterfactual(object(), evaluator, replacement)
+    with pytest.raises(TypeError, match="LeafEvaluationReplacement"):
+        core.replay_counterfactual(trace, evaluator, object())
+
+    with pytest.raises(ValueError, match="Unknown replacement"):
+        core.replay_counterfactual(trace, evaluator, replace(replacement, event_id="missing"))
+    with pytest.raises(ValueError, match="legal moves do not match"):
+        core.replay_counterfactual(
+            trace,
+            evaluator,
+            replace(replacement, legal_policy_logits=replacement.legal_policy_logits[:-1]),
+        )
+    with pytest.raises(ValueError, match="c_puct must match"):
+        _ReferenceMCTS(c_puct=2.0).replay_counterfactual(trace, evaluator, replacement)
+
+    terminal_board = chess.Board("8/8/8/8/8/8/4Q3/K1k5 w - - 0 1")
+    terminal_trace = _ReferenceMCTS(c_puct=0.0).search(terminal_board, evaluator, simulations=1)
+    with pytest.raises(ValueError, match="no replaceable leaf evaluation"):
+        LeafEvaluationReplacement.from_event(terminal_trace.events[0])
+    terminal_replacement = LeafEvaluationReplacement("simulation-0", 0.0, (("a1a2", 0.0),))
+    with pytest.raises(ValueError, match="no replaceable leaf evaluation"):
+        _ReferenceMCTS(c_puct=0.0).replay_counterfactual(terminal_trace, evaluator, terminal_replacement)
+
+
+def test_reference_core_rejects_invalid_root_replacement_type():
+    with pytest.raises(TypeError, match="LeafEvaluationReplacement"):
+        _ReferenceMCTS().search(chess.Board(), FixedEvaluator(), 1, root_evaluation=object())
+
+
+def test_restored_replay_node_ids_are_validated_without_call_order_assumptions():
+    root = _Node(chess.Board(), "node-0")
+    assert _canonical_replay_node_count({"node-0": root}) == 1
+    with pytest.raises(SemanticReplayError, match="non-canonical node IDs"):
+        _canonical_replay_node_count({"node-0": root, "unexpected-node": root})
 
 
 @pytest.mark.parametrize(

@@ -51,9 +51,33 @@ and ancestor-closure status induced by the selected events. It never inserts
 omitted events or backup contributions; selectors, fidelity metrics, and pass
 thresholds remain downstream concerns.
 
+``ReferenceSearch.replay_counterfactual`` provides a distinct intervention
+contract. It first audits and restores the source trace through the event
+prefix, applies one canonical ``LeafEvaluationReplacement`` to the selected
+non-terminal leaf, and deterministically executes the original remaining
+simulation budget. The returned trace is independently replayable and reports
+its first divergent event. Exact no-op replacements reproduce the source
+trace. Canonical replacement bytes and digests are available through
+``serialize_leaf_evaluation_replacement`` and
+``leaf_evaluation_replacement_digest``.
+
 ``LczeroSearch`` invokes a supplied lc0 executable :cite:p:`lczero` and
 translates its public root output. Public root snapshots do not imply private
 events, a complete tree, or replayability.
+
+Search-input capabilities
+-------------------------
+
+Search adapters separately advertise optional inputs through ``supports`` and
+``require`` with ``SearchAdapterCapability``. ``ReferenceSearch`` accepts a
+canonical ``LeafEvaluationReplacement`` as ``root_evaluation`` and applies its
+policy/value only to root expansion. The replacement event ID and canonical
+digest are retained in ``SearchProvenance`` parameters. Descendant evaluations
+still come from the configured evaluator; this is not full-tree replay.
+
+Stock lc0 UCI has no root-evaluation injection mechanism. ``LczeroSearch``
+therefore reports ``ROOT_EVALUATION_REPLACEMENT`` as unsupported and raises
+``SearchAdapterCapabilityError`` before starting a process when one is supplied.
 
 Live engine validation is explicit:
 

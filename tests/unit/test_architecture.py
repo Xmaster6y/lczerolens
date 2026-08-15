@@ -43,7 +43,8 @@ EXPECTED_MODULE_DEPENDENCIES = {
     "provenance": set(),
     "puzzle": {"provenance"},
     "schema": set(),
-    "search.lczero": {"search.limits", "search.result", "search.trace"},
+    "search.capabilities": set(),
+    "search.lczero": {"search.capabilities", "search.limits", "search.result", "search.trace"},
     "search.limits": {"search.trace"},
     "search.reference": {
         "_codec",
@@ -51,6 +52,7 @@ EXPECTED_MODULE_DEPENDENCIES = {
         "evaluator",
         "schema",
         "search.limits",
+        "search.capabilities",
         "search.result",
         "search.trace",
     },
@@ -61,6 +63,8 @@ EXPECTED_MODULE_DEPENDENCIES = {
 
 EXPECTED_ROOT_EXPORTS = {
     "ChessPlayer",
+    "CounterfactualReplayFormatError",
+    "CounterfactualReplayResult",
     "CounterfactualComparison",
     "CounterfactualConstraints",
     "CounterfactualPair",
@@ -91,6 +95,7 @@ EXPECTED_ROOT_EXPORTS = {
     "LineIntent",
     "LineRole",
     "LineTerminal",
+    "LeafEvaluationReplacement",
     "MoveAnalysis",
     "Nodes",
     "PositionAttribute",
@@ -110,6 +115,8 @@ EXPECTED_ROOT_EXPORTS = {
     "RetainedEventReplayPlan",
     "RetainedEventReplayResult",
     "SearchAction",
+    "SearchAdapterCapability",
+    "SearchAdapterCapabilityError",
     "SearchEvidenceUnavailable",
     "SearchLimit",
     "SearchResult",
@@ -124,6 +131,8 @@ EXPECTED_ROOT_EXPORTS = {
     "analyze_line",
     "analyze_move",
     "audit_search_trace",
+    "deserialize_leaf_evaluation_replacement",
+    "leaf_evaluation_replacement_digest",
     "compare_counterfactual",
     "compare_decision",
     "plan_retained_events",
@@ -132,6 +141,7 @@ EXPECTED_ROOT_EXPORTS = {
     "replay_retained_events",
     "replay_root_events",
     "replay_search_trace",
+    "serialize_leaf_evaluation_replacement",
     "sibling_counterfactual",
 }
 

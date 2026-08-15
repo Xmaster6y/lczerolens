@@ -1,5 +1,6 @@
 """Unified reference and official-Lczero search interfaces."""
 
+from .capabilities import SearchAdapterCapability, SearchAdapterCapabilityError
 from .limits import Depth, Nodes, SearchLimit, Simulations, Time, Visits
 from .lczero import LczeroSearch
 from .reference import ReferenceSearch
@@ -12,6 +13,8 @@ __all__ = [
     "Nodes",
     "ReferenceSearch",
     "SearchAction",
+    "SearchAdapterCapability",
+    "SearchAdapterCapabilityError",
     "SearchEvidenceUnavailable",
     "SearchLimit",
     "SearchResult",
