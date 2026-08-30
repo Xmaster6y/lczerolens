@@ -50,6 +50,7 @@ EXPECTED_MODULE_DEPENDENCIES = {
         "_codec",
         "evaluation",
         "evaluator",
+        "provenance",
         "schema",
         "search.limits",
         "search.capabilities",

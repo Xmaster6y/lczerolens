@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from typing import Protocol, runtime_checkable
+from typing import Protocol, overload, runtime_checkable
 
 import chess
 import torch
@@ -25,7 +25,7 @@ class Evaluator(Protocol):
     :class:`Evaluation`.
     """
 
-    def evaluate(self, board: chess.Board) -> Evaluation:
+    def evaluate(self, board: chess.Board, /) -> Evaluation:
         """Evaluate one position and return its standardized evidence."""
         ...
 
@@ -166,7 +166,13 @@ class LczeroEvaluator:
             tensors[LczeroKeys.NETWORK_MLH] = mlh
         return EvaluationBatch(resolved, tensors, self.provenance, self.input_format.value)
 
-    def evaluate(self, boards: chess.Board | Iterable[chess.Board]) -> Evaluation | EvaluationBatch:
+    @overload
+    def evaluate(self, boards: chess.Board, /) -> Evaluation: ...
+
+    @overload
+    def evaluate(self, boards: Iterable[chess.Board], /) -> EvaluationBatch: ...
+
+    def evaluate(self, boards: chess.Board | Iterable[chess.Board], /) -> Evaluation | EvaluationBatch:
         """Evaluate one position or a batch through the canonical TensorDict path."""
         single = isinstance(boards, chess.Board)
         resolved = (boards,) if single else tuple(boards)

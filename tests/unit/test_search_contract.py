@@ -139,6 +139,33 @@ def test_reference_search_keeps_validating_structural_evaluator_results():
         ReferenceSearch(evaluator).run(chess.Board(), Simulations(1))
 
 
+def test_reference_search_rejects_a_non_callable_evaluate_attribute():
+    class NonCallableEvaluator:
+        evaluate = None
+
+    with pytest.raises(TypeError, match="requires an Evaluator"):
+        ReferenceSearch(NonCallableEvaluator())
+
+
+def test_reference_search_rejects_an_evaluation_bound_to_different_history():
+    evaluated_board = chess.Board()
+    requested_board = chess.Board()
+    for move in ("g1f3", "g8f6", "f3g1", "f6g8"):
+        evaluated_board.push_uci(move)
+    for move in ("b1c3", "b8c6", "c3b1", "c6b8"):
+        requested_board.push_uci(move)
+    assert evaluated_board.fen(en_passant="fen") == requested_board.fen(en_passant="fen")
+
+    cached = fixture_evaluator().evaluate(evaluated_board)
+
+    class CachedEvaluator:
+        def evaluate(self, board: chess.Board) -> Evaluation:
+            return cached
+
+    with pytest.raises(ValueError, match="requested position and history"):
+        ReferenceSearch(CachedEvaluator()).run(requested_board, Simulations(1))
+
+
 def test_reference_search_injects_root_evaluation_and_records_provenance():
     search = ReferenceSearch(fixture_evaluator())
     clean = search.run(chess.Board(), Simulations(1))

@@ -21,6 +21,7 @@ from tensordict import TensorDict
 from lczerolens._codec import encode_move, legal_indices
 from lczerolens.evaluation import Evaluation
 from lczerolens.evaluator import Evaluator
+from lczerolens.provenance import PositionIdentity
 from lczerolens.schema import LczeroKeys
 from lczerolens.search.capabilities import SearchAdapterCapability, require_adapter_capability
 from lczerolens.search.limits import SearchLimit, Simulations
@@ -714,7 +715,7 @@ class ReferenceSearch:
     """
 
     def __init__(self, evaluator: Evaluator, *, c_puct: float = 1.0):
-        if not isinstance(evaluator, Evaluator):
+        if not isinstance(evaluator, Evaluator) or not callable(getattr(evaluator, "evaluate", None)):
             raise TypeError("ReferenceSearch requires an Evaluator.")
         self.evaluator = evaluator
         self._core = _ReferenceMCTS(c_puct)
@@ -758,6 +759,8 @@ class ReferenceSearch:
         evaluated = self.evaluator.evaluate(board)
         if not isinstance(evaluated, Evaluation):
             raise TypeError("ReferenceSearch requires one Evaluation per position.")
+        if PositionIdentity.from_board(evaluated.position) != PositionIdentity.from_board(board):
+            raise ValueError("ReferenceSearch evaluator result must be bound to the requested position and history.")
         value = evaluated.value
         if value is None:
             raise ValueError("ReferenceSearch requires a native or explicitly derived scalar value.")
