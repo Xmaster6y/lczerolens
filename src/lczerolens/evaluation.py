@@ -153,6 +153,12 @@ class EvaluationRecord:
             raise ValueError("Evaluation record value must be a ScalarEvaluationRecord.")
         if self.derivation is not None and not isinstance(self.derivation, EvaluationDerivation):
             raise ValueError("Evaluation record derivation must be an EvaluationDerivation.")
+        value_replaced = self.derivation is not None and self.derivation.value_replaced
+        value_is_derived = self.value is not None and self.value.origin is ValueOrigin.DERIVED
+        if value_replaced and not value_is_derived:
+            raise ValueError("A value replacement requires a scalar value with derived origin.")
+        if value_is_derived and not value_replaced:
+            raise ValueError("A scalar value with derived origin requires value-replacement metadata.")
         if self.derivation is not None:
             object.__setattr__(self, "schema_version", 2)
         moves = [action.move for action in self.policy]
