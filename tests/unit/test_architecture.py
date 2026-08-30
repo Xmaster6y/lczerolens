@@ -76,6 +76,7 @@ EXPECTED_ROOT_EXPORTS = {
     "Depth",
     "Evaluation",
     "EvaluationBatch",
+    "EvaluationDerivation",
     "EvaluationProvenance",
     "EvaluationRecord",
     "EvaluationRecordFormatError",

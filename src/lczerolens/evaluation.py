@@ -5,11 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 import math
+from numbers import Real
 from os import PathLike
 from typing import Iterator, Sequence, overload
 
 import chess
 from tensordict import TensorDictBase
+import torch
 
 from lczerolens._codec import InputFormat, decode_move, encode_move
 from lczerolens.provenance import ChessPlayer, EvaluationProvenance, PositionIdentity
@@ -21,6 +23,21 @@ class ValueOrigin(str, Enum):
 
     NATIVE = "native"
     DERIVED_FROM_WDL = "derived_from_wdl"
+    DERIVED = "derived"
+
+
+@dataclass(frozen=True)
+class EvaluationDerivation:
+    """Fields explicitly replaced when deriving an evaluation."""
+
+    policy_logits_replaced: bool = False
+    value_replaced: bool = False
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.policy_logits_replaced, bool) or not isinstance(self.value_replaced, bool):
+            raise TypeError("Evaluation derivation fields must be booleans.")
+        if not self.policy_logits_replaced and not self.value_replaced:
+            raise ValueError("An evaluation derivation must replace policy logits and/or value.")
 
 
 @dataclass(frozen=True)
@@ -114,6 +131,7 @@ class EvaluationRecord:
     wdl: WdlEvaluationRecord | None = None
     value: ScalarEvaluationRecord | None = None
     mlh: float | None = None
+    derivation: EvaluationDerivation | None = None
     schema_version: int = field(default=1, init=False)
 
     def __post_init__(self) -> None:
@@ -133,6 +151,10 @@ class EvaluationRecord:
             raise ValueError("Evaluation record WDL must be a WdlEvaluationRecord.")
         if self.value is not None and not isinstance(self.value, ScalarEvaluationRecord):
             raise ValueError("Evaluation record value must be a ScalarEvaluationRecord.")
+        if self.derivation is not None and not isinstance(self.derivation, EvaluationDerivation):
+            raise ValueError("Evaluation record derivation must be an EvaluationDerivation.")
+        if self.derivation is not None:
+            object.__setattr__(self, "schema_version", 2)
         moves = [action.move for action in self.policy]
         indices = [action.index for action in self.policy]
         if len(moves) != len(set(moves)) or len(indices) != len(set(indices)):
@@ -281,6 +303,8 @@ class Evaluation:
         tensors: TensorDictBase,
         provenance: EvaluationProvenance,
         input_format: str,
+        *,
+        derivation: EvaluationDerivation | None = None,
     ):
         if tensors.batch_size:
             raise ValueError("Evaluation requires one unbatched TensorDict row.")
@@ -288,10 +312,13 @@ class Evaluation:
             raise TypeError("Evaluation requires EvaluationProvenance.")
         if not input_format:
             raise ValueError("Evaluation requires an input format.")
+        if derivation is not None and not isinstance(derivation, EvaluationDerivation):
+            raise TypeError("Evaluation derivation must be EvaluationDerivation when provided.")
         self._position = board.copy(stack=True)
         self._tensors = tensors
         self._provenance = provenance
         self._input_format = input_format
+        self._derivation = derivation
 
     @property
     def position(self) -> chess.Board:
@@ -302,6 +329,16 @@ class Evaluation:
     def tensors(self) -> TensorDictBase:
         """The unbatched TensorDict row underlying this view."""
         return self._tensors
+
+    @property
+    def provenance(self) -> EvaluationProvenance:
+        """Identity of the evaluator and network behind this evaluation."""
+        return self._provenance
+
+    @property
+    def derivation(self) -> EvaluationDerivation | None:
+        """Structured replacement metadata, or ``None`` for direct evaluator output."""
+        return self._derivation
 
     @property
     def policy(self) -> PolicyEvaluation:
@@ -319,13 +356,16 @@ class Evaluation:
     def value(self) -> ScalarEvaluation | None:
         if LczeroKeys.EVALUATION_VALUE not in self._tensors.keys(include_nested=True, leaves_only=True):
             return None
-        origin = (
-            ValueOrigin.NATIVE
-            if LczeroKeys.NETWORK_VALUE in self._tensors.keys(include_nested=True, leaves_only=True)
-            else ValueOrigin.DERIVED_FROM_WDL
-        )
+        if self._derivation is not None and self._derivation.value_replaced:
+            origin = ValueOrigin.DERIVED
+        else:
+            origin = (
+                ValueOrigin.NATIVE
+                if LczeroKeys.NETWORK_VALUE in self._tensors.keys(include_nested=True, leaves_only=True)
+                else ValueOrigin.DERIVED_FROM_WDL
+            )
         return ScalarEvaluation(
-            float(self._tensors[LczeroKeys.EVALUATION_VALUE].reshape(-1)[0]),
+            float(self._tensors[LczeroKeys.EVALUATION_VALUE].reshape(-1)[0].detach()),
             origin,
             self._position.turn,
         )
@@ -334,7 +374,69 @@ class Evaluation:
     def mlh(self) -> float | None:
         if LczeroKeys.NETWORK_MLH not in self._tensors.keys(include_nested=True, leaves_only=True):
             return None
-        return float(self._tensors[LczeroKeys.NETWORK_MLH].reshape(-1)[0])
+        return float(self._tensors[LczeroKeys.NETWORK_MLH].reshape(-1)[0].detach())
+
+    def derive(
+        self,
+        *,
+        policy_logits: torch.Tensor | None = None,
+        value: Real | torch.Tensor | None = None,
+    ) -> "Evaluation":
+        """Return a non-mutating policy/value derivation of this evaluation.
+
+        ``policy_logits`` must be a finite floating-point tensor with the same
+        shape as the full network policy row. Legal-move probabilities are
+        recomputed from it. ``value`` must be a finite scalar in ``[-1, 1]``.
+        Unrelated network heads and instrumentation leaves are cloned unchanged.
+        """
+        if policy_logits is None and value is None:
+            raise ValueError("derive() requires replacement policy_logits and/or value.")
+
+        tensors = self._tensors.clone()
+        policy_replaced = policy_logits is not None
+        value_replaced = value is not None
+
+        if policy_logits is not None:
+            if not isinstance(policy_logits, torch.Tensor):
+                raise TypeError("policy_logits must be a torch.Tensor.")
+            reference = self._tensors[LczeroKeys.NETWORK_POLICY_LOGITS]
+            if tuple(policy_logits.shape) != tuple(reference.shape):
+                raise ValueError(f"policy_logits must have shape {tuple(reference.shape)}.")
+            if not policy_logits.is_floating_point():
+                raise ValueError("policy_logits must have a floating-point dtype.")
+            if not torch.isfinite(policy_logits).all():
+                raise ValueError("policy_logits must be finite.")
+            logits = policy_logits.to(device=reference.device, dtype=reference.dtype).clone()
+            if not torch.isfinite(logits).all():
+                raise ValueError("policy_logits must be finite in the evaluation dtype.")
+            tensors[LczeroKeys.NETWORK_POLICY_LOGITS] = logits
+            probabilities = torch.zeros_like(logits)
+            mask = tensors[LczeroKeys.INPUT_LEGAL_MASK]
+            if mask.any():
+                probabilities[mask] = torch.softmax(logits[mask], dim=0)
+            tensors[LczeroKeys.EVALUATION_POLICY] = probabilities
+
+        if value is not None:
+            leaves = set(self._tensors.keys(include_nested=True, leaves_only=True))
+            if LczeroKeys.EVALUATION_VALUE in leaves:
+                reference = self._tensors[LczeroKeys.EVALUATION_VALUE]
+            else:
+                policy_reference = self._tensors[LczeroKeys.NETWORK_POLICY_LOGITS]
+                reference = policy_reference.new_empty((1,))
+            tensors[LczeroKeys.EVALUATION_VALUE] = _derived_value_tensor(value, reference)
+
+        previous = self._derivation
+        derivation = EvaluationDerivation(
+            policy_logits_replaced=policy_replaced or (previous is not None and previous.policy_logits_replaced),
+            value_replaced=value_replaced or (previous is not None and previous.value_replaced),
+        )
+        return Evaluation(
+            self._position,
+            tensors,
+            self._provenance,
+            self._input_format,
+            derivation=derivation,
+        )
 
     def record(self) -> EvaluationRecord:
         """Freeze the current runtime values into immutable tensor-free evidence."""
@@ -359,7 +461,26 @@ class Evaluation:
             wdl=(WdlEvaluationRecord(wdl.win, wdl.draw, wdl.loss, player) if wdl is not None else None),
             value=(ScalarEvaluationRecord(value.value, value.origin, player) if value is not None else None),
             mlh=self.mlh,
+            derivation=self._derivation,
         )
+
+
+def _derived_value_tensor(value: Real | torch.Tensor, reference: torch.Tensor) -> torch.Tensor:
+    if isinstance(value, torch.Tensor):
+        if value.numel() != 1:
+            raise ValueError("value must be a scalar.")
+        if value.dtype is torch.bool or value.is_complex():
+            raise TypeError("value must be a real number.")
+        scalar = float(value.detach().item())
+        result = value.to(device=reference.device, dtype=reference.dtype).reshape(reference.shape).clone()
+    else:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise TypeError("value must be a real number or scalar torch.Tensor.")
+        scalar = float(value)
+        result = torch.tensor(scalar, device=reference.device, dtype=reference.dtype).reshape(reference.shape)
+    if not math.isfinite(scalar) or not -1 <= scalar <= 1:
+        raise ValueError("value must be finite and in [-1, 1].")
+    return result
 
 
 class EvaluationBatch(Sequence[Evaluation]):
@@ -416,6 +537,7 @@ __all__ = [
     "ActionEvaluationRecord",
     "Evaluation",
     "EvaluationBatch",
+    "EvaluationDerivation",
     "EvaluationRecord",
     "PolicyEvaluation",
     "ScalarEvaluation",
