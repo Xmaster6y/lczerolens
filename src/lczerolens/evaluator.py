@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from typing import Protocol, runtime_checkable
 
 import chess
 import torch
@@ -13,6 +14,20 @@ from lczerolens.evaluation import Evaluation, EvaluationBatch
 from lczerolens.model import LczeroModel
 from lczerolens.provenance import EvaluationProvenance
 from lczerolens.schema import LczeroKeys, _NETWORK_HEAD_KEYS
+
+
+@runtime_checkable
+class Evaluator(Protocol):
+    """Structural contract for evaluating one chess position.
+
+    Implementations may expose richer batching or instrumentation APIs, but
+    consumers of this protocol request one position and receive one validated
+    :class:`Evaluation`.
+    """
+
+    def evaluate(self, board: chess.Board) -> Evaluation:
+        """Evaluate one position and return its standardized evidence."""
+        ...
 
 
 class LczeroEvaluator:
@@ -215,4 +230,4 @@ def _model_provenance(model: LczeroModel) -> EvaluationProvenance:
     )
 
 
-__all__ = ["InputFormat", "LczeroEvaluator"]
+__all__ = ["Evaluator", "InputFormat", "LczeroEvaluator"]

@@ -11,6 +11,8 @@ from torch import nn
 
 from lczerolens import (
     Depth,
+    Evaluation,
+    Evaluator,
     LczeroModel,
     LczeroSearch,
     Nodes,
@@ -57,6 +59,18 @@ def fixture_evaluator():
     return LczeroEvaluator(LczeroModel(FixtureNetwork(), out_keys=["policy", "value"]))
 
 
+class DelegatingEvaluator:
+    """A structural evaluator adapter with no LczeroEvaluator inheritance."""
+
+    def __init__(self, delegate: Evaluator):
+        self.delegate = delegate
+
+    def evaluate(self, board: chess.Board) -> Evaluation:
+        evaluated = self.delegate.evaluate(board)
+        assert isinstance(evaluated, Evaluation)
+        return evaluated
+
+
 @pytest.mark.parametrize("limit", (Nodes(1), Visits(1), Simulations(1), Depth(1)))
 def test_count_limits_are_typed_positive_units(limit):
     assert limit.value == 1
@@ -100,6 +114,29 @@ def test_reference_search_returns_replayable_natural_result_from_plain_board():
     assert result.trace.has_snapshots
     assert result.trace.has_events
     assert result.trace.is_replayable
+
+
+def test_reference_search_accepts_the_public_structural_evaluator_protocol():
+    canonical = fixture_evaluator()
+    adapter = DelegatingEvaluator(canonical)
+
+    assert isinstance(canonical, Evaluator)
+    assert isinstance(adapter, Evaluator)
+    assert ReferenceSearch(adapter).run(chess.Board(), Simulations(2)) == ReferenceSearch(canonical).run(
+        chess.Board(), Simulations(2)
+    )
+
+
+def test_reference_search_keeps_validating_structural_evaluator_results():
+    class InvalidEvaluator:
+        def evaluate(self, board: chess.Board) -> object:
+            return object()
+
+    evaluator = InvalidEvaluator()
+
+    assert isinstance(evaluator, Evaluator)
+    with pytest.raises(TypeError, match="one Evaluation per position"):
+        ReferenceSearch(evaluator).run(chess.Board(), Simulations(1))
 
 
 def test_reference_search_injects_root_evaluation_and_records_provenance():
@@ -170,7 +207,7 @@ def test_reference_search_preserves_retained_history_and_rejects_unsupported_inp
         ReferenceSearch(fixture_evaluator()).run(chess.variant.AtomicBoard(), Simulations(1))
     with pytest.raises(ValueError, match="standard chess"):
         ReferenceSearch(fixture_evaluator()).run(chess.Board(chess960=True), Simulations(1))
-    with pytest.raises(TypeError, match="LczeroEvaluator"):
+    with pytest.raises(TypeError, match="Evaluator"):
         ReferenceSearch(object())
 
 

@@ -80,6 +80,7 @@ EXPECTED_ROOT_EXPORTS = {
     "EvaluationProvenance",
     "EvaluationRecord",
     "EvaluationRecordFormatError",
+    "Evaluator",
     "Evidence",
     "EvidenceSet",
     "ExactMoveEffect",
