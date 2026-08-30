@@ -20,7 +20,8 @@ from tensordict import TensorDict
 
 from lczerolens._codec import encode_move, legal_indices
 from lczerolens.evaluation import Evaluation
-from lczerolens.evaluator import LczeroEvaluator
+from lczerolens.evaluator import Evaluator
+from lczerolens.provenance import PositionIdentity
 from lczerolens.schema import LczeroKeys
 from lczerolens.search.capabilities import SearchAdapterCapability, require_adapter_capability
 from lczerolens.search.limits import SearchLimit, Simulations
@@ -48,7 +49,7 @@ from lczerolens.search.trace import (
 )
 
 
-class Evaluator(Protocol):
+class _TensorEvaluator(Protocol):
     """The stable #130 evaluator shape consumed by reference search."""
 
     def __call__(self, board: chess.Board) -> TensorDict: ...
@@ -367,7 +368,7 @@ class _ReferenceMCTS:
     def search(
         self,
         board: chess.Board,
-        evaluator: Evaluator | Callable[[chess.Board], TensorDict],
+        evaluator: _TensorEvaluator | Callable[[chess.Board], TensorDict],
         simulations: int,
         *,
         root_evaluation: LeafEvaluationReplacement | None = None,
@@ -405,7 +406,7 @@ class _ReferenceMCTS:
     def _run_simulations(
         self,
         root: _Node,
-        evaluator: Evaluator | Callable[[chess.Board], TensorDict],
+        evaluator: _TensorEvaluator | Callable[[chess.Board], TensorDict],
         start: int,
         stop: int,
         node_count: int,
@@ -514,7 +515,7 @@ class _ReferenceMCTS:
     def replay_counterfactual(
         self,
         trace: SearchTrace,
-        evaluator: Evaluator | Callable[[chess.Board], TensorDict],
+        evaluator: _TensorEvaluator | Callable[[chess.Board], TensorDict],
         replacement: LeafEvaluationReplacement,
     ) -> CounterfactualReplayResult:
         """Restore a validated prefix and re-execute the original remaining budget."""
@@ -595,7 +596,10 @@ class _ReferenceMCTS:
         )
 
     def _expand(
-        self, node: _Node, evaluator: Evaluator | Callable[[chess.Board], TensorDict], perspective: ValuePerspective
+        self,
+        node: _Node,
+        evaluator: _TensorEvaluator | Callable[[chess.Board], TensorDict],
+        perspective: ValuePerspective,
     ) -> tuple[PositionEvaluation, NodeExpansion, EvaluatorCall]:
         output = self._single_evaluation(evaluator(node.board))
         policy = output.get("policy")
@@ -644,7 +648,10 @@ class _ReferenceMCTS:
         raise ValueError("Reference search requires one evaluator result per board.")
 
     def _leaf(
-        self, node: _Node, evaluator: Evaluator | Callable[[chess.Board], TensorDict], root_turn: chess.Color
+        self,
+        node: _Node,
+        evaluator: _TensorEvaluator | Callable[[chess.Board], TensorDict],
+        root_turn: chess.Color,
     ) -> tuple[LeafRecord, NodeExpansion | None]:
         perspective = ValuePerspective.ROOT_PLAYER if node.board.turn == root_turn else ValuePerspective.SIDE_TO_MOVE
         if node.board.is_game_over():
@@ -707,9 +714,9 @@ class ReferenceSearch:
     its batching, FPU, collisions, pruning, transpositions, or time management.
     """
 
-    def __init__(self, evaluator: LczeroEvaluator, *, c_puct: float = 1.0):
-        if not isinstance(evaluator, LczeroEvaluator):
-            raise TypeError("ReferenceSearch requires a LczeroEvaluator.")
+    def __init__(self, evaluator: Evaluator, *, c_puct: float = 1.0):
+        if not isinstance(evaluator, Evaluator) or not callable(getattr(evaluator, "evaluate", None)):
+            raise TypeError("ReferenceSearch requires an Evaluator.")
         self.evaluator = evaluator
         self._core = _ReferenceMCTS(c_puct)
 
@@ -752,6 +759,8 @@ class ReferenceSearch:
         evaluated = self.evaluator.evaluate(board)
         if not isinstance(evaluated, Evaluation):
             raise TypeError("ReferenceSearch requires one Evaluation per position.")
+        if PositionIdentity.from_board(evaluated.position) != PositionIdentity.from_board(board):
+            raise ValueError("ReferenceSearch evaluator result must be bound to the requested position and history.")
         value = evaluated.value
         if value is None:
             raise ValueError("ReferenceSearch requires a native or explicitly derived scalar value.")

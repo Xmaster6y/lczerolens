@@ -22,7 +22,7 @@ from .decision import (
 )
 from .facts import Evidence, EvidenceSet, FactAnalyzer
 from .evaluation import Evaluation, EvaluationBatch, EvaluationDerivation, EvaluationRecord
-from .evaluator import InputFormat, LczeroEvaluator
+from .evaluator import Evaluator, InputFormat, LczeroEvaluator
 from .model import LczeroModel
 from .moves import (
     ExactMoveEffect,
@@ -117,6 +117,7 @@ __all__ = [
     "EvaluationRecord",
     "EvaluationRecordFormatError",
     "EvaluationProvenance",
+    "Evaluator",
     "FactAnalyzer",
     "ExactMoveEffect",
     "HistoryPolicy",
