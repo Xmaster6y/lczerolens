@@ -65,12 +65,3 @@ just docs
 ## Branches
 
 Make a branch before opening a pull request to `main`.
-
-## Scope gate
-
-Core changes must either preserve lc0 model interoperability or add
-chess-domain decision evidence. Hooks, attribution, probing, SAE/transcoder,
-and coaching abstractions belong in downstream integrations unless a later
-scope decision explicitly changes this boundary. Public API changes should be
-demonstrated in a maintained notebook and documented through the generated API
-reference.
