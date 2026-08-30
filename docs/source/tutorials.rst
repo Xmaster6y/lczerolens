@@ -1,10 +1,12 @@
 Tutorials
 =========
 
-All tutorials use deterministic fixtures and run offline during the docs build.
+These notebooks are the maintained guides to lczerolens. They use deterministic
+fixtures and run offline during the docs build. Use the **Open in Colab** badge
+at the top of any notebook to experiment without a local setup.
 
-Feature notebooks
------------------
+Learn the building blocks
+-------------------------
 
 .. grid:: 1 2 2 2
    :gutter: 3
@@ -45,7 +47,7 @@ Feature notebooks
 
       Run deterministic search, inspect capabilities, and replay trace evidence.
 
-Tutorial notebooks
+Complete workflows
 ------------------
 
 .. grid:: 1 2 2 2
@@ -82,7 +84,6 @@ Tutorial notebooks
    :hidden:
    :maxdepth: 2
 
-   decision-analysis-tutorial
    notebooks/features/models-and-inputs
    notebooks/features/evaluate-positions
    notebooks/features/chess-evidence

@@ -43,11 +43,9 @@ print(evaluation.policy["e2e4"].probability)
 
 ## Examples
 
-- [Model inputs and loading](https://lczerolens.readthedocs.io/en/latest/notebooks/features/models-and-inputs.html)
-- [Evaluate positions and batches](https://lczerolens.readthedocs.io/en/latest/notebooks/features/evaluate-positions.html)
-- [Chess evidence: moves, lines, puzzles, and counterfactuals](https://lczerolens.readthedocs.io/en/latest/notebooks/features/chess-evidence.html)
-- [Search and replay](https://lczerolens.readthedocs.io/en/latest/notebooks/features/replayable-search.html)
-- [Complete decision-analysis tutorial](examples/decision_analysis_tutorial.py)
+The [tutorials](https://lczerolens.readthedocs.io/en/latest/tutorials.html) are
+executable notebooks covering model inputs, evaluation, chess evidence, search,
+model comparison, and puzzle analysis. Each one can also be launched in Colab.
 
 For the package boundary and detailed guides, see the [documentation](https://lczerolens.readthedocs.io).
 
