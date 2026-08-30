@@ -8,7 +8,7 @@ from torch import nn
 
 from lczerolens import LczeroModel
 from lczerolens._codec import encode_move
-from lczerolens.evaluation import Evaluation, EvaluationBatch, ValueOrigin
+from lczerolens.evaluation import Evaluation, EvaluationBatch, EvaluationDerivation, ValueOrigin
 from lczerolens.evaluator import LczeroEvaluator
 
 
@@ -166,6 +166,90 @@ def test_policy_view_reflects_explicit_runtime_tensor_changes():
     assert evaluation.policy.best_move == chess.Move.from_uci("d2d4")
 
 
+def test_derive_replaces_policy_and_value_without_mutating_source():
+    evaluation = fixture_evaluator(wdl=True).evaluate(chess.Board())
+    evaluation.tensors["instrumentation", "fixture"] = torch.tensor(7.0)
+    original_logits = evaluation.tensors["network", "policy_logits"].clone()
+    original_probabilities = evaluation.tensors["evaluation", "policy"].clone()
+    logits = original_logits.clone()
+    d4 = evaluation.policy["d2d4"].index
+    logits[d4] = 10
+
+    derived = evaluation.derive(policy_logits=logits, value=-0.75)
+
+    assert derived is not evaluation
+    assert derived.tensors is not evaluation.tensors
+    assert derived.position == evaluation.position
+    assert derived.provenance is evaluation.provenance
+    assert derived.derivation == EvaluationDerivation(policy_logits_replaced=True, value_replaced=True)
+    assert derived.policy.best_move == chess.Move.from_uci("d2d4")
+    assert sum(action.probability for action in derived.policy.actions) == pytest.approx(1)
+    assert not derived.tensors["evaluation", "policy"][~derived.tensors["input", "legal_mask"]].any()
+    assert derived.value.value == pytest.approx(-0.75)
+    assert derived.value.origin is ValueOrigin.DERIVED
+    assert derived.wdl == evaluation.wdl
+    assert derived.tensors["instrumentation", "fixture"].item() == pytest.approx(7)
+    assert derived.tensors["network", "wdl"] is not evaluation.tensors["network", "wdl"]
+    assert torch.equal(evaluation.tensors["network", "policy_logits"], original_logits)
+    assert torch.equal(evaluation.tensors["evaluation", "policy"], original_probabilities)
+    assert evaluation.value.value == pytest.approx(0.5)
+    assert evaluation.value.origin is ValueOrigin.DERIVED_FROM_WDL
+    assert evaluation.derivation is None
+
+
+def test_derive_value_supports_policy_only_evaluations_and_accumulates_metadata():
+    evaluator = LczeroEvaluator(LczeroModel(PolicyOnlyNetwork(), out_keys=["policy"]))
+    evaluation = evaluator.evaluate(chess.Board())
+
+    value_derived = evaluation.derive(value=torch.tensor([0.25], requires_grad=True))
+    logits = value_derived.tensors["network", "policy_logits"].clone()
+    policy_derived = value_derived.derive(policy_logits=logits)
+
+    assert evaluation.value is None
+    assert value_derived.value.value == pytest.approx(0.25)
+    assert value_derived.value.origin is ValueOrigin.DERIVED
+    assert value_derived.tensors["evaluation", "value"].requires_grad
+    assert policy_derived.derivation == EvaluationDerivation(policy_logits_replaced=True, value_replaced=True)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "message"),
+    [
+        ({}, ValueError, "requires replacement"),
+        ({"policy_logits": [0.0] * 1858}, TypeError, "torch.Tensor"),
+        ({"policy_logits": torch.zeros(1857)}, ValueError, "shape"),
+        ({"policy_logits": torch.zeros(1858, dtype=torch.int64)}, ValueError, "floating-point"),
+        ({"policy_logits": torch.full((1858,), torch.nan)}, ValueError, "finite"),
+        (
+            {"policy_logits": torch.full((1858,), 1e40, dtype=torch.float64)},
+            ValueError,
+            "evaluation dtype",
+        ),
+        ({"value": True}, TypeError, "real number"),
+        ({"value": torch.tensor(True)}, TypeError, "real number"),
+        ({"value": torch.tensor(0j)}, TypeError, "real number"),
+        ({"value": torch.zeros(2)}, ValueError, "scalar"),
+        ({"value": float("inf")}, ValueError, "finite"),
+        ({"value": 1.1}, ValueError, r"\[-1, 1\]"),
+    ],
+)
+def test_derive_validates_replacements(kwargs, error, message):
+    evaluation = fixture_evaluator().evaluate(chess.Board())
+
+    with pytest.raises(error, match=message):
+        evaluation.derive(**kwargs)
+
+
+def test_derive_terminal_policy_keeps_probabilities_empty():
+    board = chess.Board("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1")
+    evaluation = fixture_evaluator().evaluate(board)
+
+    derived = evaluation.derive(policy_logits=torch.ones(1858))
+
+    assert not derived.policy.is_defined
+    assert not derived.tensors["evaluation", "policy"].any()
+
+
 def test_finish_rejects_non_floating_inputs_and_outputs():
     evaluator = fixture_evaluator()
     board = chess.Board()
@@ -243,6 +327,14 @@ def test_evaluation_views_reject_incompatible_batch_shapes():
         Evaluation(chess.Board(), row, "not provenance", evaluator.input_format.value)
     with pytest.raises(ValueError, match="input format"):
         Evaluation(chess.Board(), row, evaluator.provenance, "")
+    with pytest.raises(TypeError, match="derivation"):
+        Evaluation(
+            chess.Board(),
+            row,
+            evaluator.provenance,
+            evaluator.input_format.value,
+            derivation="derived",
+        )
     with pytest.raises(TypeError, match="EvaluationProvenance"):
         EvaluationBatch([chess.Board()], tensors, "not provenance", evaluator.input_format.value)
     with pytest.raises(ValueError, match="input format"):

@@ -15,6 +15,7 @@ from lczerolens import EvaluationRecord, EvaluationRecordFormatError, LczeroEval
 from lczerolens._codec import encode_move
 from lczerolens.evaluation import (
     ActionEvaluationRecord,
+    EvaluationDerivation,
     ScalarEvaluationRecord,
     ValueOrigin,
     WdlEvaluationRecord,
@@ -148,7 +149,7 @@ def test_position_identity_preserves_variants(board):
     [
         (b'"format":"lczerolens.evaluation"', b'"format":"future"', "format"),
         (b'"format_version":1', b'"format_version":2', "format version"),
-        (b'"schema_version":1', b'"schema_version":2', "schema version"),
+        (b'"schema_version":1', b'"schema_version":3', "schema version"),
         (b'"input_format":"classical_112"', b'"input_format":1', "input_format"),
         (b'"perspective":"white"', b'"perspective":"green"', "perspective"),
     ],
@@ -177,6 +178,52 @@ def test_serialization_entry_points_require_documented_types():
         serialize_evaluation_record("record")
     with pytest.raises(TypeError, match="bytes"):
         deserialize_evaluation_record("record")
+
+
+def test_derived_evaluation_metadata_round_trips_and_version_one_remains_readable():
+    evaluation = record_evaluator().evaluate(chess.Board())
+    logits = evaluation.tensors["network", "policy_logits"].clone()
+    derived = evaluation.derive(policy_logits=logits, value=-0.25).record()
+
+    restored = EvaluationRecord.from_bytes(derived.to_bytes())
+    version_one = evaluation.record()
+    version_one_bytes = version_one.to_bytes()
+
+    assert derived.schema_version == 2
+    assert restored.derivation == EvaluationDerivation(policy_logits_replaced=True, value_replaced=True)
+    assert restored.value.origin is ValueOrigin.DERIVED
+    assert version_one.schema_version == 1
+    assert EvaluationRecord.from_bytes(version_one_bytes) == version_one
+    assert b'"derivation"' not in version_one.to_bytes()
+
+
+def test_derived_scalar_and_replacement_metadata_must_agree():
+    base = record_evaluator().evaluate(chess.Board()).record()
+    derived_value = replace(base.value, origin=ValueOrigin.DERIVED)
+    value_replacement = EvaluationDerivation(value_replaced=True)
+
+    with pytest.raises(ValueError, match="derived origin requires value-replacement"):
+        replace(base, value=derived_value)
+    with pytest.raises(ValueError, match="requires a scalar value with derived origin"):
+        replace(base, derivation=value_replacement)
+    with pytest.raises(ValueError, match="requires a scalar value with derived origin"):
+        replace(base, derivation=value_replacement, value=None)
+
+
+def test_malformed_schema_two_derivation_records_fail_closed():
+    evaluation = record_evaluator().evaluate(chess.Board())
+    derived = evaluation.derive(value=-0.25).record()
+    encoded = derived.to_bytes()
+
+    def malformed(derivation):
+        value = json.loads(encoded)
+        value["record"]["derivation"] = derivation
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+
+    with pytest.raises(EvaluationRecordFormatError, match="derived origin requires value-replacement"):
+        EvaluationRecord.from_bytes(malformed(None))
+    with pytest.raises(EvaluationRecordFormatError, match="EvaluationDerivation must be an object"):
+        EvaluationRecord.from_bytes(malformed([]))
 
 
 def test_record_validation_fails_closed_for_position_policy_and_provenance():
@@ -243,6 +290,7 @@ def test_evaluation_record_validation_rejects_incoherent_evidence():
         ({"policy": ("not an action",)}, "policy entries"),
         ({"wdl": "not wdl"}, "WDL"),
         ({"value": "not value"}, "record value"),
+        ({"derivation": "not derivation"}, "record derivation"),
         ({"policy": (base.policy[0], base.policy[0], *base.policy[1:])}, "unique"),
         ({"policy": tuple(reversed(base.policy))}, "canonical UCI order"),
         ({"policy": (replace(base.policy[0], index=1), *base.policy[1:])}, "indices must match"),
@@ -257,6 +305,13 @@ def test_evaluation_record_validation_rejects_incoherent_evidence():
     ):
         with pytest.raises(ValueError, match=message):
             replace(base, **changes)
+
+
+def test_evaluation_derivation_requires_boolean_replacements():
+    with pytest.raises(TypeError, match="booleans"):
+        EvaluationDerivation(policy_logits_replaced=1)
+    with pytest.raises(ValueError, match="replace"):
+        EvaluationDerivation()
 
 
 def test_position_identity_rejects_invalid_inputs_and_history():

@@ -9,6 +9,7 @@ from typing import Any
 
 from lczerolens.evaluation import (
     ActionEvaluationRecord,
+    EvaluationDerivation,
     EvaluationRecord,
     ScalarEvaluationRecord,
     ValueOrigin,
@@ -88,7 +89,7 @@ def _number(value: float | int) -> int | float:
 
 
 def _record_data(record: EvaluationRecord) -> dict[str, Any]:
-    return {
+    data = {
         "input_format": record.input_format,
         "mlh": _number(record.mlh) if record.mlh is not None else None,
         "policy": [
@@ -135,16 +136,28 @@ def _record_data(record: EvaluationRecord) -> dict[str, Any]:
             else None
         ),
     }
+    if record.schema_version == 2:
+        data["derivation"] = (
+            {
+                "policy_logits_replaced": record.derivation.policy_logits_replaced,
+                "value_replaced": record.derivation.value_replaced,
+            }
+            if record.derivation is not None
+            else None
+        )
+    return data
 
 
 def _decode_record(value: Any) -> EvaluationRecord:
-    _require_fields(
-        value,
-        {"input_format", "mlh", "policy", "position", "provenance", "schema_version", "value", "wdl"},
-        "EvaluationRecord",
-    )
-    if isinstance(value["schema_version"], bool) or value["schema_version"] != 1:
-        raise EvaluationRecordFormatError(f"Unsupported EvaluationRecord schema version {value['schema_version']!r}.")
+    if not isinstance(value, dict):
+        raise EvaluationRecordFormatError("EvaluationRecord must be an object.")
+    schema_version = value.get("schema_version")
+    if isinstance(schema_version, bool) or schema_version not in (1, 2):
+        raise EvaluationRecordFormatError(f"Unsupported EvaluationRecord schema version {schema_version!r}.")
+    expected = {"input_format", "mlh", "policy", "position", "provenance", "schema_version", "value", "wdl"}
+    if schema_version == 2:
+        expected.add("derivation")
+    _require_fields(value, expected, "EvaluationRecord")
     position_data = value["position"]
     _require_fields(position_data, {"chess960", "fen", "moves", "start_fen", "variant"}, "PositionIdentity")
     provenance_data = value["provenance"]
@@ -176,6 +189,7 @@ def _decode_record(value: Any) -> EvaluationRecord:
         wdl = _decode_wdl(value["wdl"])
         scalar = _decode_scalar(value["value"])
         mlh = None if value["mlh"] is None else _float(value["mlh"], "EvaluationRecord.mlh")
+        derivation = _decode_derivation(value.get("derivation")) if schema_version == 2 else None
         return EvaluationRecord(
             position=position,
             provenance=provenance,
@@ -184,11 +198,24 @@ def _decode_record(value: Any) -> EvaluationRecord:
             wdl=wdl,
             value=scalar,
             mlh=mlh,
+            derivation=derivation,
         )
     except EvaluationRecordFormatError:
         raise
     except (TypeError, ValueError) as error:
         raise EvaluationRecordFormatError(f"Invalid EvaluationRecord: {error}") from error
+
+
+def _decode_derivation(value: Any) -> EvaluationDerivation | None:
+    if value is None:
+        return None
+    _require_fields(value, {"policy_logits_replaced", "value_replaced"}, "EvaluationDerivation")
+    return EvaluationDerivation(
+        policy_logits_replaced=_boolean(
+            value["policy_logits_replaced"], "EvaluationDerivation.policy_logits_replaced"
+        ),
+        value_replaced=_boolean(value["value_replaced"], "EvaluationDerivation.value_replaced"),
+    )
 
 
 def _decode_action(value: Any) -> ActionEvaluationRecord:

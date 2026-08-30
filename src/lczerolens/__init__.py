@@ -21,7 +21,7 @@ from .decision import (
     compare_decision,
 )
 from .facts import Evidence, EvidenceSet, FactAnalyzer
-from .evaluation import Evaluation, EvaluationBatch, EvaluationRecord
+from .evaluation import Evaluation, EvaluationBatch, EvaluationDerivation, EvaluationRecord
 from .evaluator import InputFormat, LczeroEvaluator
 from .model import LczeroModel
 from .moves import (
@@ -113,6 +113,7 @@ __all__ = [
     "EvidenceSet",
     "Evaluation",
     "EvaluationBatch",
+    "EvaluationDerivation",
     "EvaluationRecord",
     "EvaluationRecordFormatError",
     "EvaluationProvenance",
