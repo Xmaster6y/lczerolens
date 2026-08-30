@@ -1,8 +1,11 @@
-## What does this PR do?
+## Summary
 
-Key insights about the PR.
+<!-- Describe the user-visible outcome and important design choices. -->
+
+## Validation
+
+<!-- List the exact checks that were run. -->
 
 ## Linked Issues
 
-- Closes #?
-- #?
+<!-- Use "Closes #123" when this PR resolves an issue. -->

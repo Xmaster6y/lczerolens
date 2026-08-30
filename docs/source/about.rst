@@ -2,8 +2,8 @@ About lczerolens
 ================
 
 ``lczerolens`` provides PyTorch interoperability and chess-analysis evidence
-for lc0-family networks. Start with :doc:`start`, run the :doc:`tutorials`, and
-use :doc:`api/index` when you need exact signatures.
+for lc0-family networks. Start with :doc:`start`, learn from the executable
+:doc:`tutorials`, and use :doc:`api/index` when you need exact signatures.
 
 Related projects
 ----------------

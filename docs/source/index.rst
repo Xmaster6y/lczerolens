@@ -9,7 +9,6 @@ lczerolens
     :hidden:
 
     Getting Started <start>
-    Features <features>
     Tutorials <tutorials>
     API Reference <api/index>
     About <about>
@@ -45,11 +44,11 @@ lczerolens
 
                   Get Started
 
-          .. button-ref:: features
+          .. button-ref:: tutorials
             :color: primary
             :outline:
 
-                Features
+                Tutorials
 
           .. button-ref:: api/index
             :color: primary
@@ -60,7 +59,7 @@ lczerolens
 Explore
 -------
 
-.. grid:: 1 2 2 2
+.. grid:: 1 1 3 3
    :gutter: 3
 
    .. grid-item-card:: Start evaluating
@@ -72,29 +71,20 @@ Explore
 
       Install the package and evaluate a board.
 
-   .. grid-item-card:: Workflows
-      :link: features
-      :link-type: doc
-      :class-card: surface
-
-      :octicon:`workflow;2em;sd-text-primary`
-
-      Load models, inspect positions, and produce chess evidence.
-
-   .. grid-item-card:: Guided examples
+   .. grid-item-card:: Learn by example
       :link: tutorials
       :link-type: doc
       :class-card: surface
 
       :octicon:`mortar-board;2em;sd-text-primary`
 
-      Follow complete, deterministic analysis workflows.
+      Run the maintained notebooks locally or in Colab.
 
-   .. grid-item-card:: Contracts
-      :link: use-cases
+   .. grid-item-card:: Look up the API
+      :link: api/index
       :link-type: doc
       :class-card: surface
 
-      :octicon:`shield-check;2em;sd-text-primary`
+      :octicon:`code-square;2em;sd-text-primary`
 
-      Review supported guarantees, boundaries, and compatibility.
+      Browse generated signatures, types, and fields.
