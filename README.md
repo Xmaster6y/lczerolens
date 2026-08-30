@@ -43,11 +43,10 @@ print(evaluation.policy["e2e4"].probability)
 
 ## Examples
 
-The [tutorials](https://lczerolens.readthedocs.io/en/latest/tutorials.html) are
-executable notebooks covering model inputs, evaluation, chess evidence, search,
-model comparison, and puzzle analysis. Each one can also be launched in Colab.
-
-For the package boundary and detailed guides, see the [documentation](https://lczerolens.readthedocs.io).
+The [documentation](https://lczerolens.readthedocs.io) provides executable
+tutorial notebooks and the generated API reference. The tutorials cover model
+inputs, evaluation, chess evidence, search, model comparison, and puzzle
+analysis, and each one can be launched in Colab.
 
 ## Contribute
 
