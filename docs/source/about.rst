@@ -35,7 +35,7 @@ you publish research with lczerolens.
    @software{poupart_lczerolens_2026,
      author = {Poupart, Yoann},
      title = {LczeroLens},
-     version = {0.5.0},
+     version = {0.5.1},
      year = {2026},
      url = {https://github.com/Xmaster6y/lczerolens}
    }
